@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.wear.compose.material.dialog.Dialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,9 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 import com.databelay.refwatch.GameViewModel
-import com.databelay.refwatch.Team
-import com.databelay.refwatch.presentation.theme.DefaultAwayColor
-import com.databelay.refwatch.presentation.theme.DefaultHomeColor
+import com.databelay.refwatch.data.Team
+import com.databelay.refwatch.presentation.theme.*
 
 @Composable
 fun PreGameSetupScreen(
@@ -31,8 +31,8 @@ fun PreGameSetupScreen(
     var showAwayColorPicker by remember { mutableStateOf(false) }
 
     val commonJerseyColors = listOf(
-        DefaultHomeColor, DefaultAwayColor, Color.Green, Color.Yellow,
-        Color.White, Color.Black, Color.Magenta, Color.Cyan, Color.Gray, Color.Orange
+        DefaultHomeColor, DefaultAwayColor, Color.Green, Color.Yellow, Color.Red, Pink400,
+        Color.White, Color.Black, Color.Magenta, Color.Cyan, Color.Gray, Color.Blue, Orange400
     )
 
     ScalingLazyColumn(
@@ -114,12 +114,12 @@ fun PreGameSetupScreen(
         item {
             Button(
                 onClick = onStartGameConfirmed,
-                modifier = Modifier.fillMaxWidth().height(ButtonDefaults.LargeButtonHeight),
+                modifier = Modifier.fillMaxWidth().height(12.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Check, contentDescription = "Start Game")
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Spacer(Modifier.width(8.dp))
                     Text("Start Game")
                 }
             }
@@ -145,7 +145,7 @@ fun PreGameSetupScreen(
             title = "Away Color",
             availableColors = commonJerseyColors,
             onColorSelected = { color ->
-                viewModel.updateAwayColorColor(color) // Ensure you have this method in ViewModel
+                viewModel.updateAwayTeamColor(color) // Ensure you have this method in ViewModel
                 showAwayColorPicker = false
             },
             onDismiss = { showAwayColorPicker = false }
@@ -176,6 +176,7 @@ fun SimpleColorPickerDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(
+        true,
         onDismissRequest = onDismiss,
         // No properties needed, swipe to dismiss is default for Wear OS Dialog
     ) {

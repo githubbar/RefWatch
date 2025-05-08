@@ -1,32 +1,30 @@
-package com.databelay.refwatch
+package com.databelay.refwatch // Your package
 
+import android.Manifest
+import android.os.Build
 import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log // Import Log
+import androidx.annotation.RequiresPermission
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.databelay.refwatch.data.* // Imports all from your data package
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-
-// Constants for SavedStateHandle (optional if you use serializable GameState directly)
-// private const val GAME_STATE_KEY = "gameStateKey_v1" // Increment version if structure changes
 
 class GameViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _gameState = MutableStateFlow(
-        // For SavedStateHandle to work with custom classes, they need to be Parcelable or use custom Saver.
-        // For simplicity here, we'll re-init if not found or use a simpler persistence strategy.
-        // A robust app would make GameState Parcelable or use a custom Saver.
-        // For now, we just load if present, otherwise default.
         savedStateHandle.get<GameState>("gameState") ?: GameState()
     )
     val gameState = _gameState.asStateFlow()
 
-    private var countDownTimer: CountDownTimer? = null
+    private var gameCountDownTimer: CountDownTimer? = null // Renamed for clarity
     private var vibrator: Vibrator? = null
 
     fun setVibrator(v: Vibrator) {
@@ -34,15 +32,23 @@ class GameViewModel(
     }
 
     init {
-        // Initialize displayedTimeMillis based on current phase if loading from saved state
+        // If loading from saved state and timer was running, restart it.
+        // Also, ensure displayedTimeMillis is correct for the current phase.
+        val initialState = _gameState.value
+        val initialDisplayedTime = if (initialState.isTimerRunning && initialState.displayedTimeMillis > 0) {
+            initialState.displayedTimeMillis
+        } else {
+            getDurationMillisForPhase(initialState.currentPhase, initialState.settings)
+        }
+
         _gameState.update {
-            it.copy(displayedTimeMillis = getDurationMillisForPhase(it.currentPhase, it.settings))
+            it.copy(displayedTimeMillis = initialDisplayedTime)
         }
-        // If timer was running and app was killed, restart it (simplified approach)
-        if (_gameState.value.isTimerRunning) {
-            startTimerLogic(_gameState.value.displayedTimeMillis)
+
+        if (initialState.isTimerRunning && initialDisplayedTime > 0) {
+            startTimerLogic(initialDisplayedTime)
         }
-        updateCurrentPeriodKickOffTeam(_gameState.value.currentPhase) // Ensure kick-off team is correct
+        updateCurrentPeriodKickOffTeam(initialState.currentPhase)
     }
 
     // --- Pre-Game Setup ---
@@ -66,36 +72,56 @@ class GameViewModel(
     }
 
     fun setHalfDuration(minutes: Int) {
-        _gameState.update {
-            val newSettings = it.settings.copy(halfDurationMinutes = minutes)
-            val newDisplayedTime = if (it.currentPhase == GamePhase.PRE_GAME ||
-                (it.currentPhase == GamePhase.FIRST_HALF && !it.isTimerRunning && it.actualTimeElapsedInPeriodMillis == 0L)
+        _gameState.update { currentState ->
+            val newSettings = currentState.settings.copy(halfDurationMinutes = minutes)
+            var newDisplayedTime = currentState.displayedTimeMillis
+            // If in pre-game, or in first half and timer hasn't started/run, update display time
+            if (currentState.currentPhase == GamePhase.PRE_GAME ||
+                (currentState.currentPhase == GamePhase.FIRST_HALF && !currentState.isTimerRunning && currentState.actualTimeElapsedInPeriodMillis == 0L)
             ) {
-                newSettings.halfDurationMillis
-            } else {
-                it.displayedTimeMillis // Keep current if timer running or already started
+                newDisplayedTime = newSettings.halfDurationMillis
+            } else if (currentState.currentPhase == GamePhase.FIRST_HALF || currentState.currentPhase == GamePhase.SECOND_HALF) {
+                // If timer is running, adjust remaining time if new duration is shorter
+                if (currentState.isTimerRunning && newSettings.halfDurationMillis < currentState.settings.halfDurationMillis) {
+                    val timeAlreadyElapsed = currentState.settings.halfDurationMillis - currentState.displayedTimeMillis
+                    newDisplayedTime = (newSettings.halfDurationMillis - timeAlreadyElapsed).coerceAtLeast(0L)
+                } else if (!currentState.isTimerRunning && currentState.actualTimeElapsedInPeriodMillis > 0L) {
+                    // Timer paused, recalculate displayed time based on new duration and what has passed
+                    newDisplayedTime = (newSettings.halfDurationMillis - currentState.actualTimeElapsedInPeriodMillis).coerceAtLeast(0L)
+                }
             }
-            it.copy(settings = newSettings, displayedTimeMillis = newDisplayedTime)
+            currentState.copy(settings = newSettings, displayedTimeMillis = newDisplayedTime)
         }
         saveState()
     }
 
     fun setHalftimeDuration(minutes: Int) {
-        _gameState.update {
-            val newSettings = it.settings.copy(halftimeDurationMinutes = minutes)
-            val newDisplayedTime = if (it.currentPhase == GamePhase.HALF_TIME && !it.isTimerRunning && it.actualTimeElapsedInPeriodMillis == 0L) {
-                newSettings.halftimeDurationMillis
-            } else {
-                it.displayedTimeMillis
+        _gameState.update { currentState ->
+            val newSettings = currentState.settings.copy(halftimeDurationMinutes = minutes)
+            var newDisplayedTime = currentState.displayedTimeMillis
+            if (currentState.currentPhase == GamePhase.HALF_TIME && !currentState.isTimerRunning && currentState.actualTimeElapsedInPeriodMillis == 0L) {
+                newDisplayedTime = newSettings.halftimeDurationMillis
+            } else if (currentState.currentPhase == GamePhase.HALF_TIME) {
+                if (currentState.isTimerRunning && newSettings.halftimeDurationMillis < currentState.settings.halftimeDurationMillis) {
+                    val timeAlreadyElapsed = currentState.settings.halftimeDurationMillis - currentState.displayedTimeMillis
+                    newDisplayedTime = (newSettings.halftimeDurationMillis - timeAlreadyElapsed).coerceAtLeast(0L)
+                } else if (!currentState.isTimerRunning && currentState.actualTimeElapsedInPeriodMillis > 0L) {
+                    newDisplayedTime = (newSettings.halftimeDurationMillis - currentState.actualTimeElapsedInPeriodMillis).coerceAtLeast(0L)
+                }
             }
-            it.copy(settings = newSettings, displayedTimeMillis = newDisplayedTime)
+            currentState.copy(settings = newSettings, displayedTimeMillis = newDisplayedTime)
         }
         saveState()
     }
 
     fun confirmSettingsAndStartGame() {
         if (_gameState.value.currentPhase == GamePhase.PRE_GAME) {
+            // Log who kicks off
+            val kickOffTeam = _gameState.value.settings.kickOffTeam
+            addEvent(GameEvent.GenericLogEvent(message = "${kickOffTeam.name} kicks off 1st Half"))
             changePhase(GamePhase.FIRST_HALF)
+            // Optionally auto-start timer here, or let user do it via toggleTimer
+            // startTimer()
         }
     }
 
@@ -104,67 +130,107 @@ class GameViewModel(
         if (_gameState.value.isTimerRunning) {
             pauseTimer()
         } else {
-            // Only start timer if the phase is one that has a timed duration
             if (_gameState.value.currentPhase.hasDuration() && _gameState.value.displayedTimeMillis > 0) {
                 startTimer()
             }
         }
     }
 
-    private fun startTimer() {
-        if (!_gameState.value.isTimerRunning && _gameState.value.displayedTimeMillis > 0) {
+    fun startTimer() { // Made private as it's called by toggleTimer or internally
+        val currentState = _gameState.value
+        if (!currentState.isTimerRunning && currentState.displayedTimeMillis > 0 && currentState.currentPhase.hasDuration()) {
             _gameState.update { it.copy(isTimerRunning = true) }
-            startTimerLogic(_gameState.value.displayedTimeMillis)
+            startTimerLogic(currentState.displayedTimeMillis)
+            addEvent(GameEvent.GenericLogEvent(message = "Timer Started for ${currentState.currentPhase.name}"))
             saveState()
         }
     }
 
-    private fun pauseTimer() {
+     fun pauseTimer() { // Made private
         if (_gameState.value.isTimerRunning) {
-            countDownTimer?.cancel()
+            gameCountDownTimer?.cancel()
             _gameState.update { it.copy(isTimerRunning = false) }
+            addEvent(GameEvent.GenericLogEvent(message = "Timer Paused"))
             saveState()
         }
     }
 
-    private fun startTimerLogic(durationMillis: Long) {
-        countDownTimer?.cancel()
-        val startTime = System.currentTimeMillis()
-        countDownTimer = object : CountDownTimer(durationMillis, 250) { // Tick more frequently for smoother UI
+    private fun startTimerLogic(durationMillisToRun: Long) {
+        gameCountDownTimer?.cancel() // Cancel any existing timer
+
+        // This is the crucial part: when the timer starts (or resumes),
+        // the actualTimeElapsedInPeriodMillis should reflect what has *already passed* for this period.
+        // displayedTimeMillis is what's left to count down.
+        // The onTick will update actualTimeElapsedInPeriodMillis based on displayedTimeMillis changes.
+
+        val initialActualTimeElapsed = _gameState.value.actualTimeElapsedInPeriodMillis
+        val totalDurationForCurrentPhase = getDurationMillisForPhase(_gameState.value.currentPhase, _gameState.value.settings)
+
+        gameCountDownTimer = object : CountDownTimer(durationMillisToRun, 250) {
             override fun onTick(millisUntilFinished: Long) {
+                // Calculate time passed since this timer instance started
+                val timePassedThisInstance = durationMillisToRun - millisUntilFinished
                 _gameState.update {
-                    val elapsedSinceLastTick = it.displayedTimeMillis - millisUntilFinished
                     it.copy(
                         displayedTimeMillis = millisUntilFinished,
-                        actualTimeElapsedInPeriodMillis = it.actualTimeElapsedInPeriodMillis + elapsedSinceLastTick
+                        // actualTimeElapsedInPeriodMillis is the sum of what had already passed
+                        // before this timer instance started, plus what has passed in this instance.
+                        actualTimeElapsedInPeriodMillis = initialActualTimeElapsed + timePassedThisInstance
                     )
                 }
-                // Save state less frequently to avoid performance issues, e.g., every few seconds or on pause
             }
 
+            @RequiresPermission(Manifest.permission.VIBRATE)
             override fun onFinish() {
                 _gameState.update {
                     it.copy(
                         displayedTimeMillis = 0,
-                        actualTimeElapsedInPeriodMillis = getDurationMillisForPhase(it.currentPhase, it.settings), // Ensure it's maxed out
+                        actualTimeElapsedInPeriodMillis = totalDurationForCurrentPhase, // Ensure it's maxed out
                         isTimerRunning = false
                     )
                 }
                 vibrateDevice()
-                handleTimerFinish()
-                saveState()
+                handleTimerFinish() // This will call changePhase
+                // saveState() is called within changePhase
             }
         }.start()
     }
 
     private fun handleTimerFinish() {
-        when (_gameState.value.currentPhase) {
+        // This method is called when the displayedTimeMillis reaches 0
+        val currentPhase = _gameState.value.currentPhase
+        addEvent(GameEvent.GenericLogEvent(message = "${currentPhase.name} Ended"))
+
+        when (currentPhase) {
             GamePhase.FIRST_HALF -> changePhase(GamePhase.HALF_TIME)
             GamePhase.HALF_TIME -> changePhase(GamePhase.SECOND_HALF)
             GamePhase.SECOND_HALF -> changePhase(GamePhase.FULL_TIME)
             // Add Extra Time logic if implemented
-            else -> { /* Do nothing or log error */
-            }
+            else -> { Log.w("GameViewModel", "Timer finished in unhandled phase: $currentPhase") }
+        }
+    }
+
+    /**
+     * Allows the referee to manually end the current active phase.
+     */
+    fun endCurrentPhaseEarly() {
+        val currentPhase = _gameState.value.currentPhase
+
+        if (currentPhase.hasDuration() && currentPhase != GamePhase.FULL_TIME && currentPhase != GamePhase.PRE_GAME) {
+            pauseTimer() // Stop the timer first
+
+            val phaseNameReadable = currentPhase.readable()
+            addEvent(GameEvent.GenericLogEvent(
+                message = "$phaseNameReadable ended early by referee.",
+                gameTimeMillis = _gameState.value.actualTimeElapsedInPeriodMillis // Log actual time played
+            ))
+
+            // Directly call handleTimerFinish to transition to the next phase
+            // This assumes handleTimerFinish correctly sets up the next phase.
+            handleTimerFinish()
+            Log.d("GameViewModel", "$phaseNameReadable ended early. Transitioning...")
+        } else {
+            Log.w("GameViewModel", "Attempted to end phase early in a non-active/non-timed state: $currentPhase")
         }
     }
 
@@ -176,7 +242,7 @@ class GameViewModel(
         val newAwayScore = if (team == Team.AWAY) _gameState.value.awayScore + 1 else _gameState.value.awayScore
         val gameTime = _gameState.value.actualTimeElapsedInPeriodMillis
 
-        val goalEvent = GoalScoredEvent(
+        val goalEvent = GameEvent.GoalScoredEvent(
             team = team,
             gameTimeMillis = gameTime,
             homeScoreAtTime = newHomeScore,
@@ -196,7 +262,7 @@ class GameViewModel(
         if (!_gameState.value.currentPhase.isPlayablePhase()) return
 
         val gameTime = _gameState.value.actualTimeElapsedInPeriodMillis
-        val cardEvent = CardIssuedEvent(
+        val cardEvent = GameEvent.CardIssuedEvent(
             team = team,
             playerNumber = playerNumber,
             cardType = cardType,
@@ -208,38 +274,45 @@ class GameViewModel(
         saveState()
     }
 
-    fun proceedToNextPhaseManually() {
-        // This is for manually moving, e.g., if ref blows whistle early or for testing
-        val currentPhase = _gameState.value.currentPhase
-        if (_gameState.value.isTimerRunning) pauseTimer() // Pause timer before changing phase
-
-        when (currentPhase) {
-            GamePhase.FIRST_HALF -> changePhase(GamePhase.HALF_TIME)
-            GamePhase.HALF_TIME -> changePhase(GamePhase.SECOND_HALF)
-            GamePhase.SECOND_HALF -> changePhase(GamePhase.FULL_TIME)
-            else -> {} // Can't manually proceed from PRE_GAME or FULL_TIME this way
-        }
-    }
-
     private fun changePhase(newPhase: GamePhase) {
-        pauseTimer() // Ensure timer is stopped
+        pauseTimer() // Ensure timer is stopped if it was running for the old phase
         val settings = _gameState.value.settings
-        val phaseChangeEvent = PhaseChangedEvent(
+        val previousPhase = _gameState.value.currentPhase
+
+        // gameTimeMillis for PhaseChangedEvent is the total duration of the *previous* phase if it just ended.
+        // If manually changing phase or from a non-timed phase, it might be current actualTimeElapsed.
+        val gameTimeForChangeEvent = if (previousPhase.hasDuration() && _gameState.value.displayedTimeMillis == 0L) {
+            // This means the previous timed phase completed fully
+            getDurationMillisForPhase(previousPhase, settings)
+        } else {
+            // Phase changed early or from a non-timed phase, log current elapsed time of previous phase
+            _gameState.value.actualTimeElapsedInPeriodMillis
+        }
+
+        val phaseChangeEvent = GameEvent.PhaseChangedEvent(
             newPhase = newPhase,
-            // gameTimeMillis is the duration of the *previous* phase if it ended
-            gameTimeMillis = if (_gameState.value.currentPhase.hasDuration()) getDurationMillisForPhase(_gameState.value.currentPhase, settings) else 0L
+            gameTimeMillis = gameTimeForChangeEvent
         )
 
         _gameState.update {
             it.copy(
                 currentPhase = newPhase,
                 displayedTimeMillis = getDurationMillisForPhase(newPhase, settings),
-                actualTimeElapsedInPeriodMillis = 0L, // Reset elapsed time for the new period
-                isTimerRunning = false,
+                actualTimeElapsedInPeriodMillis = 0L, // Reset elapsed time for the new phase
+                isTimerRunning = false, // Timer should be explicitly started for new phase if needed
                 events = it.events + phaseChangeEvent
             )
         }
+
         updateCurrentPeriodKickOffTeam(newPhase)
+
+        // If the new phase has a duration and isn't FULL_TIME, and you want it to auto-start (e.g., halftime)
+        if (newPhase.hasDuration() && newPhase != GamePhase.FULL_TIME && newPhase == GamePhase.HALF_TIME) { // Auto-start halftime
+            startTimer()
+        }
+        // For FIRST_HALF and SECOND_HALF, timer is usually started by user (whistle)
+        // unless confirmSettingsAndStartGame also calls startTimer.
+
         saveState()
     }
 
@@ -249,74 +322,87 @@ class GameViewModel(
             val newCurrentKickOff = when (phase) {
                 GamePhase.FIRST_HALF -> initialKickOffTeam
                 GamePhase.SECOND_HALF -> if (initialKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
-                // Define for other phases if needed (e.g., extra time)
-                else -> currentState.settings.currentPeriodKickOffTeam // Keep current for other phases
+                // GamePhase.EXTRA_TIME_FIRST_HALF -> { /* Decide kick-off based on coin toss or rules */ initialKickOffTeam } // Example
+                else -> currentState.settings.currentPeriodKickOffTeam
             }
             currentState.copy(settings = currentState.settings.copy(currentPeriodKickOffTeam = newCurrentKickOff))
         }
     }
-
 
     private fun getDurationMillisForPhase(phase: GamePhase, settings: GameSettings): Long {
         return when (phase) {
             GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> settings.halfDurationMillis
             GamePhase.HALF_TIME -> settings.halftimeDurationMillis
             // GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> settings.extraTimeHalfDurationMillis
-            // GamePhase.EXTRA_TIME_HALF_TIME -> 5 * 60 * 1000L // e.g. 5 mins
-            else -> 0L // PRE_GAME, FULL_TIME
+            // GamePhase.EXTRA_TIME_HALF_TIME -> settings.extraTimeHalftimeDurationMillis
+            else -> 0L
         }
     }
 
-    private fun GamePhase.hasDuration(): Boolean {
-        return this == GamePhase.FIRST_HALF || this == GamePhase.SECOND_HALF || this == GamePhase.HALF_TIME
-        // || this == GamePhase.EXTRA_TIME_FIRST_HALF || ...
-    }
+    // Helper extension on GamePhase enum (defined in models.kt or a utils file)
+    // fun GamePhase.hasDuration(): Boolean { ... }
+    // fun GamePhase.isPlayablePhase(): Boolean { ... }
+    // fun GamePhase.name.readable(): String { return this.replace("_", " ").capitalizeWords() }
 
-    private fun GamePhase.isPlayablePhase(): Boolean {
-        return this == GamePhase.FIRST_HALF || this == GamePhase.SECOND_HALF
-        // || this == GamePhase.EXTRA_TIME_FIRST_HALF || ...
+    private fun addEvent(event: GameEvent) { // Helper to add events
+        _gameState.update {
+            it.copy(events = it.events + event)
+        }
     }
 
     fun resetGame() {
         pauseTimer()
-        val defaultSettings = GameState().settings // Keep original default settings idea
-        _gameState.value = GameState(settings = defaultSettings.copy( // Preserve user chosen colors if desired, or fully reset
-            homeTeamColor = _gameState.value.settings.homeTeamColor,
-            awayTeamColor = _gameState.value.settings.awayTeamColor
-        ))
+        val currentSettings = _gameState.value.settings
+        // Reset game state but keep configured team colors, half/halftime durations, and initial kick-off team
+        _gameState.value = GameState(
+            settings = GameSettings( // Create new settings but copy over user preferences
+                homeTeamColor = currentSettings.homeTeamColor,
+                awayTeamColor = currentSettings.awayTeamColor,
+                halfDurationMinutes = currentSettings.halfDurationMinutes,
+                halftimeDurationMinutes = currentSettings.halftimeDurationMinutes,
+                kickOffTeam = currentSettings.kickOffTeam,
+                currentPeriodKickOffTeam = currentSettings.kickOffTeam // Reset to initial
+            )
+        )
+        // Set displayed time for PRE_GAME (which should be duration of first half initially)
+        _gameState.update {
+            it.copy(displayedTimeMillis = getDurationMillisForPhase(GamePhase.FIRST_HALF, it.settings))
+        }
         updateCurrentPeriodKickOffTeam(GamePhase.PRE_GAME)
         saveState()
     }
 
-    // --- Utility ---
     private fun saveState() {
         savedStateHandle["gameState"] = _gameState.value
     }
 
+    @RequiresPermission(Manifest.permission.VIBRATE)
     private fun vibrateDevice() {
+        // ... (vibration logic remains the same) ...
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val timings = longArrayOf(0, 200, 100, 200) // Vibrate pattern: off, on, off, on
+            if (vibrator?.hasVibrator() == false) return // Check if vibrator exists
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val timings = longArrayOf(0, 300, 200, 300) // Slightly longer pattern
                 val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
-                // -1 means do not repeat
-                val effect = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val effect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     VibrationEffect.createWaveform(timings, amplitudes, -1)
                 } else {
+                    @Suppress("DEPRECATION")
                     VibrationEffect.createWaveform(timings, -1)
                 }
                 vibrator?.vibrate(effect)
             } else {
                 @Suppress("DEPRECATION")
-                vibrator?.vibrate(longArrayOf(0, 200, 100, 200), -1)
+                vibrator?.vibrate(longArrayOf(0, 300, 200, 300), -1)
             }
         } catch (e: Exception) {
-            // Log or handle error, e.g. if vibrator service not available
-            println("Vibration failed: ${e.message}")
+            Log.e("GameViewModel", "Vibration failed", e)
         }
     }
 
+
     override fun onCleared() {
         super.onCleared()
-        countDownTimer?.cancel()
+        gameCountDownTimer?.cancel()
     }
 }

@@ -12,6 +12,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.*
+import androidx.compose.material3.HorizontalDivider
 import com.databelay.refwatch.data.GameEvent
 import java.util.concurrent.TimeUnit
 import java.text.SimpleDateFormat
@@ -48,7 +49,7 @@ fun GameLogScreen(events: List<GameEvent>, onDismiss: () -> Unit) {
             }
             items(events.asReversed()) { event -> // Show newest events first
                 EventLogItem(event)
-                Divider(thickness = 0.5.dp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.3f))
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.3f))
             }
             item {
                 Button(
@@ -62,31 +63,30 @@ fun GameLogScreen(events: List<GameEvent>, onDismiss: () -> Unit) {
     }
 }
 
+
 @Composable
 fun EventLogItem(event: GameEvent) {
+    // You might still want the wall clock for extra detail, or remove if displayString is enough
     val wallTimestampStr = remember(event.timestamp) {
-        val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        sdf.format(Date(event.timestamp))
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        sdf.format(java.util.Date(event.timestamp))
     }
-    val gameTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(event.gameTimeMillis)
-    val gameTimeSeconds = TimeUnit.MILLISECONDS.toSeconds(event.gameTimeMillis) % 60
-    val gameTimeStr = String.format("%02d:%02d", gameTimeMinutes, gameTimeSeconds)
 
-    val description = when (event) {
-        is GameEvent.Goal -> "Goal: ${event.team.name}${event.scoringPlayerNumber?.let { " (#$it)" } ?: ""} (Clock: $gameTimeStr)"
-        is GameEvent.Card -> "${event.cardType.name} Card: ${event.team.name}, Player #${event.playerNumber} (Clock: $gameTimeStr)"
-        is GameEvent.PeriodChange -> {
-            val periodName = event.newPeriod.name.replace("_", " ").capitalizeWords()
-            "Period: $periodName (Clock: $gameTimeStr)"
-        }
-        is GameEvent.GenericLog -> "${event.message} ${if(event.gameTimeMillis > 0 && event.message != "Game Started: First Half") "(Clock: $gameTimeStr)" else if (event.message == "Game Started: First Half") "" else "" }"
-    }
+    // The 'when' statement is no longer needed to build the description
+    // if each event has a 'displayString'.
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(description, style = MaterialTheme.typography.body2)
-        Text("Wall: $wallTimestampStr", style = MaterialTheme.typography.caption, color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f))
+        Text(
+            text = event.displayString, // <<<< SIMPLY USE THIS!
+            style = MaterialTheme.typography.body2
+        )
+        // Optional: Keep wall clock time for more detailed logging if desired
+        Text(
+            text = "Logged: $wallTimestampStr",
+            style = MaterialTheme.typography.caption1,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+        )
     }
 }
-
 // Helper extension function if you placed it here or in a common utility file
 // fun String.capitalizeWords(): String = split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::titlecase) }

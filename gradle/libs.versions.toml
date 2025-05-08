@@ -1,14 +1,18 @@
 [versions]
 activityComposeVersion = "1.8.2"
 agp = "8.10.0"
+androidxComposeFoundation = "1.4.1"
+androidxComposeMaterial = "1.4.1"
 composeFoundationVersion = "1.3.0"
 composeMaterialVersion = "1.3.0"
 composeNavigation = "1.4.1"
+composeNavigationVersion = "1.3.0"
 coreKtx = "1.16.0"
 espressoCore = "3.6.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 kotlin = "2.0.21"
+libsComposeMaterial = "1.3.0"
 lifecycleRuntimeKtx = "2.9.0"
 materialIconsCore = "1.7.8"
 playServicesWearable = "18.0.0"
@@ -18,28 +22,37 @@ composeFoundation = "1.2.1"
 playServicesWearableVersion = "18.1.0"
 ui = "1.8.1"
 uiTooling = "1.6.1"
+uiToolingPreview = "1.6.1"
+uiToolingVersion = "1.8.1"
 wearToolingPreview = "1.0.0"
 activityCompose = "1.8.0"
 coreSplashscreen = "1.0.1"
 
 [libraries]
 androidx-activity-compose-v182 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
+androidx-compose-foundation-v141 = { module = "androidx.wear.compose:compose-foundation", version.ref = "androidxComposeFoundation" }
+androidx-compose-material-v141 = { module = "androidx.wear.compose:compose-material", version.ref = "androidxComposeMaterial" }
+androidx-compose-navigation-v130 = { module = "androidx.wear.compose:compose-navigation", version.ref = "composeNavigationVersion" }
+androidx-compose-ui-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "uiToolingVersion" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "junitVersion" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "materialIconsCore" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsCore" }
+androidx-material3 = { module = "androidx.compose.material3:material3" }
 androidx-ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "ui" }
 androidx-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "ui" }
 androidx-ui-tooling = { module = "androidx.ui:ui-tooling", version.ref = "uiTooling" }
 androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "ui" }
+androidx-ui-tooling-preview-v161 = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 compose-foundation-v130 = { module = "androidx.wear.compose:compose-foundation", version.ref = "composeFoundationVersion" }
 compose-material-v130 = { module = "androidx.wear.compose:compose-material", version.ref = "composeMaterialVersion" }
 compose-navigation = { module = "androidx.wear.compose:compose-navigation", version.ref = "composeNavigation" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 junit = { module = "junit:junit", version.ref = "junit" }
+libs-compose-material = { module = "libs.androidx.wear.compose:compose-material", version.ref = "libsComposeMaterial" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 play-services-wearable-v1810 = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearableVersion" }

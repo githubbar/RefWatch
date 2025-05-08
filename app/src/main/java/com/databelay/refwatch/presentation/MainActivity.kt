@@ -1,4 +1,4 @@
-package com.databelay.refwatch // Replace with your package name
+package com.databelay.refwatch.presentation // Replace with your package name
 
 import android.content.Context
 import android.os.Build
@@ -21,10 +21,13 @@ import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.databelay.refwatch.GameViewModel
+import com.databelay.refwatch.data.GamePhase
+import com.databelay.refwatch.data.Team
 import com.databelay.refwatch.presentation.screens.GameLogScreen
 import com.databelay.refwatch.presentation.screens.GameScreen
-import com.databelay.refwatch.presentation.screens.PreGameSetupScreen
 import com.databelay.refwatch.presentation.theme.RefWatchTheme
+import com.databelay.refwatch.navigation.Screen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,13 +38,6 @@ class MainActivity : ComponentActivity() {
             RefWatchApp()
         }
     }
-}
-
-// Navigation Routes
-sealed class Screen(val route: String) {
-    object PreGameSetup : Screen("pre_game_setup")
-    object Game : Screen("game_screen")
-    object GameLog : Screen("game_log_screen")
 }
 
 @Composable
@@ -79,31 +75,36 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                     Screen.Game.route
                 }
             ) {
-                composable(Screen.PreGameSetup.route) {
-                    PreGameSetupScreen(
-                        viewModel = gameViewModel,
-                        onStartGameConfirmed = {
-                            gameViewModel.confirmSettingsAndStartGame()
-                            navController.navigate(Screen.Game.route) {
-                                popUpTo(Screen.PreGameSetup.route) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-                composable(Screen.Game.route) {
+                composable(Screen.Game.route) { // Or NavRoutes.GAME_SCREEN
+                    val gameState by gameViewModel.gameState.collectAsState() // Collect the state here
+
                     GameScreen(
-                        viewModel = gameViewModel,
-                        onNavigateToLog = { navController.navigate(Screen.GameLog.route) },
-                        onEndGame = { // This will reset the game and go to setup
+                        gameState = gameState, // Pass the collected state
+                        onPauseResume = {
+                            if (gameState.isTimerRunning) gameViewModel.pauseTimer() else gameViewModel.startTimer()
+                        },
+                        onAddGoalHome = { gameViewModel.addGoal(Team.HOME) },
+                        onAddGoalAway = { gameViewModel.addGoal(Team.AWAY) },
+                        onLogCard = { navController.navigate(Screen.LogCard.route) }, // Or NavRoutes.LOG_CARD_SCREEN
+                        onViewLog = { navController.navigate(Screen.GameLog.route) }, // Or NavRoutes.GAME_LOG_SCREEN
+                        onEndPeriod = { gameViewModel.endCurrentPhaseEarly() },
+                        onResetGame = { // This is the action for your "End Game" or "New Game" button
                             gameViewModel.resetGame()
-                            navController.navigate(Screen.PreGameSetup.route) {
-                                popUpTo(Screen.Game.route) { inclusive = true }
+                            navController.navigate(Screen.PreGameSetup.route) { // Or NavRoutes.PRE_GAME_SETUP
+                                popUpTo(Screen.Game.route) { inclusive = true } // Or NavRoutes.GAME_SCREEN
                             }
                         }
                     )
                 }
-                composable(Screen.GameLog.route) {
-                    GameLogScreen(viewModel = gameViewModel)
+                composable(Screen.GameLog.route) { // Or NavRoutes.GAME_LOG_SCREEN
+                    val gameState by gameViewModel.gameState.collectAsState() // Collect the full game state
+
+                    GameLogScreen(
+                        events = gameState.events, // Pass the list of events from the game state
+                        onDismiss = {
+                            navController.popBackStack() // Standard way to dismiss/go back
+                        }
+                    )
                 }
             }
         }

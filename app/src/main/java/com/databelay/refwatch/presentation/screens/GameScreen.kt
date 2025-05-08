@@ -1,5 +1,7 @@
 package com.databelay.refwatch.presentation.screens // << MAKE SURE THIS MATCHES YOUR PACKAGE
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,18 +9,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
-import com.databelay.refwatch.data.GamePeriod
+import com.databelay.refwatch.data.GamePhase
 import com.databelay.refwatch.data.GameState
-import com.databelay.refwatch.data.Team
+import com.databelay.refwatch.data.luminance
 import com.databelay.refwatch.presentation.components.ColorIndicator // Assuming ColorIndicator is also separate or in a common components package
 import com.databelay.refwatch.presentation.components.ConfirmationDialog // Assuming ConfirmationDialog is also separate
 import java.util.concurrent.TimeUnit
 
+@RequiresApi(Build.VERSION_CODES.GINGERBREAD)
 @Composable
 fun GameScreen(
     gameState: GameState,
@@ -30,18 +34,18 @@ fun GameScreen(
     onEndPeriod: () -> Unit,
     onResetGame: () -> Unit
 ) {
-    val timeToDisplayMillis = gameState.remainingTimeInPeriodMillis
+    val timeToDisplayMillis = gameState.displayedTimeMillis
     val minutes = TimeUnit.MILLISECONDS.toMinutes(timeToDisplayMillis)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(timeToDisplayMillis) % 60
 
-    val periodText = when (gameState.currentPeriod) {
-        GamePeriod.FIRST_HALF -> "1st Half"
-        GamePeriod.HALF_TIME -> "Halftime"
-        GamePeriod.SECOND_HALF -> "2nd Half"
-        GamePeriod.FULL_TIME -> "Full Time"
-        GamePeriod.PRE_GAME -> "Pre Game"
+    val periodText = when (gameState.currentPhase) {
+        GamePhase.FIRST_HALF -> "1st Half"
+        GamePhase.HALF_TIME -> "Halftime"
+        GamePhase.SECOND_HALF -> "2nd Half"
+        GamePhase.FULL_TIME -> "Full Time"
+        GamePhase.PRE_GAME -> "Pre Game"
         // Add other periods if you implement them
-        else -> gameState.currentPeriod.name.replace("_", " ").capitalizeWords()
+        else -> gameState.currentPhase.name.replace("_", " ").capitalizeWords()
     }
 
     var showEndGameConfirmDialog by remember { mutableStateOf(false) }
@@ -89,7 +93,7 @@ fun GameScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp) // Spacing between button rows
             ) {
-                if (gameState.currentPeriod != GamePeriod.FULL_TIME && gameState.currentPeriod != GamePeriod.PRE_GAME) {
+                if (gameState.currentPhase != GamePhase.FULL_TIME && gameState.currentPhase != GamePhase.PRE_GAME) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -131,15 +135,15 @@ fun GameScreen(
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray)
                     ) {
                         Text(
-                            when (gameState.currentPeriod) {
-                                GamePeriod.FIRST_HALF -> "End 1st Half"
-                                GamePeriod.HALF_TIME -> "Start 2nd Half" // Changed logic: End Halftime button should start next half
-                                GamePeriod.SECOND_HALF -> "End 2nd Half"
+                            when (gameState.currentPhase) {
+                                GamePhase.FIRST_HALF -> "End 1st Half"
+                                GamePhase.HALF_TIME -> "Start 2nd Half" // Changed logic: End Halftime button should start next half
+                                GamePhase.SECOND_HALF -> "End 2nd Half"
                                 else -> "End Period"
                             }
                         )
                     }
-                } else if (gameState.currentPeriod == GamePeriod.FULL_TIME) {
+                } else if (gameState.currentPhase == GamePhase.FULL_TIME) {
                     Text("Game Over!", style = MaterialTheme.typography.title1)
                 }
             }
@@ -155,7 +159,7 @@ fun GameScreen(
                     Spacer(Modifier.width(4.dp))
                     Text("Log")
                 }
-                if(gameState.currentPeriod == GamePeriod.FULL_TIME || gameState.currentPeriod == GamePeriod.PRE_GAME) {
+                if(gameState.currentPhase == GamePhase.FULL_TIME || gameState.currentPhase == GamePhase.PRE_GAME) {
                     Button(
                         onClick = { showResetConfirmDialog = true },
                         colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.error),

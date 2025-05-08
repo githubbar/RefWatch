@@ -7,7 +7,12 @@ val Purple200 = Color(0xFFBB86FC)
 val Purple500 = Color(0xFF6200EE)
 val Purple700 = Color(0xFF3700B3)
 val Teal200 = Color(0xFF03DAC5)
+val Orange400 = Color(0xFFF4511E)
 val Red400 = Color(0xFFCF6679)
+val Pink400 = Color(0xFFEC407A)
+// vv ADD YOUR DEFAULT COLOR CONSTANTS HERE vv
+val DefaultHomeColor: Color = Color.White // Example default
+val DefaultAwayColor: Color = Color.Black // Example default
 
 internal val wearColorPalette: Colors = Colors(
     primary = Purple200,
