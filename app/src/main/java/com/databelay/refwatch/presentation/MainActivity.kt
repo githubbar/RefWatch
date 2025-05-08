@@ -26,6 +26,8 @@ import com.databelay.refwatch.data.GamePhase
 import com.databelay.refwatch.data.Team
 import com.databelay.refwatch.presentation.screens.GameLogScreen
 import com.databelay.refwatch.presentation.screens.GameScreen
+import com.databelay.refwatch.presentation.screens.LogCardScreen
+import com.databelay.refwatch.presentation.screens.PreGameSetupScreen
 import com.databelay.refwatch.presentation.theme.RefWatchTheme
 import com.databelay.refwatch.navigation.Screen
 
@@ -75,6 +77,16 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                     Screen.Game.route
                 }
             ) {
+                // Define each screen (destination) using composable()
+                composable(Screen.PreGameSetup.route) {
+                    PreGameSetupScreen(
+                        viewModel = gameViewModel
+                    ) { // Example navigation action
+                        navController.navigate(Screen.Game.route) {
+                            popUpTo(Screen.PreGameSetup.route) { inclusive = true }
+                        }
+                    }
+                }
                 composable(Screen.Game.route) { // Or NavRoutes.GAME_SCREEN
                     val gameState by gameViewModel.gameState.collectAsState() // Collect the state here
 
@@ -94,6 +106,18 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                                 popUpTo(Screen.Game.route) { inclusive = true } // Or NavRoutes.GAME_SCREEN
                             }
                         }
+                    )
+                }
+                composable(Screen.LogCard.route) {
+                    val gameState by gameViewModel.gameState.collectAsState()
+                    LogCardScreen(
+                        onLogCard = { team, playerNumber, cardType ->
+                            gameViewModel.addCard(team, playerNumber, cardType)
+                            navController.popBackStack()
+                        },
+                        onCancel = { navController.popBackStack() },
+                        homeTeamColor = gameState.settings.homeTeamColor,
+                        awayTeamColor = gameState .settings.awayTeamColor
                     )
                 }
                 composable(Screen.GameLog.route) { // Or NavRoutes.GAME_LOG_SCREEN

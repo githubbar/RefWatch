@@ -49,7 +49,6 @@ fun PreGameSetupScreen(
 
         // Kick Off Team
         item {
-            Text("Kick Off By:", style = MaterialTheme.typography.caption1)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -61,7 +60,7 @@ fun PreGameSetupScreen(
                     colors = ChipDefaults.chipColors(
                         backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
                     ),
-                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                    modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Chip(
@@ -77,7 +76,6 @@ fun PreGameSetupScreen(
 
         // Jersey Colors
         item {
-            Text("Team Colors:", style = MaterialTheme.typography.caption1)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -119,7 +117,7 @@ fun PreGameSetupScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Check, contentDescription = "Start Game")
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(18.dp))
                     Text("Start Game")
                 }
             }
