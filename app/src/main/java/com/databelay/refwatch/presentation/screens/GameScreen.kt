@@ -154,10 +154,10 @@ fun GameScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Button(onClick = onViewLog, modifier = Modifier.weight(1f)) {
+                Button(onClick = onViewLog, modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)) {
                     Icon(Icons.Filled.ListAlt, contentDescription = "View Log")
                     Spacer(Modifier.width(4.dp))
-                    Text("Log")
                 }
                 if(gameState.currentPhase == GamePhase.FULL_TIME || gameState.currentPhase == GamePhase.PRE_GAME) {
                     Button(
@@ -167,7 +167,6 @@ fun GameScreen(
                     ) {
                         Icon(Icons.Filled.Refresh, contentDescription = "New Game")
                         Spacer(Modifier.width(4.dp))
-                        Text("New")
                     }
                 } else {
                     // End Game Button (when game is active) - This leads to reset

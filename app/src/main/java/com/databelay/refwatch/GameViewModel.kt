@@ -8,6 +8,7 @@ import android.os.Vibrator
 import android.util.Log // Import Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.databelay.refwatch.data.* // Imports all from your data package
@@ -51,14 +52,22 @@ class GameViewModel(
         updateCurrentPeriodKickOffTeam(initialState.currentPhase)
     }
 
-    // --- Pre-Game Setup ---
+    // When updating colors, use the ARGB value
     fun updateHomeTeamColor(color: Color) {
-        _gameState.update { it.copy(settings = it.settings.copy(homeTeamColor = color)) }
+        _gameState.update { currentState ->
+            currentState.copy(
+                settings = currentState.settings.copy(homeTeamColorArgb = color.toArgb()) // Save ARGB Int
+            )
+        }
         saveState()
     }
 
     fun updateAwayTeamColor(color: Color) {
-        _gameState.update { it.copy(settings = it.settings.copy(awayTeamColor = color)) }
+        _gameState.update { currentState ->
+            currentState.copy(
+                settings = currentState.settings.copy(awayTeamColorArgb = color.toArgb()) // Save ARGB Int
+            )
+        }
         saveState()
     }
 
@@ -356,8 +365,8 @@ class GameViewModel(
         // Reset game state but keep configured team colors, half/halftime durations, and initial kick-off team
         _gameState.value = GameState(
             settings = GameSettings( // Create new settings but copy over user preferences
-                homeTeamColor = currentSettings.homeTeamColor,
-                awayTeamColor = currentSettings.awayTeamColor,
+//                homeTeamColor = currentSettings.homeTeamColor,
+//                awayTeamColor = currentSettings.awayTeamColor,
                 halfDurationMinutes = currentSettings.halfDurationMinutes,
                 halftimeDurationMinutes = currentSettings.halftimeDurationMinutes,
                 kickOffTeam = currentSettings.kickOffTeam,

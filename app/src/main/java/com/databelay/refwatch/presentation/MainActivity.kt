@@ -37,7 +37,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            RefWatchApp()
+            RefWatchTheme { // Or whatever you named your theme function
+                // Your NavHost and screens go here
+                RefWatchApp() // Example
+            }
         }
     }
 }

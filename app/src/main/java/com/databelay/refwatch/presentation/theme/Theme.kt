@@ -12,6 +12,7 @@ fun RefWatchTheme(
      * See: https://developer.android.com/jetpack/compose/designsystems/custom
      */
     MaterialTheme(
+        colors = wearColorPalette, // Use the new palette
         content = content
     )
 }

@@ -37,40 +37,52 @@ fun PreGameSetupScreen(
 
     ScalingLazyColumn(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp), // Overall padding
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp) // Spacing between items
+        verticalArrangement = Arrangement.spacedBy(8.dp) // Increased default spacing a bit
     ) {
         item {
-            Text("Match Setup", style = MaterialTheme.typography.title3, textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Match Setup",
+                style = MaterialTheme.typography.title3,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp) // Added more padding
+            )
+            // Removed Spacer here as padding on Text is used
         }
 
-        // Kick Off Team
+        // Kick Off Team Section
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Chip(
-                    onClick = { viewModel.setKickOffTeam(Team.HOME) },
-                    label = { Text("Home") },
-                    colors = ChipDefaults.chipColors(
-                        backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
-                    ),
-                    modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Kickoff",
+                    style = MaterialTheme.typography.caption1, // Same style as DurationSettingStepper label
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 2.dp) // Similar to DurationSettingStepper
                 )
-                Spacer(Modifier.width(4.dp))
-                Chip(
-                    onClick = { viewModel.setKickOffTeam(Team.AWAY) },
-                    label = { Text("Away") },
-                    colors = ChipDefaults.chipColors(
-                        backgroundColor = if (gameState.settings.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
-                    ),
-                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Chip(
+                        onClick = { viewModel.setKickOffTeam(Team.HOME) },
+                        label = { Text("Home", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                        ),
+                        modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Chip(
+                        onClick = { viewModel.setKickOffTeam(Team.AWAY) },
+                        label = { Text("Away", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }, // Added fillMaxWidth for consistency
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = if (gameState.settings.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                        ),
+                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                    )
+                }
             }
         }
 
@@ -79,10 +91,10 @@ fun PreGameSetupScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp) // Added a bit more vertical padding
             ) {
                 ColorPickerButton("Home", gameState.settings.homeTeamColor) { showHomeColorPicker = true }
-                ColorPickerButton("Away", gameState.settings.awayTeamColor) { showAwayColorPicker = true }
+                ColorPickerButton("Away", gameState.settings.awayTeamColor) { showAwayColorPicker = true } // Assuming gameState.settings.awayColor
             }
         }
 
@@ -92,7 +104,7 @@ fun PreGameSetupScreen(
                 label = "Half Duration",
                 currentValue = gameState.settings.halfDurationMinutes,
                 onValueChange = { viewModel.setHalfDuration(it) },
-                valueRange = 15..60 // Sensible range for half duration
+                valueRange = 15..60
             )
         }
 
@@ -102,22 +114,24 @@ fun PreGameSetupScreen(
                 label = "Halftime Duration",
                 currentValue = gameState.settings.halftimeDurationMinutes,
                 onValueChange = { viewModel.setHalftimeDuration(it) },
-                valueRange = 5..30 // Sensible range for halftime
+                valueRange = 5..30
             )
         }
 
-        item { Spacer(modifier = Modifier.height(10.dp)) }
+        item { Spacer(modifier = Modifier.height(12.dp)) } // Increased spacer before button
 
         // Start Game Button
         item {
             Button(
                 onClick = onStartGameConfirmed,
-                modifier = Modifier.fillMaxWidth().height(12.dp),
-                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp), // Made it a bit taller
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.error
+                )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Check, contentDescription = "Start Game")
-                    Spacer(Modifier.width(18.dp))
+                    Spacer(Modifier.width(8.dp)) // Reduced spacer for better balance
                     Text("Start Game")
                 }
             }

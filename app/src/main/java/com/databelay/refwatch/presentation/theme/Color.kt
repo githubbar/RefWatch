@@ -15,9 +15,9 @@ val DefaultHomeColor: Color = Color.White // Example default
 val DefaultAwayColor: Color = Color.Black // Example default
 
 internal val wearColorPalette: Colors = Colors(
-    primary = Purple200,
+    primary = Teal200,
     primaryVariant = Purple700,
-    secondary = Teal200,
+    secondary = Purple200,
     secondaryVariant = Teal200,
     error = Red400,
     onPrimary = Color.Black,
