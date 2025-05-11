@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     object AwayColorSelection : Screen("away_color_selection_screen")
     object DurationSettings : Screen("duration_settings_screen")
     object Game : Screen("game_screen")
+//    object GameSettingsDialog : Screen("game_settings_screen")
     object LogCard : Screen("log_card_screen") // << ADD THIS ENTRY
     object GameLog : Screen("game_log_screen")
 

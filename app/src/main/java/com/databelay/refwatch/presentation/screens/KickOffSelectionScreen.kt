@@ -1,104 +1,81 @@
-package com.databelay.refwatch.presentation.screens
+package com.databelay.refwatch.presentation.screens // Or your package
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.ExperimentalWearFoundationApi // For ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn // The scrollable list
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.PositionIndicator
-import androidx.wear.compose.material.Scaffold // Material Scaffold
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText // Material TimeText
-import androidx.wear.compose.material.ToggleChip
-import androidx.wear.compose.material.ToggleChipDefaults
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.Vignette
-import androidx.wear.compose.material.VignettePosition
-import androidx.wear.compose.material.scrollAway // Modifier for TimeText
+import androidx.wear.compose.material.*
+import androidx.wear.compose.material.ButtonDefaults
+import com.databelay.refwatch.GameViewModel // Your ViewModel
+import com.databelay.refwatch.data.Team // Your Team enum
 
-import com.databelay.refwatch.data.Team
 
-@OptIn(ExperimentalWearFoundationApi::class) // Still good to keep if using experimental SLC features
 @Composable
 fun KickOffSelectionScreen(
-    selectedTeam: Team,
-    onTeamSelected: (Team) -> Unit,
-    onConfirm: () -> Unit
+    viewModel: GameViewModel,
+    onConfirm: () -> Unit // Callback to navigate away (e.g., back or to next step)
 ) {
-    // 1. Create the ScalingLazyListState (from androidx.wear.compose.material)
-    val listState = rememberScalingLazyListState()
+    val gameState by viewModel.gameState.collectAsState()
+    val selectedTeam = gameState.settings.kickOffTeam // Get current selection from ViewModel
 
-    // 2. Use Scaffold. It doesn't take 'state' directly for these components anymore.
-    Scaffold(
-        timeText = {
-            // TimeText uses Modifier.scrollAway with the listState
-            TimeText(modifier = Modifier.scrollAway(listState))
-        },
-        positionIndicator = {
-            // PositionIndicator is directly given the listState
-            PositionIndicator(scalingLazyListState = listState)
-        },
-        vignette = {
-            Vignette(vignettePosition = VignettePosition.TopAndBottom)
-        }
-    ) { // Content lambda of the Scaffold
-        // 3. ScalingLazyColumn uses the listState
-        ScalingLazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-            contentPadding = PaddingValues(top = 28.dp, bottom = 28.dp, start = 8.dp, end = 8.dp) // Adjust padding
-        ) {
-            item {
+    // Use ScalingLazyColumn for standard Wear OS screen structure
+    ScalingLazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Adjust padding as needed
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically) // Center content
+    ) {
+        item {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Who Kicks Off?",
-                    style = MaterialTheme.typography.title3,
+                    "Kickoff",
+                    style = MaterialTheme.typography.caption1, // Same style as DurationSettingStepper label
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 10.dp) // Increased padding
+                    modifier = Modifier.padding(bottom = 2.dp) // Similar to DurationSettingStepper
                 )
-            }
-            item {
-                ToggleChip(
-                    checked = selectedTeam == Team.HOME,
-                    onCheckedChange = { onTeamSelected(Team.HOME) },
-                    label = { Text("Home Team") },
-                    modifier = Modifier.fillMaxWidth(0.85f), // Slightly wider
-                    toggleControl = {
-                        Icon(
-                            imageVector = ToggleChipDefaults.radioIcon(checked = selectedTeam == Team.HOME), // Using radioIcon for mutual exclusivity
-                            contentDescription = if (selectedTeam == Team.HOME) "Selected Home" else "Select Home"
-                        )
-                    }
-                )
-            }
-            item {
-                ToggleChip(
-                    checked = selectedTeam == Team.AWAY,
-                    onCheckedChange = { onTeamSelected(Team.AWAY) },
-                    label = { Text("Away Team") },
-                    modifier = Modifier.fillMaxWidth(0.85f),
-                    toggleControl = {
-                        Icon(
-                            imageVector = ToggleChipDefaults.radioIcon(checked = selectedTeam == Team.AWAY),
-                            contentDescription = if (selectedTeam == Team.AWAY) "Selected Away" else "Select Away"
-                        )
-                    }
-                )
-            }
-            item {
-                Button(
-                    onClick = onConfirm,
-                    modifier = Modifier.padding(top = 16.dp).fillMaxWidth(0.7f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Confirm")
+                    Chip(
+                        onClick = { viewModel.setKickOffTeam(Team.HOME) },
+                        label = { Text("Home", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                        ),
+                        modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Chip(
+                        onClick = { viewModel.setKickOffTeam(Team.AWAY) },
+                        label = { Text("Away", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }, // Added fillMaxWidth for consistency
+                        colors = ChipDefaults.chipColors(
+                            backgroundColor = if (gameState.settings.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                        ),
+                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                    )
                 }
+            }
+        }
+
+        item { Spacer(Modifier.height(8.dp)) } // Spacer before confirm button
+
+        item {
+            Button(
+                onClick = {
+                    viewModel.confirmSettingsAndStartGame() // Prepare game state and timer internally
+                    onConfirm() // This lambda will navigate to GameScreen
+                },
+                modifier = Modifier.fillMaxWidth(0.8f), // Button takes 80% of width
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.error
+                )
+            ) {
+                Text("Start")
             }
         }
     }

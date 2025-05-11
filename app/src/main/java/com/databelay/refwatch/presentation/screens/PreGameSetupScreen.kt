@@ -51,41 +51,6 @@ fun PreGameSetupScreen(
             // Removed Spacer here as padding on Text is used
         }
 
-        // Kick Off Team Section
-        item {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Kickoff",
-                    style = MaterialTheme.typography.caption1, // Same style as DurationSettingStepper label
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 2.dp) // Similar to DurationSettingStepper
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Chip(
-                        onClick = { viewModel.setKickOffTeam(Team.HOME) },
-                        label = { Text("Home", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-                        colors = ChipDefaults.chipColors(
-                            backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
-                        ),
-                        modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Chip(
-                        onClick = { viewModel.setKickOffTeam(Team.AWAY) },
-                        label = { Text("Away", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }, // Added fillMaxWidth for consistency
-                        colors = ChipDefaults.chipColors(
-                            backgroundColor = if (gameState.settings.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
-                        ),
-                        modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
-                    )
-                }
-            }
-        }
-
         // Jersey Colors
         item {
             Row(
@@ -130,9 +95,9 @@ fun PreGameSetupScreen(
                 )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Check, contentDescription = "Start Game")
+                    Icon(Icons.Filled.Check, contentDescription = "Kickoff")
                     Spacer(Modifier.width(8.dp)) // Reduced spacer for better balance
-                    Text("Start Game")
+                    Text("Kickoff")
                 }
             }
         }
@@ -241,7 +206,7 @@ fun DurationSettingStepper(
     currentValue: Int,
     onValueChange: (Int) -> Unit,
     valueRange: IntRange = 1..60, // Default range
-    step: Int = 1 // Default step
+    step: Int = 5 // Default step
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text(label, style = MaterialTheme.typography.caption1)

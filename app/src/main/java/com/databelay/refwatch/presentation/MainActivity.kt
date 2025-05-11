@@ -25,11 +25,12 @@ import com.databelay.refwatch.GameViewModel
 import com.databelay.refwatch.data.GamePhase
 import com.databelay.refwatch.data.Team
 import com.databelay.refwatch.presentation.screens.GameLogScreen
-import com.databelay.refwatch.presentation.screens.GameScreen
+import com.databelay.refwatch.presentation.screens.GameScreenWithPager
 import com.databelay.refwatch.presentation.screens.LogCardScreen
 import com.databelay.refwatch.presentation.screens.PreGameSetupScreen
 import com.databelay.refwatch.presentation.theme.RefWatchTheme
 import com.databelay.refwatch.navigation.Screen
+import com.databelay.refwatch.presentation.screens.KickOffSelectionScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,30 +86,50 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                     PreGameSetupScreen(
                         viewModel = gameViewModel
                     ) { // Example navigation action
-                        navController.navigate(Screen.Game.route) {
+                        navController.navigate(Screen.KickOffSelection.route) {
                             popUpTo(Screen.PreGameSetup.route) { inclusive = true }
                         }
                     }
                 }
-                composable(Screen.Game.route) { // Or NavRoutes.GAME_SCREEN
-                    val gameState by gameViewModel.gameState.collectAsState() // Collect the state here
-
-                    GameScreen(
-                        gameState = gameState, // Pass the collected state
-                        onPauseResume = {
-                            if (gameState.isTimerRunning) gameViewModel.pauseTimer() else gameViewModel.startTimer()
-                        },
-                        onAddGoalHome = { gameViewModel.addGoal(Team.HOME) },
-                        onAddGoalAway = { gameViewModel.addGoal(Team.AWAY) },
-                        onLogCard = { navController.navigate(Screen.LogCard.route) }, // Or NavRoutes.LOG_CARD_SCREEN
-                        onViewLog = { navController.navigate(Screen.GameLog.route) }, // Or NavRoutes.GAME_LOG_SCREEN
-                        onEndPeriod = { gameViewModel.endCurrentPhaseEarly() },
-                        onResetGame = { // This is the action for your "End Game" or "New Game" button
-                            gameViewModel.resetGame()
-                            navController.navigate(Screen.PreGameSetup.route) { // Or NavRoutes.PRE_GAME_SETUP
-                                popUpTo(Screen.Game.route) { inclusive = true } // Or NavRoutes.GAME_SCREEN
+                composable(Screen.KickOffSelection.route) {
+                    KickOffSelectionScreen(
+                        viewModel = gameViewModel,
+                        onConfirm = {
+                            gameViewModel.startTimer()
+                            navController.navigate(Screen.Game.route) {
+                                popUpTo(Screen.PreGameSetup.route) { inclusive = true }
                             }
                         }
+                    )
+                }
+                //TODO: add home screen with game list, start new game or sync
+                //TODO: add game list screen and sync with ICS file from GotSport
+                //TODO: add team names to DataModels (game settings)
+                composable(Screen.Game.route) { // This route now points to the Pager screen
+                    val gameState by gameViewModel.gameState.collectAsState() // Collect the state here
+                    GameScreenWithPager(
+                        gameState = gameState, // Pass the collected state
+                        onPauseResume = { if (gameState.isTimerRunning) gameViewModel.pauseTimer() else gameViewModel.startTimer() },
+                        onAddGoalHome = { gameViewModel.addGoal(Team.HOME) },
+                        onAddGoalAway = { gameViewModel.addGoal(Team.AWAY) },
+                        onLogCardForHome = {
+                            // Navigate to LogCardScreen, potentially passing Team.HOME as an argument
+                            // or have LogCardScreen allow team selection if not pre-filled.
+                            // For simplicity, let's assume LogCardScreen handles team selection:
+                            navController.navigate(Screen.LogCard.route) // You might want to pass team info
+                        },
+                        onLogCardForAway = {
+                            navController.navigate(Screen.LogCard.route) // You might want to pass team info
+                        },
+                        onViewLog = { navController.navigate(Screen.GameLog.route) },
+                        onEndPeriod = { gameViewModel.endCurrentPhaseEarly() },
+                        onResetGame = {
+                            gameViewModel.resetGame()
+                            navController.navigate(Screen.PreGameSetup.route) {
+                                popUpTo(Screen.Game.route) { inclusive = true }
+                            }
+                        },
+                        isTimerRunning = gameState.isTimerRunning // Pass current timer state
                     )
                 }
                 composable(Screen.LogCard.route) {
@@ -120,7 +141,7 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                         },
                         onCancel = { navController.popBackStack() },
                         homeTeamColor = gameState.settings.homeTeamColor,
-                        awayTeamColor = gameState .settings.awayTeamColor
+                        awayTeamColor = gameState.settings.awayTeamColor
                     )
                 }
                 composable(Screen.GameLog.route) { // Or NavRoutes.GAME_LOG_SCREEN
