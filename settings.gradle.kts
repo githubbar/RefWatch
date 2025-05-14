@@ -20,4 +20,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "RefWatch"
-include(":app")
+include(":mobile")
+include(":wear")
+
+include(":common")
