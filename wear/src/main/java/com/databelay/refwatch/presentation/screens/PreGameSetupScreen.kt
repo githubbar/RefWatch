@@ -17,8 +17,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
+//import androidx.compose.foundation.lazy.LazyColumn
 import com.databelay.refwatch.GameViewModel
-import com.databelay.refwatch.presentation.theme.*
+import com.databelay.refwatch.common.theme.*
 
 @Composable
 fun PreGameSetupScreen(
@@ -28,11 +29,6 @@ fun PreGameSetupScreen(
     val gameState by viewModel.gameState.collectAsState()
     var showHomeColorPicker by remember { mutableStateOf(false) }
     var showAwayColorPicker by remember { mutableStateOf(false) }
-
-    val commonJerseyColors = listOf(
-        DefaultHomeColor, DefaultAwayColor, Color.Green, Color.Yellow, Color.Red, Pink400,
-        Color.White, Color.Black, Color.Magenta, Color.Cyan, Color.Gray, Color.Blue, Orange400
-    )
 
     ScalingLazyColumn(
         modifier = Modifier
@@ -107,7 +103,7 @@ fun PreGameSetupScreen(
     if (showHomeColorPicker) {
         SimpleColorPickerDialog(
             title = "Home Color",
-            availableColors = commonJerseyColors,
+            availableColors = PredefinedJerseyColors,
             onColorSelected = { color ->
                 viewModel.updateHomeTeamColor(color)
                 showHomeColorPicker = false
@@ -119,7 +115,7 @@ fun PreGameSetupScreen(
     if (showAwayColorPicker) {
         SimpleColorPickerDialog(
             title = "Away Color",
-            availableColors = commonJerseyColors,
+            availableColors = PredefinedJerseyColors,
             onColorSelected = { color ->
                 viewModel.updateAwayTeamColor(color) // Ensure you have this method in ViewModel
                 showAwayColorPicker = false

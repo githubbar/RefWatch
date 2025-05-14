@@ -2,19 +2,15 @@ package com.databelay.refwatch.presentation.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircleOutline // Icon for goal
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Style // Icon for card
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
-import com.databelay.refwatch.data.Team
-import com.databelay.refwatch.data.GameState // For team color
-import com.databelay.refwatch.data.luminance
+import com.databelay.refwatch.common.*
 
 @Composable
 fun HomeTeamActionScreen(

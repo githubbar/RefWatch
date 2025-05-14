@@ -12,9 +12,8 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 // No items(count) or items(list) import needed here as we use item { Row { ... } } for the grid rows
 import androidx.wear.compose.material.* // For Scaffold, Text, Button, Chip, etc.
-import com.databelay.refwatch.data.*
 import com.databelay.refwatch.presentation.components.ColorIndicator // Your ColorIndicator
-
+import com.databelay.refwatch.common.*
 
 @OptIn(ExperimentalWearFoundationApi::class)
 @Composable

@@ -14,8 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
-import com.databelay.refwatch.data.GamePhase
-import com.databelay.refwatch.data.GameState
+import com.databelay.refwatch.common.*
 import com.databelay.refwatch.presentation.components.ColorIndicator
 import java.util.concurrent.TimeUnit
 

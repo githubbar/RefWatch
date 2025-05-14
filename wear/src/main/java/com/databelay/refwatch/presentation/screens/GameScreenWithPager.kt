@@ -14,8 +14,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.wear.compose.material.*
 import androidx.compose.ui.unit.dp
 
-import com.databelay.refwatch.data.GameState
-import com.databelay.refwatch.data.GamePhase
+import com.databelay.refwatch.common.*
 import com.databelay.refwatch.presentation.components.ConfirmationDialog
 import com.databelay.refwatch.presentation.screens.GameSettingsDialog // Your existing dialog
 import com.databelay.refwatch.presentation.components.HorizontalPagerIndicator

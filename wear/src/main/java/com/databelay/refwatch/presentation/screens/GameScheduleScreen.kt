@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
-import com.databelay.refwatch.data.GameSettings // You'll need to define this data class
+import com.databelay.refwatch.common.GameSettings // You'll need to define this data class
 
 // Define this in your data package (e.g., models.kt)
 // import android.os.Parcelable

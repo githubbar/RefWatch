@@ -10,7 +10,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 import kotlinx.coroutines.launch
-import com.databelay.refwatch.data.GameSettings
+import com.databelay.refwatch.common.*
 
 @Composable
 fun LoadIcsScreen(

@@ -9,9 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-//import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
-//import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.*
+import com.databelay.refwatch.common.theme.WearTypography
+
 
 //@OptIn(ExperimentalWearFoundationApi::class)
 @Composable
@@ -44,14 +44,19 @@ fun DurationSettingsScreen(
             item {
                 Text(
                     "Time Settings",
-                    style = MaterialTheme.typography.title3,
+                    style = WearTypography.title3,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
             // Half Duration Setting
-            item { Text("Half Duration: ${halfDurationMinutes} min", textAlign = TextAlign.Center) }
+            item {
+                Text(
+                    "Half Duration: ${halfDurationMinutes} min",
+                    textAlign = TextAlign.Center
+                )
+            }
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -60,7 +65,10 @@ fun DurationSettingsScreen(
                 ) {
                     Button(
                         onClick = {
-                            val newValue = (halfDurationMinutes - halfDurationStep).coerceIn(halfDurationRange.start.toLong(), halfDurationRange.endInclusive.toLong())
+                            val newValue = (halfDurationMinutes - halfDurationStep).coerceIn(
+                                halfDurationRange.start.toLong(),
+                                halfDurationRange.endInclusive.toLong()
+                            )
                             onHalfDurationChanged(newValue)
                         },
                         enabled = halfDurationMinutes > halfDurationRange.start
@@ -74,18 +82,21 @@ fun DurationSettingsScreen(
                     )
                     // InlineSlider can be an option, but +/- buttons are often easier on Wear
                     /*
-                    InlineSlider(
-                        value = halfDurationMinutes.toFloat(),
-                        onValueChange = { onHalfDurationChanged(it.toLong()) },
-                        valueRange = halfDurationRange,
-                        steps = ((halfDurationRange.endInclusive - halfDurationRange.start) / halfDurationStep).toInt() - 1,
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                    )
-                    */
+                InlineSlider(
+                    value = halfDurationMinutes.toFloat(),
+                    onValueChange = { onHalfDurationChanged(it.toLong()) },
+                    valueRange = halfDurationRange,
+                    steps = ((halfDurationRange.endInclusive - halfDurationRange.start) / halfDurationStep).toInt() - 1,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                )
+                */
                     Spacer(Modifier.width(10.dp))
                     Button(
                         onClick = {
-                            val newValue = (halfDurationMinutes + halfDurationStep).coerceIn(halfDurationRange.start.toLong(), halfDurationRange.endInclusive.toLong())
+                            val newValue = (halfDurationMinutes + halfDurationStep).coerceIn(
+                                halfDurationRange.start.toLong(),
+                                halfDurationRange.endInclusive.toLong()
+                            )
                             onHalfDurationChanged(newValue)
                         },
                         enabled = halfDurationMinutes < halfDurationRange.endInclusive
@@ -94,7 +105,13 @@ fun DurationSettingsScreen(
             }
 
             // Halftime Duration Setting
-            item { Text("Halftime: ${halftimeDurationMinutes} min", textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp)) }
+            item {
+                Text(
+                    "Halftime: ${halftimeDurationMinutes} min",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -103,7 +120,11 @@ fun DurationSettingsScreen(
                 ) {
                     Button(
                         onClick = {
-                            val newValue = (halftimeDurationMinutes - halftimeDurationStep).coerceIn(halftimeDurationRange.start.toLong(), halftimeDurationRange.endInclusive.toLong())
+                            val newValue =
+                                (halftimeDurationMinutes - halftimeDurationStep).coerceIn(
+                                    halftimeDurationRange.start.toLong(),
+                                    halftimeDurationRange.endInclusive.toLong()
+                                )
                             onHalftimeDurationChanged(newValue)
                         },
                         enabled = halftimeDurationMinutes > halftimeDurationRange.start
@@ -116,18 +137,22 @@ fun DurationSettingsScreen(
                         textAlign = TextAlign.Center
                     )
                     /*
-                   InlineSlider(
-                       value = halftimeDurationMinutes.toFloat(),
-                       onValueChange = { onHalftimeDurationChanged(it.toLong()) },
-                       valueRange = halftimeDurationRange,
-                       steps = ((halftimeDurationRange.endInclusive - halftimeDurationRange.start) / halftimeDurationStep).toInt() - 1,
-                       modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                   )
-                   */
+               InlineSlider(
+                   value = halftimeDurationMinutes.toFloat(),
+                   onValueChange = { onHalftimeDurationChanged(it.toLong()) },
+                   valueRange = halftimeDurationRange,
+                   steps = ((halftimeDurationRange.endInclusive - halftimeDurationRange.start) / halftimeDurationStep).toInt() - 1,
+                   modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+               )
+               */
                     Spacer(Modifier.width(10.dp))
                     Button(
                         onClick = {
-                            val newValue = (halftimeDurationMinutes + halftimeDurationStep).coerceIn(halftimeDurationRange.start.toLong(), halftimeDurationRange.endInclusive.toLong())
+                            val newValue =
+                                (halftimeDurationMinutes + halftimeDurationStep).coerceIn(
+                                    halftimeDurationRange.start.toLong(),
+                                    halftimeDurationRange.endInclusive.toLong()
+                                )
                             onHalftimeDurationChanged(newValue)
                         },
                         enabled = halftimeDurationMinutes < halftimeDurationRange.endInclusive

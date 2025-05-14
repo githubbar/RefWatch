@@ -1,9 +1,7 @@
 package com.databelay.refwatch.presentation // Replace with your package name
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
-import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,8 +20,6 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.databelay.refwatch.GameViewModel
-import com.databelay.refwatch.data.GamePhase
-import com.databelay.refwatch.data.Team
 import com.databelay.refwatch.presentation.screens.GameLogScreen
 import com.databelay.refwatch.presentation.screens.GameScreenWithPager
 import com.databelay.refwatch.presentation.screens.LogCardScreen
@@ -32,8 +28,9 @@ import com.databelay.refwatch.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.presentation.screens.HomeScreen
 import com.databelay.refwatch.presentation.screens.GameScheduleScreen
 import com.databelay.refwatch.presentation.screens.LoadIcsScreen
-import com.databelay.refwatch.presentation.theme.RefWatchTheme
+import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.navigation.Screen
+import com.databelay.refwatch.common.*
 
 
 class MainActivity : ComponentActivity() {
@@ -42,7 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            RefWatchTheme { // Or whatever you named your theme function
+            RefWatchWearTheme { // Or whatever you named your theme function
                 // Your NavHost and screens go here
                 RefWatchApp() // Example
             }
@@ -52,21 +49,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
-    RefWatchTheme {
+    RefWatchWearTheme {
         val navController = rememberSwipeDismissableNavController()
         val context = LocalContext.current
 
         // Initialize Vibrator in ViewModel
         LaunchedEffect(key1 = Unit) {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager =
-                    context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-            gameViewModel.setVibrator(vibrator)
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            gameViewModel.setVibrator(vibratorManager.defaultVibrator)
         }
 
         val currentGameState by gameViewModel.gameState.collectAsState()
@@ -109,7 +99,6 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                         }
                     )
                 }
-                //TODO: add companion app and parse and store ICS files from GotSport there
 
                 composable(Screen.Game.route) { // This route now points to the Pager screen
                     val gameState by gameViewModel.gameState.collectAsState() // Collect the state here
@@ -141,7 +130,7 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                 composable(Screen.LogCard.route) {
                     val gameState by gameViewModel.gameState.collectAsState()
                     LogCardScreen(
-                        onLogCard = { team, playerNumber, cardType ->
+                        onLogCard = { team: Team, playerNumber, cardType: CardType ->
                             gameViewModel.addCard(team, playerNumber, cardType)
                             navController.popBackStack()
                         },

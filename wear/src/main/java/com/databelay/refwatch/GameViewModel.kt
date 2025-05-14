@@ -1,7 +1,6 @@
 package com.databelay.refwatch // Your package
 
 import android.Manifest
-import android.os.Build
 import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -11,12 +10,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.databelay.refwatch.data.* // Imports all from your data package
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-
+import com.databelay.refwatch.common.*
 class GameViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -415,20 +413,11 @@ class GameViewModel(
         // ... (vibration logic remains the same) ...
         try {
             if (vibrator?.hasVibrator() == false) return // Check if vibrator exists
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val timings = longArrayOf(0, 300, 200, 300) // Slightly longer pattern
-                val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
-                val effect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    VibrationEffect.createWaveform(timings, amplitudes, -1)
-                } else {
-                    @Suppress("DEPRECATION")
-                    VibrationEffect.createWaveform(timings, -1)
-                }
-                vibrator?.vibrate(effect)
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(longArrayOf(0, 300, 200, 300), -1)
-            }
+            val timings = longArrayOf(0, 300, 200, 300) // Slightly longer pattern
+            val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
+            val effect =
+                VibrationEffect.createWaveform(timings, amplitudes, -1)
+            vibrator?.vibrate(effect)
         } catch (e: Exception) {
             Log.e("GameViewModel", "Vibration failed", e)
         }

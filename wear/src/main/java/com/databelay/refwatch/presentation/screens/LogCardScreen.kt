@@ -23,9 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.OutlinedTextField
 
 
-import com.databelay.refwatch.data.CardType
-import com.databelay.refwatch.data.Team
-import com.databelay.refwatch.data.luminance
+import com.databelay.refwatch.common.*
 
 import kotlinx.coroutines.delay
 

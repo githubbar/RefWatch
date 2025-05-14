@@ -10,13 +10,23 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.* // Using Material 3 for the phone app
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.MaterialTheme
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
@@ -28,31 +38,19 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.time.ZoneId
 
-import com.databelay.refwatch.common.GameSettings // <<<< USING SHARED GameSettings
+import com.databelay.refwatch.common.GameSettings
 import com.databelay.refwatch.common.SimpleIcsParser
 import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.common.Team // If Team enum is in common
-import com.databelay.refwatch.common.theme.*
+import com.databelay.refwatch.common.theme.RefWatchMobileTheme
 
 // --- Constants for Wearable Communication ---
 private const val TAG = "RefWatchCompanion"
 private const val ICS_FILE_TRANSFER_PATH = "/ics_file_transfer" // Must match Wear OS app
 private const val WEAR_APP_CAPABILITY = "refwatch_wear_app"   // Must match Wear OS app's wear.xml
 private const val DEBUG_ASSET_ICS_FILENAME = "referee_assignments.ics" // Name of the file in assets
-
-// New data class to represent GameSettings, similar to what Wear OS might need
-// This should eventually match or be translatable to your Wear OS GameSettings
-data class GameSettingsForPhone(
-    val id: String = java.util.UUID.randomUUID().toString(),
-    val dateTime: String, // Formatted date and time
-    val homeTeam: String,
-    val awayTeam: String,
-    val location: String,
-    val description: String? = null,
-    // Add other fields that your Wear OS GameSettings might have
-    // e.g., halfDurationMillis, kickOffTeam (might be set later)
-)
 
 // Helper to read text content from URI
 suspend fun readTextFromUri(context: Context, uri: Uri): String? { // Ensure this is defined
@@ -86,28 +84,11 @@ suspend fun readTextFromAssets(context: Context, fileName: String): String? { //
     }
 }
 
-// Helper to convert SimpleIcsEvents to GameSettingsForPhone
-fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>): List<GameSettingsForPhone> { // Ensure this is defined
-    val dateTimeOutputFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d, yyyy 'at' h:mm a")
-    return icsEvents.mapNotNull { event ->
-        if (event.summary == null || event.dtStart == null) {
-            return@mapNotNull null
-        }
-        GameSettingsForPhone(
-            dateTime = event.dtStart.format(dateTimeOutputFormatter),
-            homeTeam = event.homeTeam ?: "Home Team?",
-            awayTeam = event.awayTeam ?: "Away Team?",
-            location = event.location ?: "Unknown Location",
-            description = event.description
-        )
-    }
-}
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            RefWatchCompanionTheme {
+            RefWatchMobileTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -119,8 +100,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompanionScreen() {
@@ -130,7 +109,7 @@ fun CompanionScreen() {
     val coroutineScope = rememberCoroutineScope()
     var parsedGameSettingsList by remember { mutableStateOf(emptyList<GameSettings>()) }
 
-    suspend fun parseIcsContentAndUpdateUi(icsContent: String?, source: String) {
+    fun parseIcsContentAndUpdateUi(icsContent: String?, source: String) {
         isLoading = true
         try {
             if (icsContent == null) {
@@ -142,10 +121,10 @@ fun CompanionScreen() {
             val gameSettings = convertSimpleIcsToGameSettings(simpleIcsEvents, context) // Pass context if needed for defaults
             parsedGameSettingsList = gameSettings
 
-            if (gameSettings.isNotEmpty()) {
-                statusMessage = "ICS parsed successfully from $source: ${gameSettings.size} games found."
+            statusMessage = if (gameSettings.isNotEmpty()) {
+                "ICS parsed successfully from $source: ${gameSettings.size} games found."
             } else {
-                statusMessage = "No games found in the ICS file from $source or parsing failed."
+                "No games found in the ICS file from $source or parsing failed."
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing or processing ICS from $source", e)
@@ -158,41 +137,13 @@ fun CompanionScreen() {
 
 
     // Function to handle processing the URI
-    val processUriAndParse = { uri: Uri ->
-        Log.d(TAG, "Processing ICS File: $uri")
+    val processUriAndParse = { uri: Uri, sourceDescription: String ->
         isLoading = true
-        statusMessage = "Parsing ICS file..."
-        parsedGameSettingsList  = emptyList()// Clear previous results
-
+        statusMessage = "Reading ICS file from $sourceDescription..."
+        parsedGameSettingsList = emptyList()
         coroutineScope.launch {
-            try {
-                val icsContent = readTextFromUri(context, uri)
-                if (icsContent == null) {
-                    statusMessage = "Error: Could not read file content."
-                    isLoading = false
-                    return@launch
-                }
-
-                val simpleIcsEvents = SimpleIcsParser.parse(icsContent)
-                val gameSettingsList = convertSimpleIcsToGameSettings(simpleIcsEvents)
-                parsedGameSettingsList  = gameSettingsList
-
-                if (gameSettingsList.isNotEmpty()) {
-                    statusMessage = "ICS parsed successfully: ${gameSettingsList.size} games found."
-                    // NEXT STEP: Send gameSettingsList to Wear OS
-                    // For now, we just display them.
-                    // val sendSuccess = sendGameSettingsToWear(context, gameSettingsList)
-                    // statusMessage = if(sendSuccess) "Games sent to watch!" else "Failed to send games to watch."
-                } else {
-                    statusMessage = "No games found in the ICS file or parsing failed."
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error parsing or processing ICS", e)
-                statusMessage = "Error: ${e.localizedMessage}"
-            } finally {
-                isLoading = false
-            }
+            val icsContent = readTextFromUri(context, uri)
+            parseIcsContentAndUpdateUi(icsContent, sourceDescription)
         }
     }
 
@@ -200,7 +151,7 @@ fun CompanionScreen() {
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
             uri?.let {
-                processUriAndParse(it)
+                processUriAndParse(it, "ICS File From Dialog")
                 Log.d(TAG, "ICS File selected: $it")
                 isLoading = true
                 statusMessage = "Preparing to send file..."
@@ -221,7 +172,7 @@ fun CompanionScreen() {
         Log.d(TAG, "Processing ICS File from Assets: $DEBUG_ASSET_ICS_FILENAME")
         isLoading = true
         statusMessage = "Reading ICS file from assets..."
-        parsedGameSettingsList  = emptyList<GameSettingsForPhone>() // Be explicit when resetting
+        parsedGameSettingsList  = emptyList<GameSettings>() // Be explicit when resetting
 
         coroutineScope.launch {
             val icsContent = readTextFromAssets(context, DEBUG_ASSET_ICS_FILENAME)
@@ -237,56 +188,80 @@ fun CompanionScreen() {
             loadFromAssetsAndParse()
         }
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "RefWatch Companion",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        Button(
-            onClick = {
-                if (!isLoading) {
-                    filePickerLauncher.launch("text/calendar")
-                }
-            },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth(0.8f)
+    Scaffold { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            if (isLoading && !statusMessage.toString().contains("DEBUG")) { // Avoid showing "Sending..." if debug auto-triggered
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
+            Text(
+                text = "RefWatch",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            Button(
+                onClick = {
+                    if (!isLoading) {
+                        filePickerLauncher.launch("text/calendar")
+                    }
+                },
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth(0.8f)
+            ) {
+                if (isLoading && !statusMessage.toString()
+                        .contains("DEBUG")
+                ) { // Avoid showing "Sending..." if debug auto-triggered
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Sending...")
+                } else {
+                    Text("Select & Send ICS Schedule")
+                }
+            }
+            statusMessage?.let {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (it.contains("successfully")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
-                Spacer(Modifier.width(8.dp))
-                Text("Sending...")
-            } else {
-                Text("Select & Send ICS Schedule")
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Text(
+                text = "Ensure your RefWatch app is installed on your Wear OS device and the device is connected.",
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            if (parsedGameSettingsList.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("Parsed Games:", style = MaterialTheme.typography.titleMedium)
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(parsedGameSettingsList) { gameSetting -> // Iterate over GameSettings
+                        GameSettingsItem(gameSetting) // Pass GameSettings
+                        HorizontalDivider()
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = {
+                    Toast.makeText(context, "Send to Watch (Not Implemented Yet)", Toast.LENGTH_SHORT).show()
+                    // HERE you would serialize parsedGameSettingsList and send to Wear OS
+                }) {
+                    Text("Send ${parsedGameSettingsList.size} Games to Watch")
+                }
+            } else if (!isLoading && statusMessage != null && !statusMessage!!.contains("successfully")) {
+                Text("Error: ${statusMessage}")
             }
         }
-        statusMessage?.let {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (it.contains("successfully")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            )
-        }
-
-        Spacer(Modifier.height(32.dp))
-        Text(
-            text = "Ensure your RefWatch app is installed on your Wear OS device and the device is connected.",
-            style = MaterialTheme.typography.labelSmall,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
     }
 }
 
@@ -375,7 +350,9 @@ suspend fun sendIcsFileToWear(context: Context, fileUri: Uri): Boolean {
 @Composable
 fun GameSettingsItem(game: GameSettings) { // Now takes the shared GameSettings
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text("${game.homeTeamName} vs ${game.awayTeamName}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Text("${game.homeTeamName} vs ${game.awayTeamName}",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold)
         game.formattedGameDateTime?.let {
             Text("Time: $it", style = MaterialTheme.typography.bodyMedium)
         }
@@ -395,7 +372,7 @@ fun GameSettingsItem(game: GameSettings) { // Now takes the shared GameSettings
     }
 }
 
-// --- UPDATED CONVERTER FUNCTION ---
+// Helper to convert SimpleIcsEvents to GameSettingsForPhone
 fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Context): List<GameSettings> {
     // Using context for potential default color access from themes if needed, though GameSettings uses ARGB directly
     return icsEvents.mapNotNull { event ->
@@ -404,7 +381,7 @@ fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Con
         }
 
         // Convert LocalDateTime to epoch milliseconds (UTC)
-        val gameDateTimeEpoch = event.dtStart
+        val gameDateTimeEpoch = event.dtStart!!
             .atZone(ZoneId.systemDefault()) // Assuming ICS dtStart was parsed to system default
             .withZoneSameInstant(ZoneId.of("UTC")) // Convert to UTC
             .toInstant()
@@ -426,20 +403,3 @@ fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Con
     }
 }
 
-// Basic Material 3 Theme (you can customize this further)
-@Composable
-fun RefWatchCompanionTheme(content: @Composable () -> Unit) {
-    MaterialTheme( // Using androidx.compose.material3.MaterialTheme
-        colorScheme = lightColorScheme( // Or darkColorScheme()
-            primary = MaterialTheme.colors.primary, // Example from your theme,
-            onPrimary = md_theme_light_onPrimary,
-            secondary = md_theme_light_secondary, // Added for debug button example
-            // ... define other colors from your theme
-            background = md_theme_light_background,
-            surface = md_theme_light_surface,
-            error = md_theme_light_error
-        ),
-        typography = Typography, // Assuming you have a Typography.kt for M3
-        content = content
-    )
-}

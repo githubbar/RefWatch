@@ -30,7 +30,6 @@ enum class GamePhase : Parcelable {
     // Add more as needed (e.g., PENALTIES)
 }
 
-
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
 fun Long.formatTime(): String {
     if (this < 0L) return "00:00" // Handle invalid or uninitialized times
@@ -49,6 +48,22 @@ fun GamePhase.readable(): String {
     return this.name.replace("_", " ").capitalizeWords()
 }
 
+// Helper extensions for GamePhase (can also be in a utils.kt file)
+fun GamePhase.hasDuration(): Boolean {
+    return this == GamePhase.FIRST_HALF ||
+            this == GamePhase.SECOND_HALF ||
+            this == GamePhase.HALF_TIME ||
+            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
+            this == GamePhase.EXTRA_TIME_SECOND_HALF ||
+            this == GamePhase.EXTRA_TIME_HALF_TIME
+}
+
+fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be recorded
+    return this == GamePhase.FIRST_HALF ||
+            this == GamePhase.SECOND_HALF ||
+            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
+            this == GamePhase.EXTRA_TIME_SECOND_HALF
+}
 
 // --- Game Event Sealed Class and its Subclasses ---
 @Parcelize // Base class needs it too
@@ -118,8 +133,8 @@ sealed class GameEvent : Parcelable {
 data class GameSettings(
     // --- Core Game Mechanics Settings ---
     val id: String = UUID.randomUUID().toString(), // Unique ID for these game settings instance
-    var homeTeamColorArgb: Int = DefaultHomeColor.toArgb(),
-    var awayTeamColorArgb: Int = DefaultAwayColor.toArgb(),
+    var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
+    var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
     var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)
     var currentPeriodKickOffTeam: Team = kickOffTeam, // Actual team kicking off current period (managed by ViewModel)
     var halfDurationMinutes: Int = 45,
@@ -182,22 +197,6 @@ data class GameState(
     var kickOffTeamActual: Team = settings.kickOffTeam
 ) : Parcelable
 
-// Helper extensions for GamePhase (can also be in a utils.kt file)
-fun GamePhase.hasDuration(): Boolean {
-    return this == GamePhase.FIRST_HALF ||
-            this == GamePhase.SECOND_HALF ||
-            this == GamePhase.HALF_TIME ||
-            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
-            this == GamePhase.EXTRA_TIME_SECOND_HALF ||
-            this == GamePhase.EXTRA_TIME_HALF_TIME
-}
-
-fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be recorded
-    return this == GamePhase.FIRST_HALF ||
-            this == GamePhase.SECOND_HALF ||
-            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
-            this == GamePhase.EXTRA_TIME_SECOND_HALF
-}
 // vv DEFINE IT HERE vv
 val predefinedColors: List<Color> = listOf(
     Color.Red,

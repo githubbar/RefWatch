@@ -9,8 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.ButtonDefaults
 import com.databelay.refwatch.GameViewModel // Your ViewModel
-import com.databelay.refwatch.data.Team // Your Team enum
-
+import com.databelay.refwatch.common.*
 
 @Composable
 fun KickOffSelectionScreen(

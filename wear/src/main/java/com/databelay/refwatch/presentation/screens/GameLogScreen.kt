@@ -13,7 +13,7 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.*
 import androidx.compose.material3.HorizontalDivider
-import com.databelay.refwatch.data.GameEvent
+import com.databelay.refwatch.common.*
 import java.util.concurrent.TimeUnit
 import java.text.SimpleDateFormat
 import java.util.Date

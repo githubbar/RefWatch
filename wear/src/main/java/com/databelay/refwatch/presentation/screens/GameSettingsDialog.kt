@@ -17,7 +17,6 @@ import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.ScalingLazyColumn
 import androidx.wear.compose.material.rememberScalingLazyListState
 import androidx.wear.compose.material.dialog.Dialog
-import androidx.wear.compose.material.TimeText // Optional: if you want time in the dialog
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 
