@@ -9,6 +9,8 @@ import java.util.UUID
 import java.util.Locale // For capitalizeWords if defined here
 import java.util.concurrent.TimeUnit // For formatTime
 import com.databelay.refwatch.common.theme.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient // Import for non-serializable fields
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -127,9 +129,8 @@ sealed class GameEvent : Parcelable {
     }
 }
 
-// --- Other Data Classes (GameState, GameSettings) should also be in this file or imported ---
 // --- Game Settings ---
-@Parcelize
+@Serializable // Add this
 data class GameSettings(
     // --- Core Game Mechanics Settings ---
     val id: String = UUID.randomUUID().toString(), // Unique ID for these game settings instance
@@ -152,27 +153,32 @@ data class GameSettings(
 
     // --- Internal ID if loaded from a schedule ---
     val scheduledGameId: String? = null // Reference to the GameSettings.id if this was loaded
-) : Parcelable {
+
+)  {
+    constructor() : this(
+        id = java.util.UUID.randomUUID().toString(), // Ensure id is always initialized
+        // other fields with defaults
+    )
 
     // --- Computed Properties for UI ---
-    @IgnoredOnParcel
+    @Transient
     val homeTeamColor: Color
         get() = Color(homeTeamColorArgb)
 
-    @IgnoredOnParcel
+    @Transient
     val awayTeamColor: Color
         get() = Color(awayTeamColorArgb)
 
-    @IgnoredOnParcel
+    @Transient
     val halfDurationMillis: Long
         get() = halfDurationMinutes * 60 * 1000L
 
-    @IgnoredOnParcel
+    @Transient
     val halftimeDurationMillis: Long
         get() = halftimeDurationMinutes * 60 * 1000L
 
     // Optional: Formatted date/time string for display
-    @IgnoredOnParcel
+    @Transient
     val formattedGameDateTime: String?
         get() = gameDateTimeEpochMillis?.let {
             val sdf = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
@@ -182,8 +188,8 @@ data class GameSettings(
         }
 }
 
+
 // --- Game State ---
-@Parcelize
 data class GameState(
     val settings: GameSettings = GameSettings(),
     var currentPhase: GamePhase = GamePhase.PRE_GAME,
@@ -195,8 +201,7 @@ data class GameState(
     // List<GameEvent> is Parcelable because GameEvent is Parcelable and List is supported
     val events: List<GameEvent> = emptyList(),
     var kickOffTeamActual: Team = settings.kickOffTeam
-) : Parcelable
-
+)
 // vv DEFINE IT HERE vv
 val predefinedColors: List<Color> = listOf(
     Color.Red,

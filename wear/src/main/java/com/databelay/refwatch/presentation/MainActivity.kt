@@ -3,6 +3,7 @@ package com.databelay.refwatch.presentation // Replace with your package name
 import android.content.Context
 import android.os.Bundle
 import android.os.VibratorManager
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -19,6 +20,16 @@ import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.wearable.ChannelClient
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.json.Json
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+
 import com.databelay.refwatch.GameViewModel
 import com.databelay.refwatch.presentation.screens.GameLogScreen
 import com.databelay.refwatch.presentation.screens.GameScreenWithPager
@@ -32,17 +43,98 @@ import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.navigation.Screen
 import com.databelay.refwatch.common.*
 
+private const val GAME_SETTINGS_TRANSFER_PATH = "/game_settings_data"
+private const val TAG_WEAR = "RefWatchWearActivity"
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
-        super.onCreate(savedInstanceState)
+    private val gameViewModel: GameViewModel by viewModels()
+    private lateinit var channelClient: ChannelClient
+    private var channelCallback: ChannelClient.ChannelCallback? = null
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+//        installSplashScreen()
+        super.onCreate(savedInstanceState)
+        channelClient = Wearable.getChannelClient(this)
         setContent {
             RefWatchWearTheme { // Or whatever you named your theme function
                 // Your NavHost and screens go here
-                RefWatchApp() // Example
+                RefWatchApp(gameViewModel) // Example
             }
+        }
+    }
+    override fun onResume() {
+        super.onResume()
+        registerChannelCallback()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterChannelCallback()
+    }
+
+    private fun registerChannelCallback() {
+        if (channelCallback != null) return // Already registered
+
+        channelCallback = object : ChannelClient.ChannelCallback() {
+            override fun onChannelOpened(channel: ChannelClient.Channel) {
+                super.onChannelOpened(channel)
+                Log.d(TAG_WEAR, "Channel opened: ${channel.path}")
+
+                if (channel.path == GAME_SETTINGS_TRANSFER_PATH) {
+                    lifecycleScope.launch { // Use lifecycleScope for coroutines
+                        try {
+                            val inputStream = channelClient.getInputStream(channel).await()
+                            inputStream.use { stream ->
+                                InputStreamReader(stream, StandardCharsets.UTF_8).use { reader ->
+                                    val jsonString = reader.readText()
+                                    Log.d(TAG_WEAR, "Received JSON: $jsonString")
+                                    if (jsonString.isNotEmpty()) {
+                                        val gamesList = Json.decodeFromString<List<GameSettings>>(jsonString)
+                                        Log.d(TAG_WEAR, "Decoded ${gamesList.size} games.")
+                                        gameViewModel.addScheduledGames(gamesList) // Use your ViewModel method
+                                        // Optionally, show a toast or navigate
+                                        // Toast.makeText(this@MainActivity, "${gamesList.size} games received", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Log.w(TAG_WEAR, "Received empty data for game settings.")
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG_WEAR, "Error receiving/processing game settings", e)
+                        } finally {
+                            // It's good practice for the receiver to close its end of the channel
+                            // once data processing is done or if an error occurs.
+                            channelClient.close(channel).await()
+                            Log.d(TAG_WEAR, "Receiver closed channel: ${channel.path}")
+                        }
+                    }
+                } else {
+                    Log.d(TAG_WEAR, "Channel opened for unknown path: ${channel.path}, closing.")
+                    lifecycleScope.launch { channelClient.close(channel).await() }
+                }
+            }
+
+            override fun onInputClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
+                super.onInputClosed(channel, closeReason, appSpecificErrorCode)
+                Log.d(TAG_WEAR, "Input closed for channel: ${channel.path}, reason: $closeReason")
+                // The sender usually closes the channel, which triggers this.
+                // No explicit close needed here usually if the sender manages closure.
+            }
+
+            override fun onChannelClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
+                super.onChannelClosed(channel, closeReason, appSpecificErrorCode)
+                Log.d(TAG_WEAR, "Channel closed: ${channel.path}, reason: $closeReason")
+            }
+        }
+        channelClient.registerChannelCallback(channelCallback!!)
+        Log.d(TAG_WEAR, "ChannelCallback registered.")
+    }
+
+    private fun unregisterChannelCallback() {
+        channelCallback?.let {
+            channelClient.unregisterChannelCallback(it)
+            channelCallback = null
+            Log.d(TAG_WEAR, "ChannelCallback unregistered.")
         }
     }
 }

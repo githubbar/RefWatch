@@ -34,7 +34,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import java.io.InputStream
+import kotlinx.serialization.encodeToString // For serialization
+import kotlinx.serialization.json.Json       // For serialization
 import java.io.OutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -48,7 +49,7 @@ import com.databelay.refwatch.common.theme.RefWatchMobileTheme
 
 // --- Constants for Wearable Communication ---
 private const val TAG = "RefWatchCompanion"
-private const val ICS_FILE_TRANSFER_PATH = "/ics_file_transfer" // Must match Wear OS app
+private const val GAME_SETTINGS_TRANSFER_PATH = "/game_settings_data" // Must match Wear OS app
 private const val WEAR_APP_CAPABILITY = "refwatch_wear_app"   // Must match Wear OS app's wear.xml
 private const val DEBUG_ASSET_ICS_FILENAME = "referee_assignments.ics" // Name of the file in assets
 
@@ -108,7 +109,6 @@ fun CompanionScreen() {
     var statusMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var parsedGameSettingsList by remember { mutableStateOf(emptyList<GameSettings>()) }
-
     fun parseIcsContentAndUpdateUi(icsContent: String?, source: String) {
         isLoading = true
         try {
@@ -152,14 +152,9 @@ fun CompanionScreen() {
         onResult = { uri: Uri? ->
             uri?.let {
                 processUriAndParse(it, "ICS File From Dialog")
-                Log.d(TAG, "ICS File selected: $it")
+                Log.d(TAG, "ICS File loaded: $it")
                 isLoading = true
-                statusMessage = "Preparing to send file..."
-                coroutineScope.launch { // Launch in the composable's scope
-                    val success = sendIcsFileToWear(context, it)
-                    isLoading = false
-                    statusMessage = if (success) "ICS file sent successfully!" else "Failed to send ICS file."
-                }
+                statusMessage = "Loaded games from file..."
             } ?: run {
                 Log.d(TAG, "No file selected.")
                 statusMessage = "File selection cancelled."
@@ -223,7 +218,7 @@ fun CompanionScreen() {
                     Spacer(Modifier.width(8.dp))
                     Text("Sending...")
                 } else {
-                    Text("Select & Send ICS Schedule")
+                    Text("Load Games")
                 }
             }
             statusMessage?.let {
@@ -253,8 +248,13 @@ fun CompanionScreen() {
                 }
                 Spacer(Modifier.height(10.dp))
                 Button(onClick = {
-                    Toast.makeText(context, "Send to Watch (Not Implemented Yet)", Toast.LENGTH_SHORT).show()
-                    // HERE you would serialize parsedGameSettingsList and send to Wear OS
+                    Toast.makeText(context, "Send to Watch", Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        val success = sendGameSettingsListToWear(context, parsedGameSettingsList)
+                        isLoading = false
+                        statusMessage = if (success) "Game list sent successfully!" else "Failed to send game list."
+                    }
+
                 }) {
                     Text("Send ${parsedGameSettingsList.size} Games to Watch")
                 }
@@ -265,12 +265,14 @@ fun CompanionScreen() {
     }
 }
 
-// ... (sendIcsFileToWear and RefWatchCompanionTheme remain the same)
-// Make sure BuildConfig is imported: import com.databelay.refwatch.BuildConfig
-// If it's not found, ensure your module's build.gradle has:
-// android { ... buildFeatures { buildConfig = true } ... }
-
-suspend fun sendIcsFileToWear(context: Context, fileUri: Uri): Boolean {
+suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSettings>): Boolean {
+    if (games.isEmpty()) {
+        Log.d(TAG, "Game list is empty, not sending.")
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "No games to send.", Toast.LENGTH_SHORT).show()
+        }
+        return true // Or false, depending on desired behavior for empty list
+    }
     // Running on a background thread is good practice for wearable API calls
     return withContext(Dispatchers.IO) {
         try {
@@ -292,7 +294,7 @@ suspend fun sendIcsFileToWear(context: Context, fileUri: Uri): Boolean {
             val channelClient = Wearable.getChannelClient(context)
             val channel: ChannelClient.Channel = channelClient.openChannel(
                 connectedNode.id,
-                ICS_FILE_TRANSFER_PATH
+                GAME_SETTINGS_TRANSFER_PATH
             ).await()
             Log.d(TAG, "Channel opened to ${connectedNode.displayName}: ${channel.path}")
 
@@ -305,42 +307,33 @@ suspend fun sendIcsFileToWear(context: Context, fileUri: Uri): Boolean {
             }
 
 
-            // 4. Read the ICS file and write to the OutputStream
+            // 4. Convert games list to JSON  and write to the OutputStream
             var success = false
-            outputStream.use { os -> // Use 'use' to ensure the stream is closed
-                context.contentResolver.openInputStream(fileUri)?.use { inputStream: InputStream ->
-                    Log.d(TAG, "Streaming file...")
-                    val buffer = ByteArray(4096) // 4KB buffer
-                    var bytesRead: Int
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                        os.write(buffer, 0, bytesRead)
-                    }
-                    os.flush()
-                    Log.d(TAG, "File streaming complete.")
-                    success = true
-                } ?: run {
-                    Log.e(TAG, "Could not open input stream for URI: $fileUri")
-                    // Show a toast on the main thread for this specific error
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Error: Could not open file. Does it exist and is accessible? URI: $fileUri", Toast.LENGTH_LONG).show()
-                    }
-                }
+            outputStream.use { os ->
+                // Serialize the list to JSON
+                val jsonString = Json.encodeToString(games)
+                os.write(jsonString.toByteArray(Charsets.UTF_8))
+                os.flush()
+                Log.d(TAG, "Game settings JSON sent: ${jsonString.length} bytes")
+                success = true
             }
 
             // 5. Close the Channel (closing the output stream doesn't close the channel)
             channelClient.close(channel).await()
             Log.d(TAG, "Channel closed.")
-
+            // TODO: Error sending game list (Ask Gemini)
+            //kotlinx.serialization.SerializationException: Serializer for class 'GameSettings' is not found.
+            //Please ensure that class is marked as '@Serializable' and that the serialization compiler plugin is applied.
             if (success) {
-                Log.d(TAG, "File sent successfully.")
+                Log.d(TAG, "Games sent successfully.")
                 return@withContext true
             } else {
-                Log.e(TAG, "File sending failed (stream issue or file not found).")
+                Log.e(TAG, "Games sending failed (stream issue or file not found).")
                 return@withContext false
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending ICS file", e)
+            Log.e(TAG, "Error sending game list", e)
             withContext(Dispatchers.Main) { Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show() }
             return@withContext false
         }

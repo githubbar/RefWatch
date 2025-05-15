@@ -11,7 +11,6 @@
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="false" /> <!-- Indicates this phone app has a watch counterpart -->
-
         <activity
             android:name=".MainActivity"
             android:exported="true"

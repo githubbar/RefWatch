@@ -60,13 +60,13 @@ fun HomeScreen(
             )
         }
 
-        item {
-            Chip(
-                onClick = { onNavigate(Screen.LoadIcs.route) },
-                label = { Text("Load Games (ICS)") },
-                icon = { Icon(Icons.Filled.FileUpload, contentDescription = "Load Games from ICS") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+//        item {
+//            Chip(
+//                onClick = { onNavigate(Screen.LoadIcs.route) },
+//                label = { Text("Load Games (ICS)") },
+//                icon = { Icon(Icons.Filled.FileUpload, contentDescription = "Load Games from ICS") },
+//                modifier = Modifier.fillMaxWidth()
+//            )
+//        }
     }
 }

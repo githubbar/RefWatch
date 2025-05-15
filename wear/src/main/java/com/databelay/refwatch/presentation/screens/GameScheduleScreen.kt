@@ -9,20 +9,6 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 import com.databelay.refwatch.common.GameSettings // You'll need to define this data class
 
-// Define this in your data package (e.g., models.kt)
-// import android.os.Parcelable
-// import kotlinx.parcelize.Parcelize
-// @Parcelize
-// data class GameSettings(
-//    val id: String,
-//    val summary: String, // e.g., "Team A vs Team B"
-//    val startTimeEpochMillis: Long,
-//    val location: String?,
-//    val description: String?
-// ) : Parcelable
-
-
-
 @Composable
 fun GameScheduleScreen(
     scheduledGames: List<GameSettings>, // <<<< List of GameSettings

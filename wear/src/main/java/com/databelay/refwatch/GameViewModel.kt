@@ -30,6 +30,7 @@ class GameViewModel(
         }
         // Persist these games (e.g., to SharedPreferences as JSON, or a Room database)
         saveScheduledGamesToPersistence()
+        Log.d("GameViewModel", "Added ${games.size} games. Total: ${_scheduledGames.value.size}")
     }
 
     private fun loadScheduledGamesFromPersistence() {

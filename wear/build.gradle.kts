@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
+    kotlin("plugin.serialization") version "2.1.21"
+
 }
 
 android {
@@ -54,6 +56,8 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.play.services.wearable)
     implementation(libs.compose.navigation)
+    implementation(libs.kotlinx.coroutines.android) // You likely have this or core
+    implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose.v182)
@@ -64,6 +68,7 @@ dependencies {
     implementation(libs.androidx.compose.material.v141)
     implementation(libs.androidx.compose.foundation.v141)
     implementation(libs.androidx.compose.navigation.v130)
+    implementation(libs.kotlinx.serialization.json)
 
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)
