@@ -246,14 +246,10 @@ fun RefWatchApp(gameViewModel: GameViewModel = viewModel()) {
                     val games by gameViewModel.scheduledGames.collectAsState() // If combined in GameViewModel
                     GameScheduleScreen(
                          scheduledGames = games,
-                         onGameSelected = { /* Navigate to game details or start pre-filled game */ }
-                    )
-                }
-                composable(Screen.LoadIcs.route) {
-                    LoadIcsScreen(
-                         onIcsLoaded = { loadedGames ->
-                            gameViewModel.addScheduledGames(loadedGames)
-                            navController.popBackStack() // Go back after loading
+                         onGameSelected = {
+                             navController.navigate(Screen.PreGameSetup.route) {
+                                 popUpTo(Screen.Game.route) { inclusive = true }
+                             }
                          }
                     )
                 }

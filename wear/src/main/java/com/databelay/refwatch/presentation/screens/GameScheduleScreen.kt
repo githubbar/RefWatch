@@ -1,5 +1,6 @@
 package com.databelay.refwatch.presentation.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -7,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
+
 import com.databelay.refwatch.common.GameSettings // You'll need to define this data class
 
 @Composable
@@ -33,7 +35,11 @@ fun GameScheduleScreen(
             items(scheduledGames) { game -> // game is now a GameSettings object
                 ScheduledGameItem( // This composable now takes GameSettings
                     game = game,
-                    onClick = { onGameSelected(game) }
+                    onClick = {
+                        Log.d("GameScheduleScreen", "Game selected: $game")
+                        onGameSelected(game)
+                    }
+
                 )
             }
         }
@@ -52,7 +58,7 @@ fun ScheduledGameItem(game: GameSettings, onClick: () -> Unit) { // <<<< Takes G
         },
         secondaryLabel = {
             Column(horizontalAlignment = Alignment.Start) {
-                game.ageGroup?.let { Text(text = it, /* ... */) }
+                game.ageGroup?.let { Text(it.displayName, /* ... */) }
                 game.venue?.takeIf { it.isNotBlank() }?.let { Text(text = it, /* ... */) }
             }
         },

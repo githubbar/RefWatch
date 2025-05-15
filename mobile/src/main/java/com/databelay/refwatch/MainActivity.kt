@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
@@ -45,7 +46,10 @@ import com.databelay.refwatch.common.GameSettings
 import com.databelay.refwatch.common.SimpleIcsParser
 import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.common.Team // If Team enum is in common
-import com.databelay.refwatch.common.theme.RefWatchMobileTheme
+import com.databelay.refwatch.common.theme.*
+import kotlinx.coroutines.flow.update
+import kotlin.collections.distinctBy
+import kotlin.collections.plus
 
 // --- Constants for Wearable Communication ---
 private const val TAG = "RefWatchCompanion"
@@ -108,7 +112,10 @@ fun CompanionScreen() {
     var isLoading by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Managing the list directly in the Composable
     var parsedGameSettingsList by remember { mutableStateOf(emptyList<GameSettings>()) }
+
     fun parseIcsContentAndUpdateUi(icsContent: String?, source: String) {
         isLoading = true
         try {
@@ -119,7 +126,8 @@ fun CompanionScreen() {
             }
             val simpleIcsEvents = SimpleIcsParser.parse(icsContent) // Assuming SimpleIcsParser is accessible
             val gameSettings = convertSimpleIcsToGameSettings(simpleIcsEvents, context) // Pass context if needed for defaults
-            parsedGameSettingsList = gameSettings
+            // Add games to existing list of games (ignore duplicates by ID or by gameDateTimeEpochMillis)
+            parsedGameSettingsList = (parsedGameSettingsList + gameSettings).distinctBy { it.id }.distinctBy { it.gameDateTimeEpochMillis }.sortedBy { it.gameDateTimeEpochMillis }
 
             statusMessage = if (gameSettings.isNotEmpty()) {
                 "ICS parsed successfully from $source: ${gameSettings.size} games found."
@@ -129,7 +137,7 @@ fun CompanionScreen() {
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing or processing ICS from $source", e)
             statusMessage = "Error parsing $source: ${e.localizedMessage}"
-            parsedGameSettingsList = emptyList()
+//            parsedGameSettingsList = emptyList()
         } finally {
             isLoading = false
         }
@@ -140,7 +148,7 @@ fun CompanionScreen() {
     val processUriAndParse = { uri: Uri, sourceDescription: String ->
         isLoading = true
         statusMessage = "Reading ICS file from $sourceDescription..."
-        parsedGameSettingsList = emptyList()
+//        parsedGameSettingsList = emptyList()
         coroutineScope.launch {
             val icsContent = readTextFromUri(context, uri)
             parseIcsContentAndUpdateUi(icsContent, sourceDescription)
@@ -321,7 +329,10 @@ suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSetting
             // 5. Close the Channel (closing the output stream doesn't close the channel)
             channelClient.close(channel).await()
             Log.d(TAG, "Channel closed.")
-            // TODO: Error sending game list (Ask Gemini)
+
+            //  update ICS parsing to add games cumulatively
+            // TODO: add persistant storage
+            // TODO: fix parsing age groups
             //kotlinx.serialization.SerializationException: Serializer for class 'GameSettings' is not found.
             //Please ensure that class is marked as '@Serializable' and that the serialization compiler plugin is applied.
             if (success) {
@@ -344,8 +355,13 @@ suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSetting
 fun GameSettingsItem(game: GameSettings) { // Now takes the shared GameSettings
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text("${game.homeTeamName} vs ${game.awayTeamName}",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color =  MaterialTheme.colorScheme.error)
+        game.ageGroup?.let {
+            Text("Age Group: ${it.displayName}", style = MaterialTheme.typography.bodySmall,
+                color =  MaterialTheme.colorScheme.tertiary)
+        }
         game.formattedGameDateTime?.let {
             Text("Time: $it", style = MaterialTheme.typography.bodyMedium)
         }
@@ -380,19 +396,7 @@ fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Con
             .toInstant()
             .toEpochMilli()
 
-        GameSettings(
-            // id can be default or from ICS if UID is present
-            homeTeamName = event.homeTeam ?: "Home",
-            awayTeamName = event.awayTeam ?: "Away",
-            venue = event.location ?: "Unknown",
-            gameDateTimeEpochMillis = gameDateTimeEpoch,
-            // scheduledGameId = event.uid_from_ics_if_available, // If your SimpleIcsEvent could parse UID
-            // Set default colors or parse them if available in description/location
-            // homeTeamColorArgb = DefaultHomeColor.toArgb(), // Get DefaultHomeColor from your common theme or hardcode
-            // awayTeamColorArgb = DefaultAwayColor.toArgb(),
-            kickOffTeam = Team.HOME // Default, can be changed later
-            // Add other fields from your GameSettings as needed
-        )
+        GameSettings(icsEvent = event) // Use the new constructor
     }
 }
 

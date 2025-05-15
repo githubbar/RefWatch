@@ -2,6 +2,7 @@ package com.databelay.refwatch.common // Or your package
 
 import androidx.compose.ui.graphics.Color // If GameSettings is in this file
 import android.os.Parcelable // Import Parcelable
+import android.util.Log
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.IgnoredOnParcel
@@ -12,15 +13,19 @@ import com.databelay.refwatch.common.theme.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient // Import for non-serializable fields
 import java.text.SimpleDateFormat
+import java.time.ZoneId
 import java.util.Date
+import java.util.regex.Pattern
 
 // --- Enums (Ensure these are defined in this file or imported) ---
-@Parcelize
-enum class Team : Parcelable { HOME, AWAY }
-@Parcelize
-enum class CardType : Parcelable { YELLOW, RED }
-@Parcelize
-enum class GamePhase : Parcelable {
+@Serializable
+enum class Team { HOME, AWAY }
+
+@Serializable
+enum class CardType { YELLOW, RED }
+
+@Serializable
+enum class GamePhase {
     PRE_GAME,
     FIRST_HALF,
     HALF_TIME,
@@ -30,6 +35,50 @@ enum class GamePhase : Parcelable {
     EXTRA_TIME_SECOND_HALF, // Optional
     EXTRA_TIME_HALF_TIME // Optional
     // Add more as needed (e.g., PENALTIES)
+}
+
+@Serializable // If GameSettings is serializable and includes AgeGroup
+enum class AgeGroup(
+    val displayName: String,
+    val defaultHalfDurationMinutes: Int,
+    val defaultHalftimeDurationMinutes: Int = 10, // Default halftime for all groups
+    val players: Int? = null, // Optional: Number of players
+    val notes: String? = null // Optional: Specific rules like ball size, headers
+) {
+    U10("10U", 25, players = 7),
+    U11_U12("11U-12U", 30, players = 9, notes = "Size 4 ball, No headers"),
+    U13_U14("13U-14U", 35),
+    U15_U16("15U-16U", 40),
+    U17_PLUS("17U+", 45),
+    OVER_15_7V7("15 & Over 7v7", 35, players = 7); // Or "O15 7v7" for easier parsing
+
+    companion object {
+        // Helper function to find an AgeGroup by a string that might appear in ICS data
+        // This needs to be robust enough to handle variations.
+        fun fromString(text: String?): AgeGroup? {
+            if (text == null) return null
+            val searchText = text.uppercase().replace(" ", "").replace("-", "")
+
+            return entries.firstOrNull {
+                // Try to match based on common patterns
+                val commonName = it.displayName.uppercase().replace(" ", "").replace("-", "")
+                searchText.contains(commonName) || // "10U" in "Game for 10U Boys"
+                        searchText.contains(it.name.replace("_", "")) // "U10" in "U10_BOYS_COMP"
+
+                // Add more specific patterns if needed, e.g., for "11U-12U" you might check for "11U", "12U"
+                // or have alternative names in the enum.
+                // For "15 & Over 7v7", we might look for "15&OVER7V7" or "O157V7"
+            } ?: when { // More specific fallbacks
+                searchText.contains("10U") -> U10
+                searchText.contains("11U") || searchText.contains("12U") -> U11_U12 // Catches both
+                searchText.contains("13U") || searchText.contains("14U") -> U13_U14
+                searchText.contains("15U") || searchText.contains("16U") -> U15_U16
+                searchText.contains("17U") || searchText.contains("18U") || searchText.contains("19U") || searchText.contains("ADULT") -> U17_PLUS
+                searchText.contains("15&OVER7V7") || searchText.contains("O157V7") -> OVER_15_7V7
+                else -> null
+            }
+        }
+    }
 }
 
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
@@ -146,20 +195,31 @@ data class GameSettings(
     // --- Match Information (can be pre-filled from a schedule) ---
     var homeTeamName: String = "Home", // Default, can be overridden
     var awayTeamName: String = "Away", // Default, can be overridden
-    var ageGroup: String? = null,          // e.g., "U12 Boys", "Adult Men"
+    var ageGroup: AgeGroup? = null,          // e.g., "U12 Boys", "Adult Men"
     var competition: String? = null,       // e.g., "League Match", "Cup Final"
     var venue: String? = null,             // e.g., "Field 3, West Park"
     var gameDateTimeEpochMillis: Long? = null, // Start date & time of the match, UTC epoch ms
-
-    // --- Internal ID if loaded from a schedule ---
-    val scheduledGameId: String? = null // Reference to the GameSettings.id if this was loaded
-
+    var notes: String? = null,
 )  {
+    // Constructor to initialize from SimpleIcsEvent
+    constructor(icsEvent: SimpleIcsEvent) : this(
+        id = icsEvent.uid ?: UUID.randomUUID().toString(), // Assign if uid is not null, otherwise generate
+        homeTeamName = icsEvent.homeTeam ?: "Home",
+        awayTeamName = icsEvent.awayTeam ?: "Away",
+        venue = icsEvent.location,
+        gameDateTimeEpochMillis = icsEvent.dtStart?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+        // Initialize durations and notes based on parsed AgeGroup
+        halfDurationMinutes = icsEvent.ageGroup?.defaultHalfDurationMinutes ?: 45, // Fallback to 45
+        halftimeDurationMinutes = icsEvent.ageGroup?.defaultHalftimeDurationMinutes ?: 10, // Fallback to 10 (as per your rule)
+        ageGroup = icsEvent.ageGroup,
+        // You could combine ICS notes with age group notes:
+        notes = listOfNotNull(icsEvent.description, icsEvent.ageGroup?.notes).joinToString(" / ").ifEmpty { null }
+        // competition might be part of description or summary - needs more complex parsing or manual entry
+    )
     constructor() : this(
         id = java.util.UUID.randomUUID().toString(), // Ensure id is always initialized
         // other fields with defaults
     )
-
     // --- Computed Properties for UI ---
     @Transient
     val homeTeamColor: Color
