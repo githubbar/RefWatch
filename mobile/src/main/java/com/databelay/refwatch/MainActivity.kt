@@ -1,55 +1,57 @@
 package com.databelay.refwatch // Your phone app's package name
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.databelay.refwatch.auth.AuthScreen
+import com.databelay.refwatch.auth.AuthState
+import com.databelay.refwatch.auth.AuthViewModel
+import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.SimpleIcsEvent
+import com.databelay.refwatch.common.theme.RefWatchMobileTheme
+import com.databelay.refwatch.games.GameListScreen
+import com.databelay.refwatch.games.MobileGameViewModel
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.Wearable
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString // For serialization
-import kotlinx.serialization.json.Json       // For serialization
-import java.io.OutputStream
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.OutputStream
 import java.time.ZoneId
-
-import com.databelay.refwatch.common.GameSettings
-import com.databelay.refwatch.common.SimpleIcsParser
-import com.databelay.refwatch.common.SimpleIcsEvent
-import com.databelay.refwatch.common.Team // If Team enum is in common
-import com.databelay.refwatch.common.theme.*
-import kotlinx.coroutines.flow.update
-import kotlin.collections.distinctBy
-import kotlin.collections.plus
+import dagger.hilt.android.AndroidEntryPoint // <<<< IMPORT THIS
 
 // --- Constants for Wearable Communication ---
 private const val TAG = "RefWatchCompanion"
@@ -72,7 +74,6 @@ suspend fun readTextFromUri(context: Context, uri: Uri): String? { // Ensure thi
         }
     }
 }
-
 // Helper to read text content from Assets
 suspend fun readTextFromAssets(context: Context, fileName: String): String? { // Ensure this is defined
     return withContext(Dispatchers.IO) {
@@ -89,22 +90,116 @@ suspend fun readTextFromAssets(context: Context, fileName: String): String? { //
     }
 }
 
+@AndroidEntryPoint // <<<< ADD THIS ANNOTATION
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // If AppContent is a Composable that itself uses hiltViewModel() to get these,
+        // you don't even need to get them here.
+        // If AppContent NEEDS them passed as parameters (as your current AppContent signature suggests),
+        // then this is the correct way to obtain them in MainActivity:
+        // val authViewModel: AuthViewModel by viewModels()
+        // val mobileGameViewModel: MobileGameViewModel by viewModels()
+        // If AppContent calls hiltViewModel(), then the lines above are not strictly needed
+        // unless MainActivity itself also needs to directly interact with these ViewModels.
+
         setContent {
             RefWatchMobileTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CompanionScreen()
+                    // Option A: Pass ViewModels obtained by MainActivity (as your current AppContent expects)
+                    // This requires the by viewModels() declarations above to be active.
+                    // val authViewModelInstance: AuthViewModel by viewModels()
+                    // val mobileGameViewModelInstance: MobileGameViewModel by viewModels()
+                    // AppContent(authViewModelInstance, mobileGameViewModelInstance)
+
+                    // Option B: AppContent itself gets the ViewModels using hiltViewModel()
+                    // This means AppContent would not take them as parameters.
+                    AppContent() // Modify AppContent to use hiltViewModel() internally
                 }
             }
         }
     }
 }
 
+@Composable
+fun AppContent(
+    // Option A: Receiving ViewModels as parameters
+    // authViewModel: AuthViewModel,
+    // mobileGameViewModel: MobileGameViewModel
+
+    // Option B: Getting ViewModels internally using hiltViewModel()
+    // No parameters needed here for the ViewModels if using hiltViewModel()
+) {
+    // Option B Implementation:
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val mobileGameViewModel: MobileGameViewModel = hiltViewModel()
+
+    val authState by authViewModel.authState.collectAsState() // Assuming authState is exposed by AuthViewModel
+
+    // Your when (authState) block remains the same
+    when (val state = authState) {
+        is AuthState.Loading -> { /* ... */ }
+        is AuthState.Authenticated -> {
+            // User is authenticated, show game list or main content
+            // Make sure MobileGameViewModel is notified of the authenticated user
+            // This should happen automatically if MobileGameViewModel observes AuthViewModel's currentUser
+            // or if MainActivity/AppContent calls mobileGameViewModel.onUserChanged(state.user)
+            // Example call (if needed based on your MobileGameViewModel setup):
+            // LaunchedEffect(state.user) {
+            //     mobileGameViewModel.onUserChanged(state.user)
+            // }
+
+            val games by mobileGameViewModel.gamesList.collectAsState()
+            GameListScreen(
+                games = games,
+                onAddGame = {
+                    val newGame = Game() // Use no-arg constructor
+                    mobileGameViewModel.addOrUpdateGame(newGame) // Corrected method name
+                },
+                 onDeleteGame = { gameToDelete -> mobileGameViewModel.deleteGame(gameToDelete) }, // Assuming deleteGame takes Game object
+                onSignOut = { authViewModel.signOut() },
+                onImportGames = {
+                    // Example:
+                    val icsEvents = listOf(
+                        SimpleIcsEvent("""
+                            BEGIN:VEVENT
+                            DTSTAMP:20250327T113750Z
+                            UID:4829e374-f5e1-48d1-8c21-044404e66152
+                            DTSTART;TZID=America/New_York:20250329T143000
+                            DTEND;TZID=America/New_York:20250329T163000
+                            SUMMARY:Referee Assignment: Asst Referee 1 - 3071 Cutters SC U18 Boys Red v
+                            s.  Indy Eleven 2007/2008B White - ISL SPRING 2025 (11U-19/20U\, All Divis
+                            ions)
+                            END:VEVENT """),
+                        SimpleIcsEvent("""
+                            BEGIN:VEVENT
+                            DTSTAMP:20250327T113750Z
+                            UID:826d01cc-f123-4018-bbd3-08c820b36cc6
+                            DTSTART;TZID=America/New_York:20250330T130000
+                            DTEND;TZID=America/New_York:20250330T144500
+                            SUMMARY:Referee Assignment: Referee - 2846 Cutters SC 2009/10 Boys Red vs. 
+                              SCSA Eleven 2009B Red - ISL SPRING 2025 (11U-19/20U\, All Divisions)
+                            END:VEVENT""")
+                    )
+                    // Convert SimpleIcsEvent to Game
+                    val gamesToImport = icsEvents.map { Game(it) } // Assuming Game has a constructor taking SimpleIcsEvent
+                    mobileGameViewModel.addOrUpdateGames(gamesToImport) // Corrected method name
+                }
+            )
+        }
+        is AuthState.Unauthenticated -> {
+            AuthScreen(authViewModel = authViewModel) // AuthScreen likely needs AuthViewModel
+        }
+        is AuthState.Error -> { /* ... */ }
+    }
+}
+
+
+/*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompanionScreen() {
@@ -114,20 +209,20 @@ fun CompanionScreen() {
     val coroutineScope = rememberCoroutineScope()
 
     // Managing the list directly in the Composable
-    var parsedGameSettingsList by remember { mutableStateOf(emptyList<GameSettings>()) }
+    var parsedGameList by remember { mutableStateOf(emptyList<Game>()) }
 
     fun parseIcsContentAndUpdateUi(icsContent: String?, source: String) {
         isLoading = true
         try {
             if (icsContent == null) {
                 statusMessage = "Error: Could not read file content from $source."
-                parsedGameSettingsList = emptyList()
+                parsedGameList = emptyList()
                 return
             }
             val simpleIcsEvents = SimpleIcsParser.parse(icsContent) // Assuming SimpleIcsParser is accessible
             val gameSettings = convertSimpleIcsToGameSettings(simpleIcsEvents, context) // Pass context if needed for defaults
             // Add games to existing list of games (ignore duplicates by ID or by gameDateTimeEpochMillis)
-            parsedGameSettingsList = (parsedGameSettingsList + gameSettings).distinctBy { it.id }.distinctBy { it.gameDateTimeEpochMillis }.sortedBy { it.gameDateTimeEpochMillis }
+            parsedGameList = (parsedGameList + gameSettings).distinctBy { it.id }.distinctBy { it.gameDateTimeEpochMillis }.sortedBy { it.gameDateTimeEpochMillis }
 
             statusMessage = if (gameSettings.isNotEmpty()) {
                 "ICS parsed successfully from $source: ${gameSettings.size} games found."
@@ -175,7 +270,7 @@ fun CompanionScreen() {
         Log.d(TAG, "Processing ICS File from Assets: $DEBUG_ASSET_ICS_FILENAME")
         isLoading = true
         statusMessage = "Reading ICS file from assets..."
-        parsedGameSettingsList  = emptyList<GameSettings>() // Be explicit when resetting
+        parsedGameList  = emptyList<Game>() // Be explicit when resetting
 
         coroutineScope.launch {
             val icsContent = readTextFromAssets(context, DEBUG_ASSET_ICS_FILENAME)
@@ -183,97 +278,10 @@ fun CompanionScreen() {
         }
     }
 
-    var debugAssetLoadAttempted by remember { mutableStateOf(false) }
-    if (BuildConfig.DEBUG && !debugAssetLoadAttempted && !isLoading) {
-        LaunchedEffect(Unit) {
-            debugAssetLoadAttempted = true
-            Toast.makeText(context, "DEBUG: Auto-processing ICS from assets", Toast.LENGTH_SHORT).show()
-            loadFromAssetsAndParse()
-        }
-    }
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "RefWatch",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
 
-            Button(
-                onClick = {
-                    if (!isLoading) {
-                        filePickerLauncher.launch("text/calendar")
-                    }
-                },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth(0.8f)
-            ) {
-                if (isLoading && !statusMessage.toString()
-                        .contains("DEBUG")
-                ) { // Avoid showing "Sending..." if debug auto-triggered
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Sending...")
-                } else {
-                    Text("Load Games")
-                }
-            }
-            statusMessage?.let {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (it.contains("successfully")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                )
-            }
+}*/
 
-            Spacer(Modifier.height(32.dp))
-            Text(
-                text = "Ensure your RefWatch app is installed on your Wear OS device and the device is connected.",
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            if (parsedGameSettingsList.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                Text("Parsed Games:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    items(parsedGameSettingsList) { gameSetting -> // Iterate over GameSettings
-                        GameSettingsItem(gameSetting) // Pass GameSettings
-                        HorizontalDivider()
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = {
-                    Toast.makeText(context, "Send to Watch", Toast.LENGTH_SHORT).show()
-                    coroutineScope.launch {
-                        val success = sendGameSettingsListToWear(context, parsedGameSettingsList)
-                        isLoading = false
-                        statusMessage = if (success) "Game list sent successfully!" else "Failed to send game list."
-                    }
-
-                }) {
-                    Text("Send ${parsedGameSettingsList.size} Games to Watch")
-                }
-            } else if (!isLoading && statusMessage != null && !statusMessage!!.contains("successfully")) {
-                Text("Error: ${statusMessage}")
-            }
-        }
-    }
-}
-
-suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSettings>): Boolean {
+suspend fun sendGameSettingsListToWear(context: Context, games: List<Game>): Boolean {
     if (games.isEmpty()) {
         Log.d(TAG, "Game list is empty, not sending.")
         withContext(Dispatchers.Main) {
@@ -331,8 +339,8 @@ suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSetting
             Log.d(TAG, "Channel closed.")
 
             //  update ICS parsing to add games cumulatively
-            // TODO: add persistant storage
-            // TODO: fix parsing age groups
+            // TODO:setup firebase data backup and sync
+
             //kotlinx.serialization.SerializationException: Serializer for class 'GameSettings' is not found.
             //Please ensure that class is marked as '@Serializable' and that the serialization compiler plugin is applied.
             if (success) {
@@ -352,7 +360,7 @@ suspend fun sendGameSettingsListToWear(context: Context, games: List<GameSetting
 }
 
 @Composable
-fun GameSettingsItem(game: GameSettings) { // Now takes the shared GameSettings
+fun GameSettingsItem(game: Game) { // Now takes the shared GameSettings
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text("${game.homeTeamName} vs ${game.awayTeamName}",
             style = MaterialTheme.typography.bodyMedium,
@@ -382,7 +390,7 @@ fun GameSettingsItem(game: GameSettings) { // Now takes the shared GameSettings
 }
 
 // Helper to convert SimpleIcsEvents to GameSettingsForPhone
-fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Context): List<GameSettings> {
+fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Context): List<Game> {
     // Using context for potential default color access from themes if needed, though GameSettings uses ARGB directly
     return icsEvents.mapNotNull { event ->
         if (event.summary == null || event.dtStart == null) {
@@ -396,7 +404,7 @@ fun convertSimpleIcsToGameSettings(icsEvents: List<SimpleIcsEvent>, context: Con
             .toInstant()
             .toEpochMilli()
 
-        GameSettings(icsEvent = event) // Use the new constructor
+        Game(icsEvent = event) // Use the new constructor
     }
 }
 

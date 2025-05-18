@@ -9,12 +9,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 
-import com.databelay.refwatch.common.GameSettings // You'll need to define this data class
+import com.databelay.refwatch.common.Game // You'll need to define this data class
 
 @Composable
 fun GameScheduleScreen(
-    scheduledGames: List<GameSettings>, // <<<< List of GameSettings
-    onGameSelected: (GameSettings) -> Unit, // <<<< Callback with GameSettings
+    scheduledGames: List<Game>, // <<<< List of GameSettings
+    onGameSelected: (Game) -> Unit, // <<<< Callback with GameSettings
     modifier: Modifier = Modifier
 ) {
     ScalingLazyColumn(
@@ -47,7 +47,7 @@ fun GameScheduleScreen(
 }
 
 @Composable
-fun ScheduledGameItem(game: GameSettings, onClick: () -> Unit) { // <<<< Takes GameSettings
+fun ScheduledGameItem(game: Game, onClick: () -> Unit) { // <<<< Takes GameSettings
     Chip(
         onClick = onClick,
         label = {

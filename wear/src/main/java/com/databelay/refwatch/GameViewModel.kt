@@ -20,10 +20,10 @@ class GameViewModel(
 ) : ViewModel() {
 
     // =================== Scheduled Game List ===================
-    private val _scheduledGames = MutableStateFlow<List<GameSettings>>(emptyList())
-    val scheduledGames: StateFlow<List<GameSettings>> = _scheduledGames.asStateFlow()
+    private val _scheduledGames = MutableStateFlow<List<Game>>(emptyList())
+    val scheduledGames: StateFlow<List<Game>> = _scheduledGames.asStateFlow()
 
-    fun addScheduledGames(games: List<GameSettings>) {
+    fun addScheduledGames(games: List<Game>) {
         _scheduledGames.update { currentGames ->
             // Handle duplicates or merge logic if necessary
             (currentGames + games).distinctBy { it.id }.sortedBy { it.gameDateTimeEpochMillis }
@@ -362,7 +362,7 @@ class GameViewModel(
         }
     }
 
-    private fun getDurationMillisForPhase(phase: GamePhase, settings: GameSettings): Long {
+    private fun getDurationMillisForPhase(phase: GamePhase, settings: Game): Long {
         return when (phase) {
             GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> settings.halfDurationMillis
             GamePhase.HALF_TIME -> settings.halftimeDurationMillis
@@ -388,7 +388,7 @@ class GameViewModel(
         val currentSettings = _gameState.value.settings
         // Reset game state but keep configured team colors, half/halftime durations, and initial kick-off team
         _gameState.value = GameState(
-            settings = GameSettings( // Create new settings but copy over user preferences
+            settings = Game( // Create new settings but copy over user preferences
 //                homeTeamColor = currentSettings.homeTeamColor,
 //                awayTeamColor = currentSettings.awayTeamColor,
                 halfDurationMinutes = currentSettings.halfDurationMinutes,

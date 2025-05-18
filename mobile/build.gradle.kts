@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.1.21"
+    id("com.google.gms.google-services")
+    id("com.google.dagger.hilt.android") // Apply the Hilt plugin here
+    id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
 }
 
 android {
@@ -64,6 +67,14 @@ dependencies {
     implementation(libs.androidx.compose.foundation.v141)
     implementation(libs.androidx.compose.navigation.v130)
     implementation(libs.kotlinx.serialization.json)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.play.services.auth) // Check for latest
+    implementation(libs.hilt.android) // Use the same version as the plugin
+//    implementation(libs.hilt.compiler) // Annotation processor for Hilt, use ksp
+    implementation(libs.androidx.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

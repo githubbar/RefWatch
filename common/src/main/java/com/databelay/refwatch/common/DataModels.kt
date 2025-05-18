@@ -2,7 +2,6 @@ package com.databelay.refwatch.common // Or your package
 
 import androidx.compose.ui.graphics.Color // If GameSettings is in this file
 import android.os.Parcelable // Import Parcelable
-import android.util.Log
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.IgnoredOnParcel
@@ -15,7 +14,6 @@ import kotlinx.serialization.Transient // Import for non-serializable fields
 import java.text.SimpleDateFormat
 import java.time.ZoneId
 import java.util.Date
-import java.util.regex.Pattern
 
 // --- Enums (Ensure these are defined in this file or imported) ---
 @Serializable
@@ -35,50 +33,6 @@ enum class GamePhase {
     EXTRA_TIME_SECOND_HALF, // Optional
     EXTRA_TIME_HALF_TIME // Optional
     // Add more as needed (e.g., PENALTIES)
-}
-
-@Serializable // If GameSettings is serializable and includes AgeGroup
-enum class AgeGroup(
-    val displayName: String,
-    val defaultHalfDurationMinutes: Int,
-    val defaultHalftimeDurationMinutes: Int = 10, // Default halftime for all groups
-    val players: Int? = null, // Optional: Number of players
-    val notes: String? = null // Optional: Specific rules like ball size, headers
-) {
-    U10("10U", 25, players = 7),
-    U11_U12("11U-12U", 30, players = 9, notes = "Size 4 ball, No headers"),
-    U13_U14("13U-14U", 35),
-    U15_U16("15U-16U", 40),
-    U17_PLUS("17U+", 45),
-    OVER_15_7V7("15 & Over 7v7", 35, players = 7); // Or "O15 7v7" for easier parsing
-
-    companion object {
-        // Helper function to find an AgeGroup by a string that might appear in ICS data
-        // This needs to be robust enough to handle variations.
-        fun fromString(text: String?): AgeGroup? {
-            if (text == null) return null
-            val searchText = text.uppercase().replace(" ", "").replace("-", "")
-
-            return entries.firstOrNull {
-                // Try to match based on common patterns
-                val commonName = it.displayName.uppercase().replace(" ", "").replace("-", "")
-                searchText.contains(commonName) || // "10U" in "Game for 10U Boys"
-                        searchText.contains(it.name.replace("_", "")) // "U10" in "U10_BOYS_COMP"
-
-                // Add more specific patterns if needed, e.g., for "11U-12U" you might check for "11U", "12U"
-                // or have alternative names in the enum.
-                // For "15 & Over 7v7", we might look for "15&OVER7V7" or "O157V7"
-            } ?: when { // More specific fallbacks
-                searchText.contains("10U") -> U10
-                searchText.contains("11U") || searchText.contains("12U") -> U11_U12 // Catches both
-                searchText.contains("13U") || searchText.contains("14U") -> U13_U14
-                searchText.contains("15U") || searchText.contains("16U") -> U15_U16
-                searchText.contains("17U") || searchText.contains("18U") || searchText.contains("19U") || searchText.contains("ADULT") -> U17_PLUS
-                searchText.contains("15&OVER7V7") || searchText.contains("O157V7") -> OVER_15_7V7
-                else -> null
-            }
-        }
-    }
 }
 
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
@@ -117,7 +71,7 @@ fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be re
 }
 
 // --- Game Event Sealed Class and its Subclasses ---
-@Parcelize // Base class needs it too
+@Serializable
 sealed class GameEvent : Parcelable {
     abstract val id: String
     abstract val timestamp: Long // Wall-clock time of event logging
@@ -180,13 +134,10 @@ sealed class GameEvent : Parcelable {
 
 // --- Game Settings ---
 @Serializable // Add this
-data class GameSettings(
+data class Game(
     // --- Core Game Mechanics Settings ---
     val id: String = UUID.randomUUID().toString(), // Unique ID for these game settings instance
-    var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
-    var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
-    var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)
-    var currentPeriodKickOffTeam: Team = kickOffTeam, // Actual team kicking off current period (managed by ViewModel)
+    var lastUpdated: Long = System.currentTimeMillis(), // Timestamp for when this was last updated by user
     var halfDurationMinutes: Int = 45,
     var halftimeDurationMinutes: Int = 15,
     // var extraTimeHalfDurationMinutes: Int = 15, // Optional for future
@@ -200,6 +151,20 @@ data class GameSettings(
     var venue: String? = null,             // e.g., "Field 3, West Park"
     var gameDateTimeEpochMillis: Long? = null, // Start date & time of the match, UTC epoch ms
     var notes: String? = null,
+
+    // Live State Fields (updated by watch, synced via phone to Firebase)
+    var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
+    var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
+    var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)
+    var currentPeriodKickOffTeam: Team = kickOffTeam, // Actual team kicking off current period (managed by ViewModel)
+    var currentPhase: GamePhase = GamePhase.PRE_GAME,
+    var homeScore: Int = 0,
+    var awayScore: Int = 0,
+    var displayedTimeMillis: Long = 45,
+    var actualTimeElapsedInPeriodMillis: Long = 0L,
+    var isTimerRunning: Boolean = false,
+    // List<GameEvent> is Parcelable because GameEvent is Parcelable and List is supported
+    val events: List<GameEvent> = emptyList(),
 )  {
     // Constructor to initialize from SimpleIcsEvent
     constructor(icsEvent: SimpleIcsEvent) : this(
@@ -221,24 +186,20 @@ data class GameSettings(
         // other fields with defaults
     )
     // --- Computed Properties for UI ---
-    @Transient
+
     val homeTeamColor: Color
         get() = Color(homeTeamColorArgb)
 
-    @Transient
     val awayTeamColor: Color
         get() = Color(awayTeamColorArgb)
 
-    @Transient
     val halfDurationMillis: Long
         get() = halfDurationMinutes * 60 * 1000L
 
-    @Transient
     val halftimeDurationMillis: Long
         get() = halftimeDurationMinutes * 60 * 1000L
 
     // Optional: Formatted date/time string for display
-    @Transient
     val formattedGameDateTime: String?
         get() = gameDateTimeEpochMillis?.let {
             val sdf = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
@@ -246,22 +207,54 @@ data class GameSettings(
             // sdf.timeZone = java.util.TimeZone.getDefault() // Example
             sdf.format(Date(it))
         }
+
+    val summary: String
+        get() {
+            val parts = mutableListOf<String>()
+
+            // Team names
+            val teamsPart = if (homeTeamName.isNotBlank() && homeTeamName != "Home" || awayTeamName.isNotBlank() && awayTeamName != "Away") {
+                "${homeTeamName.trim()} vs ${awayTeamName.trim()}"
+            } else {
+                "Game" // Fallback if team names are default/empty
+            }
+            parts.add(teamsPart)
+
+            // Age Group
+            ageGroup?.displayName?.let {
+                if (it.isNotBlank() && it.lowercase() != "unknown") {
+                    parts.add("($it)")
+                }
+            }
+
+            // Competition (if available and different from age group)
+            competition?.let {
+                if (it.isNotBlank() && it.lowercase() != ageGroup?.displayName?.lowercase()) {
+                    parts.add("- $it")
+                }
+            }
+
+            // Date/Time (optional, can make the summary long)
+            // formattedGameDateTime?.let { parts.add("on $it") }
+
+            // Venue (optional)
+            // venue?.let { if (it.isNotBlank()) parts.add("@ $it") }
+
+
+            var summary = parts.joinToString(" ")
+
+            // If the summary is just "Game", try to use date or ID as a fallback
+            if (summary == "Game") {
+                formattedGameDateTime?.let {
+                    summary = "Game on $it"
+                } ?: run {
+                    summary = "Game ID: ${id.substring(0, 8)}" // Shortened ID
+                }
+            }
+            return summary
+        }
 }
 
-
-// --- Game State ---
-data class GameState(
-    val settings: GameSettings = GameSettings(),
-    var currentPhase: GamePhase = GamePhase.PRE_GAME,
-    var homeScore: Int = 0,
-    var awayScore: Int = 0,
-    var displayedTimeMillis: Long = settings.halfDurationMillis,
-    var actualTimeElapsedInPeriodMillis: Long = 0L,
-    var isTimerRunning: Boolean = false,
-    // List<GameEvent> is Parcelable because GameEvent is Parcelable and List is supported
-    val events: List<GameEvent> = emptyList(),
-    var kickOffTeamActual: Team = settings.kickOffTeam
-)
 // vv DEFINE IT HERE vv
 val predefinedColors: List<Color> = listOf(
     Color.Red,
@@ -285,4 +278,13 @@ fun Color.luminance(): Float {
     val green = this.green
     val blue = this.blue
     return (0.2126f * red + 0.7152f * green + 0.0722f * blue)
+}
+
+
+// From your common module or defined consistently
+object WearSyncConstants {
+    const val GAMES_LIST_PATH = "/games_list_all"
+    const val GAME_SETTINGS_KEY = "games_json"
+    const val GAME_UPDATE_FROM_WATCH_PATH_PREFIX = "/game_update_from_watch"
+    const val GAME_UPDATE_PAYLOAD_KEY = "game_update_json"
 }

@@ -1,6 +1,5 @@
 package com.databelay.refwatch.presentation.screens
 
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +13,7 @@ import com.databelay.refwatch.common.*
 
 @Composable
 fun LoadIcsScreen(
-    onIcsLoaded: (List<GameSettings>) -> Unit, // <<<< Callback with List<GameSettings>    // viewModel: SomeViewModel // ViewModel to handle loading logic
+    onIcsLoaded: (List<Game>) -> Unit, // <<<< Callback with List<GameSettings>    // viewModel: SomeViewModel // ViewModel to handle loading logic
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()

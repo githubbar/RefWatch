@@ -13,7 +13,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
@@ -38,7 +37,6 @@ import com.databelay.refwatch.presentation.screens.PreGameSetupScreen
 import com.databelay.refwatch.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.presentation.screens.HomeScreen
 import com.databelay.refwatch.presentation.screens.GameScheduleScreen
-import com.databelay.refwatch.presentation.screens.LoadIcsScreen
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.navigation.Screen
 import com.databelay.refwatch.common.*
@@ -89,7 +87,7 @@ class MainActivity : ComponentActivity() {
                                     val jsonString = reader.readText()
                                     Log.d(TAG_WEAR, "Received JSON: $jsonString")
                                     if (jsonString.isNotEmpty()) {
-                                        val gamesList = Json.decodeFromString<List<GameSettings>>(jsonString)
+                                        val gamesList = Json.decodeFromString<List<Game>>(jsonString)
                                         Log.d(TAG_WEAR, "Decoded ${gamesList.size} games.")
                                         gameViewModel.addScheduledGames(gamesList) // Use your ViewModel method
                                         // Optionally, show a toast or navigate
