@@ -137,7 +137,7 @@ fun GameListScreen(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
             Button(onClick = onImportGames, modifier = Modifier.fillMaxWidth()) {
-                Text("Import ICS (Simulated)")
+                Text("Import ICS")
             }
             Spacer(modifier = Modifier.height(8.dp))
             if (games.isEmpty()) {

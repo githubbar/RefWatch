@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -149,9 +150,9 @@ fun AppContent(
             // This should happen automatically if MobileGameViewModel observes AuthViewModel's currentUser
             // or if MainActivity/AppContent calls mobileGameViewModel.onUserChanged(state.user)
             // Example call (if needed based on your MobileGameViewModel setup):
-            // LaunchedEffect(state.user) {
-            //     mobileGameViewModel.onUserChanged(state.user)
-            // }
+             LaunchedEffect(state.user) {
+                 mobileGameViewModel.onUserChanged(state.user)
+             }
 
             val games by mobileGameViewModel.gamesList.collectAsState()
             GameListScreen(
