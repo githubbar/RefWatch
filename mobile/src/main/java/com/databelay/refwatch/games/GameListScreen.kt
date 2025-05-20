@@ -14,14 +14,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
+import androidx.navigation.NavController
 import java.text.SimpleDateFormat
 import java.util.*
 import com.databelay.refwatch.common.Game
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameListScreen(
+    navController: NavController, // Added NavController
     games: List<Game>,
     onAddGame: () -> Unit,
+    onEditGame: (Game) -> Unit, // Callback for editing
     onDeleteGame: (game: Game) -> Unit,
     onSignOut: () -> Unit,
     onImportGames: () -> Unit // Callback for importing
@@ -35,86 +39,6 @@ fun GameListScreen(
 //            loadFromAssetsAndParse()
 //        }
 //    }
-    /*Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "RefWatch",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-
-            Button(
-                onClick = {
-                    if (!isLoading) {
-                        filePickerLauncher.launch("text/calendar")
-                    }
-                },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth(0.8f)
-            ) {
-                if (isLoading && !statusMessage.toString()
-                        .contains("DEBUG")
-                ) { // Avoid showing "Sending..." if debug auto-triggered
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Sending...")
-                } else {
-                    Text("Load Games")
-                }
-            }
-            statusMessage?.let {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (it.contains("successfully")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                )
-            }
-
-            Spacer(Modifier.height(32.dp))
-            Text(
-                text = "Ensure your RefWatch app is installed on your Wear OS device and the device is connected.",
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            if (parsedGameList.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                Text("Parsed Games:", style = MaterialTheme.typography.titleMedium)
-                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    items(parsedGameList) { gameSetting -> // Iterate over GameSettings
-                        GameSettingsItem(gameSetting) // Pass GameSettings
-                        HorizontalDivider()
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = {
-                    Toast.makeText(context, "Send to Watch", Toast.LENGTH_SHORT).show()
-                    coroutineScope.launch {
-                        val success = sendGameSettingsListToWear(context, parsedGameList)
-                        isLoading = false
-                        statusMessage = if (success) "Game list sent successfully!" else "Failed to send game list."
-                    }
-
-                }) {
-                    Text("Send ${parsedGameList.size} Games to Watch")
-                }
-            } else if (!isLoading && statusMessage != null && !statusMessage!!.contains("successfully")) {
-                Text("Error: ${statusMessage}")
-            }
-        }
-    }*/
     Scaffold(
         topBar = {
             TopAppBar(
@@ -130,7 +54,13 @@ fun GameListScreen(
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues).padding(8.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text = "RefWatch",
                 style = MaterialTheme.typography.headlineSmall,
@@ -149,6 +79,7 @@ fun GameListScreen(
                     items(games, key = { it.id }) { game ->
                         GameItem(
                             game = game,
+                            onEdit = { onEditGame(game) }, // Call onEditGame
                             onDelete = { onDeleteGame(game) }
                         )
                     }
@@ -159,7 +90,7 @@ fun GameListScreen(
 }
 
 @Composable
-fun GameItem(game: Game, onDelete: () -> Unit) {
+fun GameItem(game: Game, onEdit: () -> Unit, onDelete: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
 
     Card(

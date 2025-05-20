@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.hilt.android) // Use the same version as the plugin
 //    implementation(libs.hilt.compiler) // Annotation processor for Hilt, use ksp
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.navigation.runtime.android)
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)

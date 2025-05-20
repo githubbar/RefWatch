@@ -1,7 +1,8 @@
 package com.databelay.refwatch.di
-
+import com.databelay.refwatch.auth.AuthRepository // Import new repository
 import com.databelay.refwatch.games.GameRepository
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseAuth // Needed for AuthRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,4 +19,9 @@ object RepositoryModule {
         // from FirebaseModule because it knows how to create it.
         return GameRepository(firestore)
     }
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(firebaseAuth: FirebaseAuth): AuthRepository = // Provide AuthRepository
+        AuthRepository(firebaseAuth)
 }
