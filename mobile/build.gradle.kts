@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.1.21"
-    id("com.google.gms.google-services")
+//    id("com.google.gms.google-services")
     id("com.google.dagger.hilt.android") // Apply the Hilt plugin here
     id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
 }

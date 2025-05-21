@@ -335,7 +335,6 @@ class MobileGameViewModel @Inject constructor(
 
     // When importing ICS, use the new constructor in your Game class
     fun addOrUpdateGames(games: List<Game>) { // Assuming SimpleIcsEvent is your parser's output
-        // TODO: userId null after loggin in
         val userId = _currentUserId.value // Use internal state
         if (userId == null) {
             Log.w(

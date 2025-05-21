@@ -1,63 +1,41 @@
 package com.databelay.refwatch.presentation.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.filled.Style
+import androidx.wear.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.*
-import com.databelay.refwatch.common.*
+import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.isPlayablePhase
 
 @Composable
 fun AwayTeamActionScreen(
-    gameState: GameState, // To get away team color
-    onAddGoalAway: () -> Unit,
-    onLogCardForAway: () -> Unit, // This will likely navigate to LogCardScreen pre-filled for Away
+    game: Game,
+    onAddGoal: () -> Unit,      // Action already knows it's for AWAY
+    onLogCard: () -> Unit,      // Navigate to LogCardScreen
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            "Away Team",
-            style = MaterialTheme.typography.title3,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
+        Text("Away: ${game.awayTeamName}", style = MaterialTheme.typography.title2)
+        Spacer(Modifier.height(16.dp))
         Button(
-            onClick = onAddGoalAway,
-            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp),
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = gameState.settings.awayTeamColor.copy(alpha = 0.8f)
-            )
+            onClick = onAddGoal,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = game.currentPhase.isPlayablePhase()
         ) {
-            Icon(Icons.Filled.SportsSoccer, contentDescription = "Away Goal")
-            Spacer(Modifier.width(8.dp))
-//            Text(
-//                "Add Goal",
-//                color = if (gameState.settings.awayTeamColor.luminance() < 0.5f) Color.White else Color.Black
-//            )
+            Text("Add Goal for Away")
         }
-
-        Spacer(Modifier.height(12.dp))
-
         Button(
-            onClick = onLogCardForAway,
-            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp),
-            colors = ButtonDefaults.secondaryButtonColors()
+            onClick = onLogCard,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = game.currentPhase.isPlayablePhase()
         ) {
-            Icon(Icons.Filled.Style, contentDescription = "Log Card for Away")
-            Spacer(Modifier.width(8.dp))
-//            Text("Log Card")
+            Text("Log Card (Away)")
         }
     }
 }

@@ -4,7 +4,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
     kotlin("plugin.serialization") version "2.1.21"
-
+//    id("com.google.gms.google-services")
+    id("com.google.dagger.hilt.android") // Apply the Hilt plugin here
+    id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
 }
 
 android {
@@ -69,6 +71,11 @@ dependencies {
     implementation(libs.androidx.compose.foundation.v141)
     implementation(libs.androidx.compose.navigation.v130)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.play.services.auth) // Check for latest
+    implementation(libs.hilt.android) // Use the same version as the plugin
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.navigation.runtime.android)
+    ksp(libs.hilt.compiler)
 
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)

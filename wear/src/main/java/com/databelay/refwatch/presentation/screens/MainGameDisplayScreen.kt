@@ -1,22 +1,121 @@
-package com.databelay.refwatch.presentation.screens
+package com.databelay.refwatch.presentation.screens.pager // Example package
 
-// ... (Keep necessary imports for Text, Row, Column, ColorIndicator, GameState, TimeUnit, etc.)
-// ... (Remove imports for Button, specific Icons for actions if they are no longer here)
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons // Keep if needed for other things
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PauseCircleFilled
+import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.material.icons.filled.StopCircle // For ending phase
+import androidx.compose.material3.Text // Use Material 3 Text
+import androidx.wear.compose.material.* // Use Wear Material
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.*
-import com.databelay.refwatch.common.*
+import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GamePhase
+import com.databelay.refwatch.common.formatTime
+import com.databelay.refwatch.common.hasDuration
+import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.presentation.components.ColorIndicator
-import java.util.concurrent.TimeUnit
+
+@Composable
+fun MainGameDisplayScreen(
+    game: Game,
+    onToggleTimer: () -> Unit,
+    onEndPhaseEarly: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceAround // Distribute elements
+    ) {
+        // Score and Team Colors
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ColorIndicator(color = game.homeTeamColor)
+            Box(modifier = Modifier.size(16.dp).background(Color(game.homeTeamColorArgb)))
+            Text(
+                "${game.homeScore} - ${game.awayScore}",
+                style = MaterialTheme.typography.display2, // Wear typography
+                fontWeight = FontWeight.Bold
+            )
+            Box(modifier = Modifier.size(16.dp).background(Color(game.awayTeamColorArgb)))
+            ColorIndicator(color = game.awayTeamColor)
+        }
+
+        // Current Phase
+        Text(
+            game.currentPhase.readable(),
+            style = MaterialTheme.typography.title2,
+            textAlign = TextAlign.Center
+        )
+
+        // Main Timer Display
+        Text(
+            text = game.displayedTimeMillis.formatTime(),
+            style = MaterialTheme.typography.display1.copy(fontSize = 56.sp), // Large timer
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        // Action Buttons for this page
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Start/Pause Button
+            if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME) {
+                Button(
+                    onClick = onToggleTimer,
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = if (game.isTimerRunning) MaterialTheme.colors.surface else MaterialTheme.colors.primary
+                    ),
+                    modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
+                ) {
+                    Icon(
+                        imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                        contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
+                        modifier = Modifier.size(ButtonDefaults.LargeIconSize)
+                    )
+                }
+            } else {
+                // Placeholder or disabled button if timer cannot be run
+                Spacer(modifier = Modifier.size(ButtonDefaults.LargeButtonSize))
+            }
+
+            // End Phase Early Button
+            if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME && game.currentPhase != GamePhase.PRE_GAME) {
+                Button(
+                    onClick = onEndPhaseEarly,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray), // Or a distinct color
+                    modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.StopCircle, // Example icon
+                        contentDescription = "End Phase Early",
+                        modifier = Modifier.size(ButtonDefaults.DefaultIconSize)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.size(ButtonDefaults.DefaultButtonSize))
+            }
+        }
+        // You might have a small text indicating "Long press for menu"
+        Text("Long press for menu", style = MaterialTheme.typography.caption3, textAlign = TextAlign.Center)
+    }
+}
+/*
 
 // Note: The `onPauseResume`, `onAddGoalHome`, `onAddGoalAway`, `onLogCard` callbacks
 // are no longer directly used by THIS Composable. They will be used by the Pager wrapper.
@@ -54,7 +153,7 @@ fun SimplifiedGameScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             ColorIndicator(color = gameState.settings.homeTeamColor)
-            Text(
+            androidx.wear.compose.material.Text(
                 "${gameState.homeScore} - ${gameState.awayScore}",
                 style = MaterialTheme.typography.display1,
                 fontWeight = FontWeight.Bold
@@ -62,7 +161,7 @@ fun SimplifiedGameScreen(
             ColorIndicator(color = gameState.settings.awayTeamColor)
         }
         Spacer(Modifier.height(8.dp))
-        Text(
+        androidx.wear.compose.material.Text(
             periodText,
             style = MaterialTheme.typography.body1, // Made period text a bit larger
             textAlign = TextAlign.Center
@@ -71,7 +170,7 @@ fun SimplifiedGameScreen(
         Spacer(Modifier.height(16.dp)) // More space before timer
 
         // Timer
-        Text(
+        androidx.wear.compose.material.Text(
             String.format("%02d:%02d", minutes, seconds),
             style = MaterialTheme.typography.display2, // Made timer slightly larger too
             fontWeight = FontWeight.Bold,
@@ -82,13 +181,17 @@ fun SimplifiedGameScreen(
         // Game Over message if applicable
         if (gameState.currentPhase == GamePhase.FULL_TIME) {
             Spacer(Modifier.height(16.dp))
-            Text("Game Over!", style = MaterialTheme.typography.title1)
+            androidx.wear.compose.material.Text(
+                "Game Over!",
+                style = MaterialTheme.typography.title1
+            )
         }
     }
 }
+*/
 
 // Helper extension function for capitalizing words (if not already available)
-fun String.capitalizeWords(): String = split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::titlecase) }
+//fun String.capitalizeWords(): String = split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::titlecase) }
 
 // You might need to move ColorIndicator and ConfirmationDialog to a common 'components' package
 // For example, in com.databelay.refwatch.presentation.components

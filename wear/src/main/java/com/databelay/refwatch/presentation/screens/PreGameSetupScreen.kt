@@ -18,15 +18,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
 //import androidx.compose.foundation.lazy.LazyColumn
-import com.databelay.refwatch.GameViewModel
+import com.databelay.refwatch.WearGameViewModel
 import com.databelay.refwatch.common.theme.*
 
 @Composable
 fun PreGameSetupScreen(
-    viewModel: GameViewModel,
+    gameViewModel: WearGameViewModel,
+    onNavigateToKickOff: () -> Unit,
     onStartGameConfirmed: () -> Unit
 ) {
-    val gameState by viewModel.gameState.collectAsState()
+    val activeGame by gameViewModel.activeGame.collectAsState()
+
     var showHomeColorPicker by remember { mutableStateOf(false) }
     var showAwayColorPicker by remember { mutableStateOf(false) }
 
@@ -53,8 +55,8 @@ fun PreGameSetupScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp) // Added a bit more vertical padding
             ) {
-                ColorPickerButton("Home", gameState.settings.homeTeamColor) { showHomeColorPicker = true }
-                ColorPickerButton("Away", gameState.settings.awayTeamColor) { showAwayColorPicker = true } // Assuming gameState.settings.awayColor
+                ColorPickerButton("Home", activeGame.homeTeamColor) { showHomeColorPicker = true }
+                ColorPickerButton("Away", activeGame.awayTeamColor) { showAwayColorPicker = true } // Assuming gameState.settings.awayColor
             }
         }
 
@@ -62,8 +64,8 @@ fun PreGameSetupScreen(
         item {
             DurationSettingStepper(
                 label = "Half Duration",
-                currentValue = gameState.settings.halfDurationMinutes,
-                onValueChange = { viewModel.setHalfDuration(it) },
+                currentValue = activeGame.halfDurationMinutes,
+                onValueChange = { gameViewModel.setHalfDuration(it) },
                 valueRange = 15..60
             )
         }
@@ -72,8 +74,8 @@ fun PreGameSetupScreen(
         item {
             DurationSettingStepper(
                 label = "Halftime Duration",
-                currentValue = gameState.settings.halftimeDurationMinutes,
-                onValueChange = { viewModel.setHalftimeDuration(it) },
+                currentValue = activeGame.halftimeDurationMinutes,
+                onValueChange = { gameViewModel.setHalftimeDuration(it) },
                 valueRange = 5..30
             )
         }
@@ -105,7 +107,7 @@ fun PreGameSetupScreen(
             title = "Home Color",
             availableColors = PredefinedJerseyColors,
             onColorSelected = { color ->
-                viewModel.updateHomeTeamColor(color)
+                gameViewModel.updateHomeTeamColor(color)
                 showHomeColorPicker = false
             },
             onDismiss = { showHomeColorPicker = false }
@@ -117,7 +119,7 @@ fun PreGameSetupScreen(
             title = "Away Color",
             availableColors = PredefinedJerseyColors,
             onColorSelected = { color ->
-                viewModel.updateAwayTeamColor(color) // Ensure you have this method in ViewModel
+                gameViewModel.updateAwayTeamColor(color) // Ensure you have this method in ViewModel
                 showAwayColorPicker = false
             },
             onDismiss = { showAwayColorPicker = false }

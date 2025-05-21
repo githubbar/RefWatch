@@ -2,9 +2,6 @@ package com.databelay.refwatch.presentation.screens // Or your chosen package
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,18 +11,18 @@ import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.ScalingLazyColumn
-import androidx.wear.compose.material.rememberScalingLazyListState
 import androidx.wear.compose.material.dialog.Dialog
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 
 @Composable
 fun GameSettingsDialog(
     onDismiss: () -> Unit,
     onViewLog: () -> Unit,
     onResetGame: () -> Unit,
-    onPauseResume: () -> Unit, // New callback
+    onToggleTimer: () -> Unit, // New callback
     isTimerRunning: Boolean,  // Current timer state
     isGameActive: Boolean,
     isGameFinished: Boolean
@@ -51,7 +48,7 @@ fun GameSettingsDialog(
             if (isGameActive) {
                 item {
                     Button(
-                        onClick = onPauseResume,
+                        onClick = onToggleTimer,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = if (isTimerRunning) MaterialTheme.colors.surface else MaterialTheme.colors.primary

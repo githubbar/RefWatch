@@ -22,7 +22,6 @@ import com.databelay.refwatch.common.Game
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameListScreen(
-    navController: NavController, // Added NavController
     games: List<Game>,
     onAddGame: () -> Unit,
     onEditGame: (Game) -> Unit, // Callback for editing

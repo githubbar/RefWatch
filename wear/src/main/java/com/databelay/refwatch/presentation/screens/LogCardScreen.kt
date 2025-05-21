@@ -29,10 +29,8 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun LogCardScreen(
-    onLogCard: (Team, Int, CardType) -> Unit,
+    onLogCard: () -> Unit,
     onCancel: () -> Unit,
-    homeTeamColor: Color,
-    awayTeamColor: Color
 ) {
     var selectedTeam: Team? by remember { mutableStateOf(null) }
     var selectedCardType: CardType? by remember { mutableStateOf(null) }
@@ -85,18 +83,18 @@ fun LogCardScreen(
                 ) {
                     Button(
                         onClick = { selectedTeam = Team.HOME },
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (selectedTeam == Team.HOME) homeTeamColor else homeTeamColor.copy(alpha = 0.5f),
-                            contentColor = if (homeTeamColor.luminance() > 0.5f && selectedTeam == Team.HOME) Color.Black else Color.White
-                        ),
+//                        colors = ButtonDefaults.buttonColors(
+//                            backgroundColor = if (selectedTeam == Team.HOME) homeTeamColor else homeTeamColor.copy(alpha = 0.5f),
+//                            contentColor = if (homeTeamColor.luminance() > 0.5f && selectedTeam == Team.HOME) Color.Black else Color.White
+//                        ),
                         modifier = Modifier.weight(1f)
                     ) { Text("Home") }
                     Button(
                         onClick = { selectedTeam = Team.AWAY },
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (selectedTeam == Team.AWAY) awayTeamColor else awayTeamColor.copy(alpha = 0.5f),
-                            contentColor = if (awayTeamColor.luminance() > 0.5f && selectedTeam == Team.AWAY) Color.Black else Color.White
-                        ),
+//                        colors = ButtonDefaults.buttonColors(
+//                            backgroundColor = if (selectedTeam == Team.AWAY) awayTeamColor else awayTeamColor.copy(alpha = 0.5f),
+//                            contentColor = if (awayTeamColor.luminance() > 0.5f && selectedTeam == Team.AWAY) Color.Black else Color.White
+//                        ),
                         modifier = Modifier.weight(1f)
                     ) { Text("Away") }
                 }
@@ -168,7 +166,12 @@ fun LogCardScreen(
                         onClick = {
                             val playerNum = playerNumberString.toIntOrNull()
                             if (selectedTeam != null && selectedCardType != null && playerNum != null && playerNum > 0) {
-                                onLogCard(selectedTeam!!, playerNum, selectedCardType!!)
+                                // TODO: implement log card
+                                // Team, Int, CardType
+                                // selectedTeam!!, playerNum, selectedCardType!!
+
+                                onLogCard()
+
                                 keyboardController?.hide() // Hide keyboard on success
                             } else {
                                 Toast.makeText(context, "Fill all fields", Toast.LENGTH_SHORT).show()

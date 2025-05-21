@@ -153,7 +153,7 @@ val WearTypography = androidx.wear.compose.material.Typography(
         lineHeight = 26.sp,
         letterSpacing = MobileTypography.titleLarge.letterSpacing
     ),
-    title2 = TextStyle( // Similar to M3 titleMedium
+    title2 = TextStyle( // Similar to M3 title2
         fontFamily = MobileTypography.titleMedium.fontFamily,
         fontWeight = MobileTypography.titleMedium.fontWeight,
         fontSize = 15.sp, // Scaled down from 16sp

@@ -50,7 +50,14 @@ fun String.capitalizeWords(): String = split(" ").joinToString(" ") { word ->
 }
 
 fun GamePhase.readable(): String {
-    return this.name.replace("_", " ").capitalizeWords()
+    return when (this) {
+        GamePhase.FIRST_HALF -> "1st Half"
+        GamePhase.HALF_TIME -> "Halftime"
+        GamePhase.SECOND_HALF -> "2nd Half"
+        GamePhase.FULL_TIME -> "Full Time"
+        GamePhase.PRE_GAME -> "Pre Game"
+        else -> this.name.replace("_", " ").capitalizeWords()
+    }
 }
 
 // Helper extensions for GamePhase (can also be in a utils.kt file)

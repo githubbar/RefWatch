@@ -120,7 +120,6 @@ fun RefWatchNavHost() {
             // }
 
             GameListScreen(
-                navController = navController, // Pass NavController
                 games = games,
                 onAddGame = {
                     // Navigate to AddEditGameScreen for a new game

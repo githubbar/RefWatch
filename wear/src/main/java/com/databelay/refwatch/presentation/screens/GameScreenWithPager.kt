@@ -1,52 +1,42 @@
 package com.databelay.refwatch.presentation.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi // Keep for Pager
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager // Pager import
-import androidx.compose.foundation.pager.rememberPagerState // Pager state
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.wear.compose.material.*
-import androidx.compose.ui.unit.dp
-
 import com.databelay.refwatch.common.*
 import com.databelay.refwatch.presentation.components.ConfirmationDialog
-import com.databelay.refwatch.presentation.screens.GameSettingsDialog // Your existing dialog
-import com.databelay.refwatch.presentation.components.HorizontalPagerIndicator
+import com.databelay.refwatch.presentation.screens.pager.MainGameDisplayScreen
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class) // For Pager
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GameScreenWithPager(
-    gameState: GameState,
-    onPauseResume: () -> Unit,
-    onAddGoalHome: () -> Unit,
-    onAddGoalAway: () -> Unit,
-    onLogCardForHome: () -> Unit, // To navigate to LogCardScreen for Home
-    onLogCardForAway: () -> Unit, // To navigate to LogCardScreen for Away
-    onViewLog: () -> Unit,
-    onEndPeriod: () -> Unit,
-    onResetGame: () -> Unit,
-    isTimerRunning: Boolean // Pass this explicitly for the dialog
+    activeGame: Game,                   // <<< Receives the active Game state
+    // Lambdas for actions the Pager or its settings dialog might trigger
+    onToggleTimer: () -> Unit,
+    onAddGoal: (Team) -> Unit,
+    // TODO: add onaddcard
+    //onAddCard is more complex: either navigate or show a dialog from here.
+    // Let's assume navigation for now.
+    onNavigateToLogCard: () -> Unit,
+    onNavigateToGameLog: () -> Unit,
+    onEndPhaseEarly: () -> Unit,
+    onResetGame: () -> Unit // For resetting the entire game state
 ) {
-    val pagerState = rememberPagerState(initialPage = 1) { 3 } // 0: Home, 1: Main, 2: Away
-
+    val pagerState = rememberPagerState(initialPage = 1) { 3 } // 0: Home Actions, 1: Main Display, 2: Away Actions
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showEndGameConfirmDialog by remember { mutableStateOf(false) }
-    // showResetConfirmDialog is likely handled within the EndGameConfirm now
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(Unit) { // Long press anywhere to open settings
                 detectTapGestures(
                     onLongPress = {
-                        // Only show settings if on the main page (pagerState.currentPage == 1)
-                        // Or allow from any page - your preference. For simplicity, allow from any.
                         showSettingsDialog = true
                     }
                 )
@@ -55,68 +45,69 @@ fun GameScreenWithPager(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-//            beyondBoundsPageCount = 1 // Keep adjacent pages composed
+            // beyondBoundsPageCount = 1 // Consider if needed for performance/preloading
         ) { pageIndex ->
+            // Pass the 'game' state and relevant action lambdas to each page
             when (pageIndex) {
                 0 -> HomeTeamActionScreen(
-                    gameState = gameState,
-                    onAddGoalHome = onAddGoalHome,
-                    onLogCardForHome = onLogCardForHome,
+                    game = activeGame, // Pass game state
+                    onAddGoal = { onAddGoal(Team.HOME) },
+                    onLogCard = onNavigateToLogCard, // Or pass team specific lambda if LogCardScreen expects it
                     modifier = Modifier.fillMaxSize()
                 )
-                1 -> SimplifiedGameScreen(
-                    gameState = gameState,
+                1 -> MainGameDisplayScreen( // Renamed for clarity
+                    game = activeGame, // Pass game state
+                    onToggleTimer = onToggleTimer,
+                    onEndPhaseEarly = onEndPhaseEarly,
                     modifier = Modifier.fillMaxSize()
                 )
                 2 -> AwayTeamActionScreen(
-                    gameState = gameState,
-                    onAddGoalAway = onAddGoalAway,
-                    onLogCardForAway = onLogCardForAway,
+                    game = activeGame, // Pass game state
+                    onAddGoal = { onAddGoal(Team.AWAY) },
+                    onLogCard = onNavigateToLogCard, // Or pass team specific lambda
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
 
-//        // Page indicators (optional, but good for UX)
 //        HorizontalPagerIndicator(
 //            pagerState = pagerState,
 //            modifier = Modifier
 //                .align(Alignment.BottomCenter)
-//                .padding(bottom = 8.dp),
-//            activeColor = MaterialTheme.colors.primary,
-//            inactiveColor = MaterialTheme.colors.onSurface.copy(alpha = 0.3f)
+//                .padding(bottom = 8.dp)
+//            // ... other indicator properties
 //        )
 
         if (showSettingsDialog) {
-            // Pass the onPauseResume callback and isTimerRunning to the dialog
             GameSettingsDialog(
                 onDismiss = { showSettingsDialog = false },
                 onViewLog = {
                     showSettingsDialog = false
-                    onViewLog()
+                    onNavigateToGameLog() // Use the passed lambda
                 },
-                onResetGame = {
+                onResetGame = { // This is "End Game & Reset" from settings
                     showSettingsDialog = false
-                    showEndGameConfirmDialog = true
+                    showEndGameConfirmDialog = true // Show confirmation for reset
                 },
-                onPauseResume = onPauseResume, // New callback
-                isTimerRunning = isTimerRunning, // Pass current timer state
-                isGameActive = gameState.currentPhase != GamePhase.FULL_TIME && gameState.currentPhase != GamePhase.PRE_GAME,
-                isGameFinished = gameState.currentPhase == GamePhase.FULL_TIME
+                onToggleTimer = onToggleTimer, // Pass toggle timer lambda
+                isTimerRunning = activeGame.isTimerRunning, // Get from game state
+                // Determine if game is active or finished based on game.currentPhase
+                isGameActive = activeGame.currentPhase != GamePhase.FULL_TIME && activeGame.currentPhase != GamePhase.PRE_GAME,
+                isGameFinished = activeGame.currentPhase == GamePhase.FULL_TIME
             )
         }
 
         if (showEndGameConfirmDialog) {
-            val message = if (gameState.currentPhase == GamePhase.FULL_TIME || gameState.currentPhase == GamePhase.PRE_GAME) {
-                "Start a new game? Current data will be lost."
+            val message = if (activeGame.currentPhase == GamePhase.FULL_TIME || activeGame.currentPhase == GamePhase.PRE_GAME) {
+                "Start a new default game? Current game settings will be reset." // Or "Select new game from schedule?"
             } else {
-                "Are you sure you want to end the current game and reset?"
+                "End the current game and reset to pre-game defaults?"
             }
             ConfirmationDialog(
                 message = message,
                 onConfirm = {
                     showEndGameConfirmDialog = false
-                    onResetGame()
+                    onResetGame() // Call the passed lambda for resetting
                 },
                 onDismiss = { showEndGameConfirmDialog = false }
             )

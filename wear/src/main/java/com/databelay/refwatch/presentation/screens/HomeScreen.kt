@@ -1,21 +1,28 @@
 package com.databelay.refwatch.presentation.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.*
-import com.databelay.refwatch.navigation.Screen // Your Screen sealed class
+import androidx.wear.compose.material.Chip
+import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.ScalingLazyColumn
+import androidx.wear.compose.material.Text
 
 @Composable
 fun HomeScreen(
-    onNavigate: (String) -> Unit // Generic navigation callback
+    onNavigateToSchedule: () -> Unit,
+    onNavigateToNewGame: () -> Unit
 ) {
     ScalingLazyColumn(
         modifier = Modifier
@@ -43,7 +50,7 @@ fun HomeScreen(
 
         item {
             Chip(
-                onClick = { onNavigate(Screen.PreGameSetup.route) },
+                onClick = { onNavigateToNewGame() },
                 label = { Text("Start New Game") },
                 icon = { Icon(Icons.Filled.PlayCircleOutline, contentDescription = "Start New Game") },
                 modifier = Modifier.fillMaxWidth(),
@@ -53,7 +60,7 @@ fun HomeScreen(
 
         item {
             Chip(
-                onClick = { onNavigate(Screen.GameSchedule.route) },
+                onClick = { onNavigateToSchedule()},
                 label = { Text("Game Schedule") },
                 icon = { Icon(Icons.Filled.CalendarToday, contentDescription = "Game Schedule") },
                 modifier = Modifier.fillMaxWidth()

@@ -8,16 +8,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 import androidx.wear.compose.material.ButtonDefaults
-import com.databelay.refwatch.GameViewModel // Your ViewModel
+import com.databelay.refwatch.WearGameViewModel // Your ViewModel
 import com.databelay.refwatch.common.*
 
 @Composable
 fun KickOffSelectionScreen(
-    viewModel: GameViewModel,
+    gameViewModel: WearGameViewModel,
     onConfirm: () -> Unit // Callback to navigate away (e.g., back or to next step)
 ) {
-    val gameState by viewModel.gameState.collectAsState()
-    val selectedTeam = gameState.settings.kickOffTeam // Get current selection from ViewModel
+    val activeGame by gameViewModel.activeGame.collectAsState()
+    val selectedTeam = activeGame.kickOffTeam // Get current selection from ViewModel
 
     // Use ScalingLazyColumn for standard Wear OS screen structure
     ScalingLazyColumn(
@@ -41,19 +41,19 @@ fun KickOffSelectionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Chip(
-                        onClick = { viewModel.setKickOffTeam(Team.HOME) },
+                        onClick = { gameViewModel.setKickOffTeam(Team.HOME) },
                         label = { Text("Home", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
                         colors = ChipDefaults.chipColors(
-                            backgroundColor = if (gameState.settings.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                            backgroundColor = if (activeGame.kickOffTeam == Team.HOME) MaterialTheme.colors.primary else MaterialTheme.colors.surface
                         ),
                         modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Chip(
-                        onClick = { viewModel.setKickOffTeam(Team.AWAY) },
+                        onClick = { gameViewModel.setKickOffTeam(Team.AWAY) },
                         label = { Text("Away", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }, // Added fillMaxWidth for consistency
                         colors = ChipDefaults.chipColors(
-                            backgroundColor = if (gameState.settings.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+                            backgroundColor = if (activeGame.kickOffTeam == Team.AWAY) MaterialTheme.colors.primary else MaterialTheme.colors.surface
                         ),
                         modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
                     )
@@ -66,7 +66,7 @@ fun KickOffSelectionScreen(
         item {
             Button(
                 onClick = {
-                    viewModel.confirmSettingsAndStartGame() // Prepare game state and timer internally
+                    gameViewModel.confirmSettingsAndStartGame() // Prepare game state and timer internally
                     onConfirm() // This lambda will navigate to GameScreen
                 },
                 modifier = Modifier.fillMaxWidth(0.8f), // Button takes 80% of width
