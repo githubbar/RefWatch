@@ -29,11 +29,12 @@ object SimpleIcsParser {
     // (Can be private if only used here, or public if needed elsewhere)
     private fun unfoldIcsLines(foldedString: String): String {
         // Remove CR LF Space, CR LF Tab, CR, and special characters and spaces
-        return foldedString.replace(Regex("[\r\t ]"), "")
+        return foldedString.replace(Regex("[\r\t]"), "")
     }
 
     fun parse(icsContent: String): List<SimpleIcsEvent> {
         val events = mutableListOf<SimpleIcsEvent>()
+
         val unfoldedIcs = unfoldIcsLines(icsContent) // Unfold entire content once
         val eventMatcher = EVENT_PATTERN.matcher(unfoldedIcs)
 
@@ -51,15 +52,15 @@ object SimpleIcsParser {
 // Factory object to construct SimpleIcsEvent
 object SimpleIcsEventFactory {
     // Patterns and helpers moved from SimpleIcsEvent.Companion for clarity in factory
-    private val UID_PATTERN: Pattern = Pattern.compile("^UID:(.+)$", Pattern.MULTILINE)
-    private val SUMMARY_PATTERN: Pattern = Pattern.compile("^SUMMARY:(.+)$", Pattern.MULTILINE)
-    private val DESCRIPTION_PATTERN: Pattern = Pattern.compile("^DESCRIPTION:(.+)$", Pattern.MULTILINE)
-    private val LOCATION_PATTERN: Pattern = Pattern.compile("^LOCATION:(.+)$", Pattern.MULTILINE)
-    private val DATETIME_PROPERTY_PATTERN: Pattern = Pattern.compile("^(DTSTART|DTEND)(?:;TZID=([^:]+))?:(\\d{8}T\\d{6})(Z)?$", Pattern.MULTILINE)
+    private val UID_PATTERN: Pattern = Pattern.compile("^\\s*UID:(.+)$", Pattern.MULTILINE)
+    private val SUMMARY_PATTERN: Pattern = Pattern.compile("^\\s*SUMMARY:(.+)$", Pattern.MULTILINE)
+    private val DESCRIPTION_PATTERN: Pattern = Pattern.compile("^\\s*DESCRIPTION:(.+)$", Pattern.MULTILINE)
+    private val LOCATION_PATTERN: Pattern = Pattern.compile("^\\s*LOCATION:(.+)$", Pattern.MULTILINE)
+    private val DATETIME_PROPERTY_PATTERN: Pattern = Pattern.compile("^\\s*(DTSTART|DTEND)(?:;TZID=([^:]+))?:(\\d{8}T\\d{6})(Z)?$", Pattern.MULTILINE)
     private val ICS_DATETIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
     private val TEAM_BIRTH_YEAR_PATTERN: Pattern = Pattern.compile("\\b(\\d{4})(?:[/\\-]\\d{2,4})?\\b")
     private val TEAM_VS_PATTERN: Pattern = Pattern.compile(
-        "^(?:(?:Referee(?: Assignment)?:\\s*(?:Referee|Asst Referee \\d|AR\\d?|REF)?\\s*-\\s*\\d+\\s*)?)(.*?)" +
+        "^\\s*(?:(?:Referee(?: Assignment)?:\\s*(?:Referee|Asst Referee \\d|AR\\d?|REF)?\\s*-\\s*\\d+\\s*)?)(.*?)" +
                 "(?:\\s+(?:vs?\\.?|v\\.?|-)\\s+)" +
                 "(.*?)" +
                 "(?:\\s+-\\s+(?:ISL|GLC)|\\s*\\(|\\s*$)",

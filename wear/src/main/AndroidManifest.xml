@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.databelay.refwatch.wear">
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
     <uses-feature android:name="android.hardware.type.watch" />
 
     <application
@@ -16,26 +17,64 @@
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
-
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="false" />
-
         <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:taskAffinity=""
-            android:theme="@style/MainActivityTheme.Starting">
+            android:name=".MinimalWearActivity"
+            android:exported="true" android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+<!--        <activity-->
+<!--            android:name=".MainActivity"-->
+<!--            android:exported="true"-->
+<!--            android:taskAffinity=""-->
+<!--            android:theme="@style/MainActivityTheme.Starting">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
+<!--        <service-->
+<!--            android:name="com.databelay.refwatch.wear.data.WearDataListenerService"-->
+<!--            android:exported="true">-->
+<!--            <intent-filter>-->
+<!--                &lt;!&ndash; Option A: Generic data URI, filter in code (more flexible) &ndash;&gt;-->
+<!--                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />-->
+<!--                <data android:scheme="wear" android:host="*" android:pathPattern=".*"/>-->
+<!--                &lt;!&ndash; Option B: Specific pathPrefix (ensure no leading slash if pathPattern is not used) &ndash;&gt;-->
+<!--                &lt;!&ndash; <data android:scheme="wear" android:host="*" android:pathPrefix="/games_list_all"/> &ndash;&gt;-->
+<!--            </intent-filter>-->
+<!--            &lt;!&ndash; If you also send messages FROM watch TO phone using MessageClient-->
+<!--                 and want the phone's WearableListenerService to pick them up,-->
+<!--                 this service on the watch doesn't necessarily need the MESSAGE_RECEIVED filter,-->
+<!--                 unless the phone is sending messages TO the watch.-->
+<!--            &ndash;&gt;-->
+<!--        </service>-->
+<!--        <service
+            android:name=".services.SimpleTestListenerService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPattern=".*"/>
+            </intent-filter>
+        </service>-->
+        <service
+            android:name=".services.MinimalTestListenerService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPattern=".*"/> <!-- Most open filter -->
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-parcelize")
+//    id("kotlin-parcelize")
     kotlin("plugin.serialization") version "2.1.21"
 //    id("com.google.gms.google-services")
     id("com.google.dagger.hilt.android") // Apply the Hilt plugin here
@@ -10,11 +10,11 @@ plugins {
 }
 
 android {
-    namespace = "com.databelay.refwatch"
+    namespace = "com.databelay.refwatch.wear"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.databelay.refwatch"
+        applicationId = "com.databelay.refwatch.wear"
         minSdk = 31
         targetSdk = 35
         versionCode = 1
@@ -37,6 +37,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+//        freeCompilerArgs += "-Xlint:deprecation"
     }
     buildFeatures {
         compose = true
@@ -75,6 +76,13 @@ dependencies {
     implementation(libs.hilt.android) // Use the same version as the plugin
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.navigation.runtime.android)
+    implementation(libs.kotlinx.serialization.json) // For deserialization
+    implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModels
+    implementation(libs.play.services.wearable)
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.android.gms:play-services-wearable:18.2.0") // Crucial
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0") // For coroutines
+
     ksp(libs.hilt.compiler)
 
     debugImplementation(libs.ui.test.manifest)

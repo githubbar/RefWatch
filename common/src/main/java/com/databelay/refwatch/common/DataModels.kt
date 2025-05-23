@@ -1,10 +1,7 @@
 package com.databelay.refwatch.common // Or your package
 
 import androidx.compose.ui.graphics.Color // If GameSettings is in this file
-import android.os.Parcelable // Import Parcelable
 import androidx.compose.ui.graphics.toArgb
-import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.IgnoredOnParcel
 import java.util.UUID
 import java.util.Locale // For capitalizeWords if defined here
 import java.util.concurrent.TimeUnit // For formatTime
@@ -37,7 +34,6 @@ enum class GamePhase {
 
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
 fun Long.formatTime(): String {
-    if (this < 0L) return "00:00" // Handle invalid or uninitialized times
     val minutes = TimeUnit.MILLISECONDS.toMinutes(this)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(this) % 60
     return String.format("%02d:%02d", minutes, seconds)
@@ -79,13 +75,12 @@ fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be re
 
 // --- Game Event Sealed Class and its Subclasses ---
 @Serializable
-sealed class GameEvent : Parcelable {
+sealed class GameEvent {
     abstract val id: String
     abstract val timestamp: Long // Wall-clock time of event logging
     abstract val gameTimeMillis: Long // Game clock time when event occurred
     abstract val displayString: String // User-friendly string for the log
 
-    @Parcelize
     data class GoalScoredEvent(
         override val id: String = UUID.randomUUID().toString(),
         val team: Team,
@@ -94,12 +89,10 @@ sealed class GameEvent : Parcelable {
         val homeScoreAtTime: Int,
         val awayScoreAtTime: Int
     ) : GameEvent() {
-        @IgnoredOnParcel // displayString getter doesn't need to be parcelled
         override val displayString: String
             get() = "Goal: ${team.name} ($homeScoreAtTime-$awayScoreAtTime) at ${gameTimeMillis.formatTime()}"
     }
 
-    @Parcelize
     data class CardIssuedEvent(
         override val id: String = UUID.randomUUID().toString(),
         val team: Team,
@@ -108,32 +101,28 @@ sealed class GameEvent : Parcelable {
         override val timestamp: Long = System.currentTimeMillis(),
         override val gameTimeMillis: Long
     ) : GameEvent() {
-        @IgnoredOnParcel
         override val displayString: String
             get() = "${cardType.name.capitalizeWords()} Card: ${team.name}, Player #$playerNumber at ${gameTimeMillis.formatTime()}"
     }
 
-    @Parcelize
     data class PhaseChangedEvent(
         override val id: String = UUID.randomUUID().toString(),
         val newPhase: GamePhase,
         override val timestamp: Long = System.currentTimeMillis(),
         override val gameTimeMillis: Long
     ) : GameEvent() {
-        @IgnoredOnParcel
         override val displayString: String
             get() = "${newPhase.readable()} (Clock: ${gameTimeMillis.formatTime()})"
     }
 
     // For miscellaneous logs like "Timer Paused", "Referee ends period early", "Team X kicks off"
-    @Parcelize
+
     data class GenericLogEvent(
         override val id: String = UUID.randomUUID().toString(),
         val message: String,
         override val timestamp: Long = System.currentTimeMillis(),
         override val gameTimeMillis: Long = 0L
     ) : GameEvent() {
-        @IgnoredOnParcel
         override val displayString: String
             get() { /* ... build string ... */ return message } // Simplified example
     }

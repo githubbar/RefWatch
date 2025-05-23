@@ -3,36 +3,47 @@ activityComposeVersion = "1.8.2"
 agp = "8.10.0"
 androidxComposeFoundation = "1.4.1"
 androidxComposeMaterial = "1.4.1"
+androidxJunit = "1.1.5"
 composeFoundationVersion = "1.3.0"
 composeMaterialVersion = "1.3.0"
 composeNavigation = "1.4.1"
 composeNavigationVersion = "1.3.0"
 coreKtx = "1.16.0"
 espressoCore = "3.6.1"
+espressoCoreVersion = "3.5.1"
 firebaseBom = "33.13.0"
 googlePlayServicesWearable = "19.0.0"
+googlePlayServicesWearableVersion = "18.2.0"
+googleServices = "4.4.2"
 gson = "2.11.0"
 hiltAndroid = "2.56"
 hiltCompiler = "2.56"
 hiltNavigationCompose = "1.2.0"
 ical4j = "3.2.10"
+jetbrainsKotlinxSerializationJson = "1.6.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 kotlin = "2.0.21"
+kotlinTestJunit = "2.0.21"
 kotlinxCoroutinesAndroid = "1.7.3"
 kotlinxCoroutinesPlayServices = "1.7.3"
+kotlinxCoroutinesTest = "1.7.3"
 kotlinxSerializationJson = "1.6.3"
 kotlinxSerializationJsonVersion = "1.8.1"
 libsComposeMaterial = "1.3.0"
 lifecycleRuntimeKtx = "2.9.0"
+lifecycleViewmodelCompose = "2.7.0"
 materialIconsCore = "1.7.8"
 playServicesAuth = "21.3.0"
-playServicesWearable = "18.0.0"
+playServicesWearable = "19.0.0"
 composeBom = "2024.09.00"
 composeMaterial = "1.2.1"
 composeFoundation = "1.2.1"
 playServicesWearableVersion = "18.1.0"
+rules = "1.6.1"
+runner = "1.6.2"
 slf4jNop = "1.7.32"
+truth = "1.1.5"
 ui = "1.8.1"
 uiTooling = "1.6.1"
 uiToolingPreview = "1.6.1"
@@ -51,13 +62,18 @@ androidx-compose-material-v141 = { module = "androidx.wear.compose:compose-mater
 androidx-compose-navigation-v130 = { module = "androidx.wear.compose:compose-navigation", version.ref = "composeNavigationVersion" }
 androidx-compose-ui-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "uiToolingVersion" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
+androidx-espresso-core-v351 = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "junitVersion" }
+androidx-junit-v115 = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose-v270 = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "materialIconsCore" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsCore" }
 androidx-material3 = { module = "androidx.compose.material3:material3" }
+androidx-rules = { module = "androidx.test:rules", version.ref = "rules" }
+androidx-runner = { module = "androidx.test:runner", version.ref = "runner" }
 androidx-ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "ui" }
 androidx-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "ui" }
@@ -71,22 +87,29 @@ core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
+google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltCompiler" }
 ical4j = { module = "org.mnode.ical4j:ical4j", version.ref = "ical4j" }
+jetbrains-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlinTestJunit" }
 junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-json-v160 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrainsKotlinxSerializationJson" }
 kotlinx-serialization-json-v181 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJsonVersion" }
 libs-compose-material = { module = "libs.androidx.wear.compose:compose-material", version.ref = "libsComposeMaterial" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 play-services-wearable-v1810 = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearableVersion" }
+play-services-wearable-v1820 = { module = "com.google.android.gms:play-services-wearable", version.ref = "googlePlayServicesWearableVersion" }
 play-services-wearable-v1900 = { module = "com.google.android.gms:play-services-wearable", version.ref = "googlePlayServicesWearable" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4jNop" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
 ui = { group = "androidx.compose.ui", name = "ui" }
 ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }

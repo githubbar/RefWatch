@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "140812013657",
+    "project_id": "refwatchapp",
+    "storage_bucket": "refwatchapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140812013657:android:4e19d5e173d552dbe36148",
+        "android_client_info": {
+          "package_name": "com.databelay.refwatch.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD89KeSHF_s_4FmAXnC1fb4i2OBf6baUOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140812013657:android:17ec8ca0eebcb160e36148",
+        "android_client_info": {
+          "package_name": "com.example.minwearlistener"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD89KeSHF_s_4FmAXnC1fb4i2OBf6baUOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
