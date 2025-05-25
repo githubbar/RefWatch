@@ -5,9 +5,8 @@
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-feature android:name="android.hardware.type.watch" />
-
+    <!--        android:name=".RefWatchApp"-->
     <application
-        android:name=".RefWatchApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -31,6 +30,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".services.MinimalTestListenerService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPattern=".*"/> <!-- Most open filter -->
+            </intent-filter>
+        </service>
 <!--        <activity-->
 <!--            android:name=".MainActivity"-->
 <!--            android:exported="true"-->
@@ -66,15 +74,7 @@
                 <data android:scheme="wear" android:host="*" android:pathPattern=".*"/>
             </intent-filter>
         </service>-->
-        <service
-            android:name=".services.MinimalTestListenerService"
-            android:exported="true"
-            tools:ignore="ExportedService">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*" android:pathPattern=".*"/> <!-- Most open filter -->
-            </intent-filter>
-        </service>
+
     </application>
 
 </manifest>

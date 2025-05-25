@@ -7,12 +7,14 @@ import android.util.Log
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class RefWatchApp : Application() {
+class RefWatchApp : Application()
+
+/*     {
     // You can override onCreate() if you need to do other app-level initializations
     // In MyPhoneApplication.kt (phone app)
     override fun onCreate() {
         super.onCreate()
-  /*      Log.e("MyPhoneApp", "!!!!!!!!!! RefWatchApp onCreate - BEFORE Firebase Init !!!!!!!!!!")
+   Log.e("MyPhoneApp", "!!!!!!!!!! RefWatchApp onCreate - BEFORE Firebase Init !!!!!!!!!!")
         try {
             FirebaseApp.initializeApp(this)
             Log.e("MyPhoneApp", "!!!!!!!!!! FirebaseApp.initializeApp(this) CALLED SUCCESSFULLY !!!!!!!!!!")
@@ -29,6 +31,8 @@ class RefWatchApp : Application() {
 
         } catch (e: Exception) {
             Log.e("MyPhoneApp", "!!!!!!!!!! FirebaseApp.initializeApp FAILED !!!!!!!!!!", e)
-        }*/
+        }
     }
 }
+
+*/

@@ -77,11 +77,13 @@ class WearDataListenerService : WearableListenerService() {
     // In WearDataListenerService.kt
     override fun onCreate() {
         // FIXME: service never starts when using hilt; MinimalTestListenerService app works fine and the pings go through from mobile to watch
-        // with hilt i get this wierd exception: Failed to get service from broker.  (Ask Gemini)
         // java.lang.SecurityException: Unknown calling package name 'com.google.android.gms'.
-        // Warnings after: Failed to register com.google.android.gms.providerinstaller#com.databelay.refwatch.mobile (Ask Gemini)
-        // fdok: 17: 17: API: Phenotype.API is not available on this device. Connection failed with: ConnectionResult{statusCode=DEVELOPER_ERROR, resolution=null, message=null}
+        // Error: Failed to register com.google.android.gms.providerinstaller
+        // Warnings after: fdok: 17: 17: API: Phenotype.API is not available on this device. Connection failed with: ConnectionResult{statusCode=DEVELOPER_ERROR, resolution=null, message=null}
         // at fdom.a(:com.google.android.gms@251833035@25.18.33 (260400-756823100):13)
+        //!!!!! Looks like it's not hilt, cause MinApp also uses it. Library versions or the naming in google-services.json?
+        // Progress: no exception, says ping sent. Not receiving at the other end still.
+
 
         super.onCreate()
         Log.e(TAG, "WearDataListenerService CREATED") // Use a prominent tag/level
