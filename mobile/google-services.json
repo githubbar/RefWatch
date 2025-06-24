@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:140812013657:android:1f7819005360a735e36148",
+        "android_client_info": {
+          "package_name": "com.databelay.refwatch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD89KeSHF_s_4FmAXnC1fb4i2OBf6baUOA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:140812013657:android:4e19d5e173d552dbe36148",
         "android_client_info": {
           "package_name": "com.databelay.refwatch.mobile"

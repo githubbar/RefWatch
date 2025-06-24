@@ -22,5 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "RefWatch"
 include(":mobile")
 include(":wear")
-
 include(":common")

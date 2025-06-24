@@ -2,21 +2,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-//    id("kotlin-parcelize")
     kotlin("plugin.serialization") version "2.1.21"
-//    id("com.google.gms.google-services")
-    id("com.google.dagger.hilt.android") // Apply the Hilt plugin here
     id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
+    id("com.google.dagger.hilt.android")
 }
 
 android {
-    namespace = "com.databelay.refwatch.wear"
-    compileSdk = 35
+    namespace = "com.databelay.refwatch"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.databelay.refwatch.wear"
+        applicationId = "com.databelay.refwatch"
         minSdk = 31
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -37,8 +35,8 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-//        freeCompilerArgs += "-Xlint:deprecation"
     }
+    useLibrary("wear-sdk")
     buildFeatures {
         compose = true
     }
@@ -63,14 +61,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose.v182)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.compose.navigation.v130) // If you're using Wear Navigation
+    implementation(libs.androidx.compose.navigation) // If you're using Wear Navigation
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.compose.material.v141)
-    implementation(libs.androidx.compose.foundation.v141)
-    implementation(libs.androidx.compose.navigation.v130)
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.foundation)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.play.services.auth) // Check for latest
     implementation(libs.hilt.android) // Use the same version as the plugin
@@ -79,9 +76,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json) // For deserialization
     implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModels
     implementation(libs.play.services.wearable)
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("com.google.android.gms:play-services-wearable:18.2.0") // Crucial
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0") // For coroutines
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.play.services.wearable) // Crucial
+    implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
 
     ksp(libs.hilt.compiler)
 
@@ -93,4 +90,4 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
-    }
+}

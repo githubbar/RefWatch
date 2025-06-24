@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+//    id("com.google.gms.google-services")
+
 //    id("kotlin-parcelize")
     kotlin("plugin.serialization") version "2.1.21"
 }
@@ -54,14 +56,13 @@ dependencies {
     implementation(libs.compose.navigation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose.v182)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.compose.navigation.v130) // If you're using Wear Navigation
+    implementation(libs.androidx.compose.navigation) // If you're using Wear Navigation
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.compose.material.v141)
-    implementation(libs.androidx.compose.foundation.v141)
-    implementation(libs.androidx.compose.navigation.v130)
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.foundation)
 
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)
