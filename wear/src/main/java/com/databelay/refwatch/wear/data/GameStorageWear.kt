@@ -6,50 +6,86 @@ import android.util.Log
 import com.databelay.refwatch.common.Game // Your common Game class
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.ListSerializer // For List<Game>
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
+import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.core.content.edit
 
-object GameStorageWear {
-    private const val PREFS_NAME = "RefWatchWearPrefs"
-    private const val KEY_GAMES_LIST = "syncedGamesList"
-    private const val TAG = "GameStorageWear"
+@Singleton // Hilt will create only one instance of this class for the entire app
+class GameStorageWear @Inject constructor(
+    @ApplicationContext private val context: Context // Hilt provides the application context
+) {
+    private val TAG = "GameStorageWear"
+    private val PREFS_NAME = "RefWatchWearPrefs"
+    private val KEY_GAMES_LIST = "syncedGamesList"
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = true
-        classDiscriminator = "eventType" // If GameEvent needs it
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+    private val _gamesListFlow = MutableStateFlow<List<Game>>(emptyList())
+    val gamesListFlow: StateFlow<List<Game>> = _gamesListFlow.asStateFlow()
+
+    init {
+        // Load the initial list from SharedPreferences when the singleton is first created
+        loadGamesList()
     }
 
-    private fun getPreferences(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
-
-    fun saveGamesList(context: Context, list: List<Game>) {
+    fun saveGamesList(games: List<Game>) {
         try {
-            val jsonString = json.encodeToString(ListSerializer(Game.serializer()), list)
-            getPreferences(context).edit().putString(KEY_GAMES_LIST, jsonString).apply()
-            Log.i(TAG, "Saved ${list.size} games to SharedPreferences on watch.")
+            val jsonString = json.encodeToString(games)
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    putString(KEY_GAMES_LIST, jsonString)
+                }
+            // Update the flow to notify observers
+            _gamesListFlow.value = games
+            Log.i(TAG, "Saved and updated ${games.size} games.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving games list to SharedPreferences on watch", e)
+            Log.e(TAG, "Failed to save games list", e)
         }
     }
 
-    fun loadGamesList(context: Context): List<Game> {
-        val jsonString = getPreferences(context).getString(KEY_GAMES_LIST, null)
-        return if (jsonString != null) {
-            try {
-                json.decodeFromString(ListSerializer(Game.serializer()), jsonString)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading games list from SharedPreferences on watch", e)
+    private fun loadGamesList() {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val jsonString = prefs.getString(KEY_GAMES_LIST, null)
+            val loadedGames = if (jsonString != null) {
+                json.decodeFromString<List<Game>>(jsonString)
+            } else {
                 emptyList()
             }
-        } else {
-            emptyList()
+            // Update the flow with the loaded data
+            _gamesListFlow.value = loadedGames
+            Log.i(TAG, "Loaded ${loadedGames.size} games from SharedPreferences.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load games list", e)
+            _gamesListFlow.value = emptyList()
         }
     }
 
-    fun clearGamesList(context: Context) {
-        getPreferences(context).edit().remove(KEY_GAMES_LIST).apply()
-        Log.i(TAG, "Cleared games list from SharedPreferences on watch.")
+    /**
+     * Clears the list of games from both memory (StateFlow) and persistence (SharedPreferences).
+     */
+    fun clearGamesList() {
+        try {
+            // Clear from SharedPreferences
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    remove(KEY_GAMES_LIST)
+                }
+
+            // Update the flow to notify observers that the list is now empty
+            _gamesListFlow.value = emptyList()
+            Log.i(TAG, "Games list cleared from storage and memory.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear games list.", e)
+        }
+    }
+
+    // This can be useful if other parts of the app need a non-flow, immediate snapshot
+    fun getGames(): List<Game> {
+        return _gamesListFlow.value
     }
 }

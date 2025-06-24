@@ -4,154 +4,173 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import com.databelay.refwatch.common.Game
+import androidx.compose.foundation.background
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.navigation.SwipeDismissableNavHost
+import androidx.wear.compose.navigation.composable
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
-import com.google.android.gms.wearable.ChannelClient
-import com.google.android.gms.wearable.Wearable
+import com.databelay.refwatch.wear.navigation.Screen
+import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
+import com.databelay.refwatch.wear.presentation.screens.GameScheduleScreen
+import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
+import com.databelay.refwatch.wear.presentation.screens.HomeScreen
+import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
+import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
+import com.databelay.refwatch.wear.presentation.screens.PreGameSetupScreen
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.serialization.json.Json
-import java.io.InputStreamReader
-import java.nio.charset.StandardCharsets
 
-@AndroidEntryPoint // Add if using Hilt for this Activity or ViewModels obtained via hiltViewModel()
+// Navigation routes for the Wear App
+object WearNavRoutes {
+    const val GAME_LIST = "game_list"
+    // Define the argument name for the gameId
+    const val GAME_ID_ARG = "gameId"
+    const val GAME_IN_PROGRESS_ROUTE = "game_in_progress" // Base route name
+    // Full route definition with argument
+    const val GAME_IN_PROGRESS = "$GAME_IN_PROGRESS_ROUTE/{$GAME_ID_ARG}"
+
+    fun gameInProgressRoute(gameId: String) = "$GAME_IN_PROGRESS_ROUTE/$gameId"
+}
+
+@AndroidEntryPoint // This annotation enables Hilt injection for the Activity
 class MainActivity : ComponentActivity() {
-
-    // If WearGameViewModel is @HiltViewModel, you'd typically get it in Composable scope.
-    // If not using Hilt or if Activity needs direct access (less common with Compose):
-    // private val gameViewModel: WearGameViewModel by viewModels()
-
-    private val GAME_SETTINGS_TRANSFER_PATH = "/game_settings_data" // Matches phone
-    private val TAG_WEAR_ACTIVITY = "RefWatchWearActivity"
-
-    private lateinit var channelClient: ChannelClient
-    private var channelCallback: ChannelClient.ChannelCallback? = null
-    private val activityScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) // For UI-related coroutines in Activity
+    // The Activity's only job is to set up the Compose content.
+    // Data reception is handled by your background WearableListenerService.
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        channelClient = Wearable.getChannelClient(this)
 
         setContent {
             RefWatchWearTheme {
-                // gameViewModel is now obtained via hiltViewModel() in RefWatchWearApp
+                // Call your main Composable that contains the navigation logic.
                 RefWatchWearApp()
             }
         }
     }
+}
 
-    override fun onResume() {
-        super.onResume()
-        registerChannelCallback()
-    }
 
-    override fun onPause() {
-        super.onPause()
-        unregisterChannelCallback()
-    }
+@Composable
+fun RefWatchWearApp() {
+    val navController = rememberSwipeDismissableNavController()
+    // Obtain the WearGameViewModel. Hilt scopes it to the navigation graph.
+    // We get it here so it's shared between GameListScreen and GameInProgressScreen.
+    val gameViewModel: WearGameViewModel = hiltViewModel()
 
-    private fun registerChannelCallback() {
-        if (channelCallback != null) {
-            Log.d(TAG_WEAR_ACTIVITY, "ChannelCallback already registered.")
-            return
+    // Observe the StateFlows from the ViewModel.
+    // When the background service updates GameStorage, the ViewModel's flow will update,
+    // and this UI will recompose automatically.
+    val scheduledGames by gameViewModel.scheduledGames.collectAsState()
+    val activeGame by gameViewModel.activeGame.collectAsState()
+
+    // Determine start destination based on the current active game's phase
+    val startDestination = remember(activeGame.currentPhase) { // Recalculate if phase changes
+        if (activeGame.currentPhase == GamePhase.PRE_GAME || activeGame.currentPhase == GamePhase.FULL_TIME) {
+            Screen.Home.route // Start at Home if no game active or game ended
+        } else {
+            Screen.Game.route // Go directly to game if it's in progress
         }
-
-        channelCallback = object : ChannelClient.ChannelCallback() {
-            override fun onChannelOpened(channel: ChannelClient.Channel) {
-                super.onChannelOpened(channel)
-                Log.d(TAG_WEAR_ACTIVITY, "Channel opened: ${channel.path}")
-
-                if (channel.path == GAME_SETTINGS_TRANSFER_PATH) {
-                    // It's better to pass the Application context to the ViewModel
-                    // and let the ViewModel handle the data processing and storage.
-                    // This avoids holding a direct ViewModel reference in the Activity if using Hilt for ViewModels.
-                    // For now, if not using Hilt for VM in Activity:
-                    // val gameViewModelInstance: WearGameViewModel by viewModels() // this would create a new one if not careful
-                    // Instead, we'll assume WearGameViewModel is a singleton or accessible via Hilt in Composable.
-                    // The data received here needs to be funnelled to the active ViewModel.
-                    // One way is to use a SharedFlow/EventBus or have ViewModel expose a method.
-                    // For simplicity, if your ViewModel is a singleton or easily accessible for this:
-                    // This example assumes you'll get the ViewModel instance correctly later.
-                    // A better way would be for the service/listener (if not in Activity) to update storage,
-                    // and ViewModel observes storage.
-
-                    // Since we're in Activity, we can obtain the ViewModel instance associated
-                    // with the Activity's lifecycle if WearGameViewModel is @HiltViewModel
-                    // For this specific ChannelClient callback which is tied to Activity lifecycle,
-                    // it's okay to get it here for this task, but be mindful of context.
-                    // However, a service is better for background data reception.
-                    // Let's assume RefWatchWearApp gets the ViewModel and we need to signal it.
-                    // For this direct example:
-                    val gameViewModelForCallback: WearGameViewModel by viewModels()
+    }
+    Log.d("RefWatchWearApp", "Start destination determined: $startDestination based on phase: ${activeGame.currentPhase}")
 
 
-                    activityScope.launch { // Use Activity's scope
-                        try {
-                            Log.d(TAG_WEAR_ACTIVITY, "Processing data from channel: ${channel.path}")
-                            val inputStream = channelClient.getInputStream(channel).await()
-                            inputStream.use { stream ->
-                                InputStreamReader(stream, StandardCharsets.UTF_8).use { reader ->
-                                    val jsonString = reader.readText()
-                                    Log.d(TAG_WEAR_ACTIVITY, "Received JSON ($jsonString)")
-                                    if (jsonString.isNotEmpty()) {
-                                        // Use kotlinx.serialization.json.Json
-                                        val gamesList = Json {ignoreUnknownKeys = true}.decodeFromString<List<Game>>(jsonString)
-                                        Log.d(TAG_WEAR_ACTIVITY, "Decoded ${gamesList.size} games from channel.")
-                                        gameViewModelForCallback.updateScheduledGames(gamesList) // Update ViewModel
-                                    } else {
-                                        Log.w(TAG_WEAR_ACTIVITY, "Received empty data for game settings via channel.")
-                                        gameViewModelForCallback.updateScheduledGames(emptyList()) // Clear if empty received
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG_WEAR_ACTIVITY, "Error receiving/processing game settings from channel", e)
-                        } finally {
-                            Log.d(TAG_WEAR_ACTIVITY, "Closing channel from receiver side: ${channel.path}")
-                            channelClient.close(channel).await() // Receiver should close its end
+    Scaffold(
+        modifier = Modifier.background(MaterialTheme.colors.background), // Use Wear MaterialTheme
+        // timeText = { TimeText() } // Optional: standard time display
+    ) {
+        SwipeDismissableNavHost(
+            navController = navController,
+            startDestination = startDestination // Dynamic start destination
+        ) {
+            composable(Screen.Home.route) {
+                // Pass NavController and ViewModel
+                HomeScreen(
+                    onNavigateToSchedule = { navController.navigate(Screen.GameSchedule.route) },
+                    onNavigateToNewGame = {
+                        gameViewModel.createNewDefaultGame() // Prepare a new default game
+                        navController.navigate(Screen.PreGameSetup.route)
+                    }
+                )
+            }
+            composable(Screen.GameSchedule.route) {
+                val scheduledGames by gameViewModel.scheduledGames.collectAsState()
+                GameScheduleScreen(
+                    scheduledGames = scheduledGames,
+                    onGameSelected = { selectedGame ->
+                        gameViewModel.selectGameToStart(selectedGame) // Prepare the selected game
+                        navController.navigate(Screen.PreGameSetup.route) {
+                            // Clear back stack to home or make sense for your flow
+                            popUpTo(Screen.Home.route)
                         }
                     }
-                } else {
-                    Log.w(TAG_WEAR_ACTIVITY, "Channel opened for unknown path: ${channel.path}, closing.")
-                    activityScope.launch { channelClient.close(channel).await() }
-                }
+                )
             }
-
-            override fun onInputClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
-                super.onInputClosed(channel, closeReason, appSpecificErrorCode)
-                Log.d(TAG_WEAR_ACTIVITY, "Input closed for channel: ${channel.path}, reason: $closeReason (usually indicates sender closed output)")
+            composable(Screen.PreGameSetup.route) {
+                // ViewModel is already available via hiltViewModel or passed if needed
+                PreGameSetupScreen(
+                    gameViewModel = gameViewModel, // Pass the ViewModel
+                    onNavigateToKickOff = {
+                        navController.navigate(Screen.KickOffSelection.route)
+                    },
+                    onStartGameConfirmed = { // New callback for when settings are confirmed
+                        gameViewModel.confirmSettingsAndStartGame() // ViewModel handles phase change
+                        navController.navigate(Screen.Game.route) {
+                            popUpTo(Screen.Home.route) {
+                                inclusive = false
+                            } // Go back to home, then to game
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
+            composable(Screen.KickOffSelection.route) {
+                KickOffSelectionScreen(
+                    gameViewModel = gameViewModel,
+                    onConfirm = {
+                        // confirmSettingsAndStartGame should be called before navigating if this is the final step
+                        // Or, PreGameSetupScreen's "Start Game" button is the one to call confirmSettingsAndStartGame
+                        // For now, let's assume PreGameSetup handles the final confirmation
+                        navController.popBackStack() // Go back to PreGameSetup
+                    }
+                )
+            }
+            composable(Screen.Game.route) {
+                val currentActiveGame by gameViewModel.activeGame.collectAsState()
+                GameScreenWithPager( // Ensure this screen observes the activeGame state
+                    activeGame = currentActiveGame, // Pass the whole Game object
+                    // Pass specific lambdas for actions the Pager needs to trigger
+                    onToggleTimer = { gameViewModel.toggleTimer() },
+                    onAddGoal = { team -> gameViewModel.addGoal(team) },
+                    onEndPhaseEarly = { gameViewModel.endCurrentPhaseEarly() },
+                    onNavigateToLogCard = { navController.navigate(Screen.LogCard.route) }, // Navigation is separate
+                    onNavigateToGameLog = { navController.navigate(Screen.GameLog.route) },
+                    //TODO: implement resetgame
+                    onResetGame = { /*gameViewModel.resetGame()*/ }
 
-            override fun onChannelClosed(channel: ChannelClient.Channel, closeReason: Int, appSpecificErrorCode: Int) {
-                super.onChannelClosed(channel, closeReason, appSpecificErrorCode)
-                Log.d(TAG_WEAR_ACTIVITY, "Channel closed: ${channel.path}, reason: $closeReason")
+                )
+            }
+            composable(Screen.LogCard.route) {
+                // val currentActiveGame by gameViewModel.activeGame.collectAsState() // Already available
+                LogCardScreen(
+                    onLogCard = { navController.popBackStack() },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.GameLog.route) {
+                val currentActiveGame by gameViewModel.activeGame.collectAsState()
+                GameLogScreen(
+                    events = currentActiveGame.events,
+                    onDismiss = { navController.popBackStack() }
+                )
             }
         }
-        channelClient.registerChannelCallback(channelCallback!!)
-        Log.i(TAG_WEAR_ACTIVITY, "ChannelCallback registered.")
-    }
-
-    private fun unregisterChannelCallback() {
-        channelCallback?.let {
-            try {
-                channelClient.unregisterChannelCallback(it)
-                Log.i(TAG_WEAR_ACTIVITY, "ChannelCallback unregistered.")
-            } catch (e: Exception) {
-                Log.w(TAG_WEAR_ACTIVITY, "Error unregistering ChannelCallback: ${e.message}")
-            } finally {
-                channelCallback = null
-            }
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // activityScope.cancel() // Cancel coroutines if any are long-running
     }
 }

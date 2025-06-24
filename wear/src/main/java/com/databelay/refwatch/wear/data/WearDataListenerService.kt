@@ -11,10 +11,13 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.ListSerializer // For List<Game>
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.WearableListenerService
-
+import java.nio.charset.StandardCharsets
+@AndroidEntryPoint // <<<< ADD THIS
 class WearDataListenerService : WearableListenerService() {
 
     private val serviceJob = SupervisorJob()
@@ -26,6 +29,18 @@ class WearDataListenerService : WearableListenerService() {
         isLenient = true
         classDiscriminator = "eventType" // If needed for GameEvent
     }
+    @Inject // <<<< ADD THIS for field injection
+    lateinit var gameStorage: GameStorageWear
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        super.onMessageReceived(messageEvent)
+
+        Log.d(TAG, "Message received! Path: ${messageEvent.path}")
+        val message = String(messageEvent.data, StandardCharsets.UTF_8)
+        Log.d(TAG, "Received message: $message")
+
+    }
+
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d(TAG, "onDataChanged received ${dataEvents.count} events.")
@@ -44,7 +59,7 @@ class WearDataListenerService : WearableListenerService() {
                             Log.i(TAG, "Successfully deserialized ${gameList.size} games.")
 
                             serviceScope.launch {
-                                GameStorageWear.saveGamesList(applicationContext, gameList)
+                                gameStorage.saveGamesList(gameList)
                                 // TODO: Optionally, notify active UI/ViewModel to refresh
                                 // This could be via a LocalBroadcastManager, a SharedFlow in a singleton,
                                 // or the ViewModel re-fetching on next observation.
@@ -65,7 +80,7 @@ class WearDataListenerService : WearableListenerService() {
                 if (event.dataItem.uri.path == WearSyncConstants.GAMES_LIST_PATH) {
                     Log.i(TAG, "Game list DataItem deleted by phone. Clearing local storage.")
                     serviceScope.launch {
-                        GameStorageWear.clearGamesList(applicationContext)
+                        gameStorage.clearGamesList()
                         // TODO: Notify UI/ViewModel
                     }
                 }
@@ -76,15 +91,6 @@ class WearDataListenerService : WearableListenerService() {
 
     // In WearDataListenerService.kt
     override fun onCreate() {
-        // FIXME: service never starts when using hilt; MinimalTestListenerService app works fine and the pings go through from mobile to watch
-        // java.lang.SecurityException: Unknown calling package name 'com.google.android.gms'.
-        // Error: Failed to register com.google.android.gms.providerinstaller
-        // Warnings after: fdok: 17: 17: API: Phenotype.API is not available on this device. Connection failed with: ConnectionResult{statusCode=DEVELOPER_ERROR, resolution=null, message=null}
-        // at fdom.a(:com.google.android.gms@251833035@25.18.33 (260400-756823100):13)
-        //!!!!! Looks like it's not hilt, cause MinApp also uses it. Library versions or the naming in google-services.json?
-        // Progress: no exception, says ping sent. Not receiving at the other end still.
-
-
         super.onCreate()
         Log.e(TAG, "WearDataListenerService CREATED") // Use a prominent tag/level
     }
