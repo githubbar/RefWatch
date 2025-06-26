@@ -31,6 +31,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import androidx.core.content.edit
+import com.google.android.gms.wearable.DataClient
+import com.google.android.gms.wearable.PutDataMapRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 
 // Assume this is your Wear OS specific storage helper (similar to phone's but for Wear)
 // You'll need to implement this for Wear OS using SharedPreferences or DataStore
@@ -70,7 +74,8 @@ object WearAppStorage {
 class WearGameViewModel @Inject constructor(
     private val application: Application, // Hilt can provide this
     private val savedStateHandle: SavedStateHandle, // Hilt provides this
-    private val gameStorage: GameStorageWear // Hilt injects your singleton GameStorage
+    private val gameStorage: GameStorageWear, // Hilt injects your singleton GameStorage
+    private val dataClient: DataClient // For syncing
 ) : AndroidViewModel(application) {
     private val TAG = "WearGameViewModel"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -105,6 +110,38 @@ class WearGameViewModel @Inject constructor(
             startTimerLogic(initialDisplayedTime)
         }
         updateCurrentPeriodKickOffTeam(initialGame.currentPhase, initialGame.kickOffTeam)
+    }
+
+    fun createNewDefaultGame() {
+        pauseTimer()
+        val newDefaultGame = Game(gameDateTimeEpochMillis = System.currentTimeMillis()) // Creates a game with a new unique ID and default values
+        _activeGame.value = newDefaultGame // Set it as the active game immediately
+        updateCurrentPeriodKickOffTeam(GamePhase.PRE_GAME, newDefaultGame.kickOffTeam)
+        _activeGame.update {
+            it.copy(displayedTimeMillis = getDurationMillisForPhase(GamePhase.FIRST_HALF, it))
+        }
+        Log.d(TAG, "New default game created with ID: ${newDefaultGame.id}. Setting as active and syncing to phone.")
+        saveActiveGameState() // Save it to SavedStateHandle for session persistence
+
+        // --- NEW LOGIC: Sync this new game to the phone ---
+        syncNewAdHocGameToPhone(newDefaultGame)
+    }
+
+    private fun syncNewAdHocGameToPhone(newGame: Game) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val jsonString = json.encodeToString(newGame)
+                val putDataMapReq = PutDataMapRequest.create(WearSyncConstants.NEW_AD_HOC_GAME_PATH)
+                putDataMapReq.dataMap.putString(WearSyncConstants.NEW_GAME_PAYLOAD_KEY, jsonString)
+                putDataMapReq.dataMap.putLong("timestamp", System.currentTimeMillis())
+                putDataMapReq.setUrgent()
+
+                dataClient.putDataItem(putDataMapReq.asPutDataRequest()).await()
+                Log.i(TAG, "Successfully sent new ad-hoc game ${newGame.id} to phone.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending new ad-hoc game to phone.", e)
+            }
+        }
     }
 
     private fun loadInitialActiveGame(): Game {
@@ -142,11 +179,62 @@ class WearGameViewModel @Inject constructor(
             val activeGameJson = json.encodeToString(_activeGame.value)
             savedStateHandle["activeGameJson"] = activeGameJson
             Log.d(TAG, "Active game state saved to SavedStateHandle.")
-            // TODO: Also send this _activeGame.value to the phone via DataClient
             // sendActiveGameUpdateToPhone(_activeGame.value)
         } catch (e: Exception) {
             Log.e(TAG, "Error saving active game state to JSON", e)
         }
+    }
+
+    // To be called when the user finishes a game.
+    fun finishAndSyncActiveGame(onSyncComplete: () -> Unit) {
+        Log.d(TAG, "finishAndSyncActiveGame called for game: ${_activeGame.value.id}")
+
+        // The game is now considered completed.
+        // We update the local activeGame state before sending it.
+        val finalGameData = _activeGame.value.copy(
+            currentPhase = GamePhase.FULL_TIME, // Ensure it's marked as full time
+            status = GameStatus.COMPLETED,      // <<< NEW: Mark the game as completed
+            lastUpdated = System.currentTimeMillis()
+        )
+
+        // Update the local StateFlow immediately for responsive UI, even before sync completes
+        _activeGame.value = finalGameData
+
+        Log.d(TAG, "Game ${finalGameData.id} marked as COMPLETED. Syncing to phone.")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Serialize the *finalGameData* object which now has the COMPLETED status
+                val jsonString = json.encodeToString(finalGameData)
+                val path = "${WearSyncConstants.GAME_UPDATE_FROM_WATCH_PATH_PREFIX}/${finalGameData.id}"
+                // ... (rest of your DataClient logic to send the data)
+                val putDataMapReq = PutDataMapRequest.create(path)
+                putDataMapReq.dataMap.putString(WearSyncConstants.GAME_UPDATE_PAYLOAD_KEY, jsonString)
+                // ...
+                dataClient.putDataItem(putDataMapReq.asPutDataRequest()).await()
+                Log.i(TAG, "Successfully sent final game state for game ${finalGameData.id} to phone.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending final game state to phone.", e)
+            } finally {
+                launch(Dispatchers.Main) {
+                    resetActiveGameToDefault()
+                    onSyncComplete()
+                }
+            }
+        }
+    }
+
+
+    // Add a helper to reset the active game to a neutral default state after a game is finished.
+    fun resetActiveGameToDefault() {
+        pauseTimer() // Ensure any lingering timers are stopped
+        val newDefaultGame = Game() // Create a fresh default game
+        _activeGame.value = newDefaultGame.copy(
+            // Ensure displayed time is ready for the next pre-game setup
+            displayedTimeMillis = getDurationMillisForPhase(GamePhase.FIRST_HALF, newDefaultGame)
+        )
+        saveActiveGameState() // Save the new default state
+        Log.d(TAG, "Active game has been reset to default after finishing.")
     }
 
     // Call this when a user selects a game from the _scheduledGames list
@@ -467,18 +555,6 @@ class WearGameViewModel @Inject constructor(
         saveActiveGameState()
     }
 
-    fun createNewDefaultGame() { // For starting a completely new game without selection
-        pauseTimer()
-        _activeGame.value = Game() // Creates a game with default constructor values
-        updateCurrentPeriodKickOffTeam(GamePhase.PRE_GAME, _activeGame.value.kickOffTeam)
-        // Set initial displayed time for the first half for the new default game
-        _activeGame.update {
-            it.copy(displayedTimeMillis = getDurationMillisForPhase(GamePhase.FIRST_HALF, it))
-        }
-        Log.d(TAG, "New default game created and made active.")
-        saveActiveGameState()
-    }
-
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun vibrateDevice() {
         try {
@@ -499,5 +575,15 @@ class WearGameViewModel @Inject constructor(
         super.onCleared()
         gameCountDownTimer?.cancel()
         Log.d(TAG, "WearGameViewModel cleared, timer cancelled.")
+    }
+
+    fun updateHomeTeamName(name: String) {
+        _activeGame.update { it.copy(homeTeamName = name, lastUpdated = System.currentTimeMillis()) }
+        saveActiveGameState()
+    }
+
+    fun updateAwayTeamName(name: String) {
+        _activeGame.update { it.copy(awayTeamName = name, lastUpdated = System.currentTimeMillis()) }
+        saveActiveGameState()
     }
 }

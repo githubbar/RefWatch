@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.TextField
 import androidx.wear.compose.material.dialog.Dialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,16 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.CompactButton
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.*
 import com.databelay.refwatch.wear.WearGameViewModel
 import com.databelay.refwatch.common.theme.*
 
@@ -37,6 +35,8 @@ fun PreGameSetupScreen(
 
     var showHomeColorPicker by remember { mutableStateOf(false) }
     var showAwayColorPicker by remember { mutableStateOf(false) }
+    // State for managing which team name is being edited
+    var teamNameToEdit by remember { mutableStateOf<Pair<String, (String) -> Unit>?>(null) }
 
     ScalingLazyColumn(
         modifier = Modifier
@@ -54,15 +54,40 @@ fun PreGameSetupScreen(
             // Removed Spacer here as padding on Text is used
         }
 
+        // Team Name Editors
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            ) {
+                // Home Team Name Chip
+                OutlinedChip(
+                    onClick = { teamNameToEdit = "Home" to gameViewModel::updateHomeTeamName },
+                    label = { Text(activeGame.homeTeamName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit Home Team Name") },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                // Away Team Name Chip
+                OutlinedChip(
+                    onClick = { teamNameToEdit = "Away" to gameViewModel::updateAwayTeamName },
+                    label = { Text(activeGame.awayTeamName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    icon = { Icon(Icons.Default.Edit, contentDescription = "Edit Away Team Name") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         // Jersey Colors
         item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp) // Added a bit more vertical padding
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             ) {
                 ColorPickerButton("Home", activeGame.homeTeamColor) { showHomeColorPicker = true }
-                ColorPickerButton("Away", activeGame.awayTeamColor) { showAwayColorPicker = true } // Assuming gameState.settings.awayColor
+                ColorPickerButton("Away", activeGame.awayTeamColor) { showAwayColorPicker = true }
             }
         }
 
@@ -107,6 +132,22 @@ fun PreGameSetupScreen(
         item { Spacer(modifier = Modifier.height(10.dp)) } // Bottom padding
     }
 
+
+    // --- DIALOGS ---
+
+    // Team Name Edit Dialog
+    teamNameToEdit?.let { (teamLabel, onSave) ->
+        TeamNameEditDialog(
+            teamLabel = teamLabel,
+            initialValue = if (teamLabel == "Home") activeGame.homeTeamName else activeGame.awayTeamName,
+            onSave = { newName ->
+                onSave(newName)
+                teamNameToEdit = null // Close dialog
+            },
+            onDismiss = { teamNameToEdit = null } // Close dialog
+        )
+    }
+
     // Color Picker Dialogs
     if (showHomeColorPicker) {
         SimpleColorPickerDialog(
@@ -130,6 +171,58 @@ fun PreGameSetupScreen(
             },
             onDismiss = { showAwayColorPicker = false }
         )
+    }
+}
+
+
+/**
+ * A new dialog Composable for editing a team's name.
+ */
+@Composable
+fun TeamNameEditDialog(
+    teamLabel: String,
+    initialValue: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initialValue) }
+
+    Dialog(
+        showDialog = true,
+        onDismissRequest = onDismiss
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.surface)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Edit $teamLabel Team Name", style = MaterialTheme.typography.title3, textAlign = TextAlign.Center)
+
+            // Text field for input. This will bring up the keyboard on a real device.
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("Team Name") }
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(onClick = onDismiss, colors = ButtonDefaults.secondaryButtonColors()) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = { onSave(text) },
+                    enabled = text.isNotBlank() // Save button is disabled if the name is empty
+                ) {
+                    Text("Save")
+                }
+            }
+        }
     }
 }
 

@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.play.services.wearable) // Crucial
     implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
+//    implementation("androidx.wear.compose.foundation.lazy")
 
     ksp(libs.hilt.compiler)
 

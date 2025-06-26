@@ -11,34 +11,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.databelay.refwatch.common.GamePhase
+import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.wear.navigation.Screen
 import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScheduleScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
-import com.databelay.refwatch.wear.presentation.screens.HomeScreen
 import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupScreen
 import dagger.hilt.android.AndroidEntryPoint
 
-// Navigation routes for the Wear App
-object WearNavRoutes {
-    const val GAME_LIST = "game_list"
-    // Define the argument name for the gameId
-    const val GAME_ID_ARG = "gameId"
-    const val GAME_IN_PROGRESS_ROUTE = "game_in_progress" // Base route name
-    // Full route definition with argument
-    const val GAME_IN_PROGRESS = "$GAME_IN_PROGRESS_ROUTE/{$GAME_ID_ARG}"
-
-    fun gameInProgressRoute(gameId: String) = "$GAME_IN_PROGRESS_ROUTE/$gameId"
-}
 
 @AndroidEntryPoint // This annotation enables Hilt injection for the Activity
 class MainActivity : ComponentActivity() {
@@ -61,26 +52,28 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RefWatchWearApp() {
     val navController = rememberSwipeDismissableNavController()
-    // Obtain the WearGameViewModel. Hilt scopes it to the navigation graph.
-    // We get it here so it's shared between GameListScreen and GameInProgressScreen.
     val gameViewModel: WearGameViewModel = hiltViewModel()
-
-    // Observe the StateFlows from the ViewModel.
-    // When the background service updates GameStorage, the ViewModel's flow will update,
-    // and this UI will recompose automatically.
     val scheduledGames by gameViewModel.scheduledGames.collectAsState()
     val activeGame by gameViewModel.activeGame.collectAsState()
 
-    // Determine start destination based on the current active game's phase
-    val startDestination = remember(activeGame.currentPhase) { // Recalculate if phase changes
-        if (activeGame.currentPhase == GamePhase.PRE_GAME || activeGame.currentPhase == GamePhase.FULL_TIME) {
-            Screen.Home.route // Start at Home if no game active or game ended
+    // Determine start destination based on whether a game is resumable
+    val startDestination = remember(activeGame) {
+        // If there's an active game in progress, start directly on the game screen.
+        // Otherwise, start on the schedule/home screen.
+        if (activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.FULL_TIME) {
+            // A more robust check for a default/empty game state
+            val isDefaultGame = activeGame.homeTeamName == "Home" && activeGame.awayTeamName == "Away" && activeGame.events.isEmpty()
+            if (!isDefaultGame) {
+                Screen.Game.route // Base route name for the pager screen
+            } else {
+                Screen.GameSchedule.route // Default start
+            }
         } else {
-            Screen.Game.route // Go directly to game if it's in progress
+            Screen.GameSchedule.route
         }
     }
-    Log.d("RefWatchWearApp", "Start destination determined: $startDestination based on phase: ${activeGame.currentPhase}")
 
+    Log.d("RefWatchWearApp", "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
 
     Scaffold(
         modifier = Modifier.background(MaterialTheme.colors.background), // Use Wear MaterialTheme
@@ -90,26 +83,25 @@ fun RefWatchWearApp() {
             navController = navController,
             startDestination = startDestination // Dynamic start destination
         ) {
-            composable(Screen.Home.route) {
-                // Pass NavController and ViewModel
-                HomeScreen(
-                    onNavigateToSchedule = { navController.navigate(Screen.GameSchedule.route) },
-                    onNavigateToNewGame = {
-                        gameViewModel.createNewDefaultGame() // Prepare a new default game
-                        navController.navigate(Screen.PreGameSetup.route)
-                    }
-                )
-            }
             composable(Screen.GameSchedule.route) {
                 val scheduledGames by gameViewModel.scheduledGames.collectAsState()
                 GameScheduleScreen(
                     scheduledGames = scheduledGames,
+                    activeGame = activeGame,
                     onGameSelected = { selectedGame ->
                         gameViewModel.selectGameToStart(selectedGame) // Prepare the selected game
                         navController.navigate(Screen.PreGameSetup.route) {
                             // Clear back stack to home or make sense for your flow
                             popUpTo(Screen.Home.route)
                         }
+                    },
+                    onNavigateToGameScreen = { // <<<<  Implement the resume navigation
+                        // The game is already active in the ViewModel, just navigate
+                        navController.navigate(Screen.Game.route)
+                    },
+                    onNavigateToNewGame = {
+                        gameViewModel.createNewDefaultGame() // Prepare a new default game
+                        navController.navigate(Screen.PreGameSetup.route)
                     }
                 )
             }
@@ -150,17 +142,49 @@ fun RefWatchWearApp() {
                     onToggleTimer = { gameViewModel.toggleTimer() },
                     onAddGoal = { team -> gameViewModel.addGoal(team) },
                     onEndPhaseEarly = { gameViewModel.endCurrentPhaseEarly() },
-                    onNavigateToLogCard = { navController.navigate(Screen.LogCard.route) }, // Navigation is separate
+                    onNavigateToLogCard = { team -> navController.navigate(Screen.LogCard.createRoute(team)) }, // Navigation is separate
                     onNavigateToGameLog = { navController.navigate(Screen.GameLog.route) },
-                    //TODO: implement resetgame
-                    onResetGame = { /*gameViewModel.resetGame()*/ }
-
+                    // This lambda defines what happens when the user finishes the game
+                    onFinishGame = {
+                        Log.d("RefWatchWearApp", "Finish Game action triggered from UI.")
+                        gameViewModel.finishAndSyncActiveGame {
+                            Log.d("RefWatchWearApp", "Sync complete. Navigating to Home.")
+                            // Navigate back home and clear the history
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Home.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onResetGame = {
+                        Log.d("RefWatchWearApp", "Reset Game action triggered from UI.")
+                        // This action simply resets the current active game to a fresh default state.
+                        gameViewModel.createNewDefaultGame()
+                        // After resetting, we navigate to the PreGameSetup screen for this new default game.
+                        navController.navigate(Screen.PreGameSetup.route) {
+                            popUpTo(Screen.Home.route) // Go back to Home then to PreGameSetup
+                        }
+                    }
                 )
             }
-            composable(Screen.LogCard.route) {
-                // val currentActiveGame by gameViewModel.activeGame.collectAsState() // Already available
+            composable(
+                route = Screen.LogCard.route,
+                arguments = listOf(navArgument("team") { type = NavType.StringType })
+            ) { backStackEntry ->
+                // Extract the team name from the route, convert it to the Enum
+                val teamName = backStackEntry.arguments?.getString("team")
+                val preselectedTeam = try {
+                    teamName?.let { Team.valueOf(it) }
+                } catch (e: IllegalArgumentException) {
+                    null // Handle error if the team name is invalid
+                }
+
                 LogCardScreen(
-                    onLogCard = { navController.popBackStack() },
+                    preselectedTeam = preselectedTeam, // Pass the preselected team
+                    onLogCard = { team, number, cardType ->
+                        gameViewModel.addCard(team, number, cardType)
+                        navController.popBackStack() // Go back after logging
+                    },
                     onCancel = { navController.popBackStack() }
                 )
             }

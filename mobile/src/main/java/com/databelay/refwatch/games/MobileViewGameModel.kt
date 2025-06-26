@@ -68,8 +68,21 @@ class MobileGameViewModel @Inject constructor(
                 val dataItem = event.dataItem
                 val path = dataItem.uri.path
                 Log.d(TAG, "DataItem changed: $path")
-
-                if (path != null && path.startsWith(WearSyncConstants.GAME_UPDATE_FROM_WATCH_PATH_PREFIX)) {
+                if (path == WearSyncConstants.NEW_AD_HOC_GAME_PATH) {
+                    try {
+                        val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+                        val newGameJson = dataMap.getString(WearSyncConstants.NEW_GAME_PAYLOAD_KEY)
+                        if (newGameJson != null) {
+                            val newGame = json.decodeFromString<Game>(newGameJson)
+                            Log.i(TAG, "Received new ad-hoc game ${newGame.id} from watch. Saving to Firebase.")
+                            // Call the existing method to save it to Firestore
+                            addOrUpdateGame(newGame)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing new ad-hoc game from watch.", e)
+                    }
+                }
+                else if (path != null && path.startsWith(WearSyncConstants.GAME_UPDATE_FROM_WATCH_PATH_PREFIX)) {
                     val gameId = path.substringAfterLast('/') // Extracts gameId from path
                     try {
                         val dataMap = DataMapItem.fromDataItem(dataItem).dataMap

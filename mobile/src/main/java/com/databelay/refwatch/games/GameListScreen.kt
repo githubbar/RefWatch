@@ -4,18 +4,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import java.text.SimpleDateFormat
 import java.util.*
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GameStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,22 +35,29 @@ fun GameListScreen(
     onImportGames: () -> Unit, // Callback for importing
     onSendPing: () -> Unit
 ) {
-    // Debug
-//    var debugAssetLoadAttempted by remember { mutableStateOf(false) }
-//    if (BuildConfig.DEBUG && !debugAssetLoadAttempted && !isLoading) {
-//        LaunchedEffect(Unit) {
-//            debugAssetLoadAttempted = true
-//            Toast.makeText(context, "DEBUG: Auto-processing ICS from assets", Toast.LENGTH_SHORT).show()
-//            loadFromAssetsAndParse()
-//        }
-//    }
+    var selectedTab by remember { mutableStateOf(GameStatus.SCHEDULED) }
+
+    // Filter and sort the lists, just like on the watch
+    val (upcomingGames, pastGames) = remember(games) {
+        val (scheduled, completed) = games.partition { it.status == GameStatus.SCHEDULED }
+        Pair(
+            scheduled.sortedBy { it.gameDateTimeEpochMillis },
+            completed.sortedByDescending { it.gameDateTimeEpochMillis }
+        )
+    }
+    val gamesToDisplay = if (selectedTab == GameStatus.SCHEDULED) upcomingGames else pastGames
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Referee Games") },
+                title = { Text("My Games") },
                 actions = {
-                    TextButton(onClick = onSignOut) { Text("Sign Out") }
-                }
+                    IconButton(onClick = onImportGames) {
+                        Icon(Icons.Default.UploadFile, contentDescription = "Import ICS")
+                    }
+                    IconButton(onClick = onSignOut) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out")
+                    }                }
             )
         },
         floatingActionButton = {
@@ -59,26 +73,29 @@ fun GameListScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "RefWatch",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-            Button(onClick = onSendPing, modifier = Modifier.fillMaxWidth()) {
-                Text("Send Ping")
-            }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = onImportGames, modifier = Modifier.fillMaxWidth()) {
-                Text("Import ICS")
+            // --- TABS FOR FILTERING ---
+            TabRow(selectedTabIndex = selectedTab.ordinal) {
+                Tab(
+                    selected = selectedTab == GameStatus.SCHEDULED,
+                    onClick = { selectedTab = GameStatus.SCHEDULED },
+                    text = { Text("Upcoming (${upcomingGames.size})") }
+                )
+                Tab(
+                    selected = selectedTab == GameStatus.COMPLETED,
+                    onClick = { selectedTab = GameStatus.COMPLETED },
+                    text = { Text("Past (${pastGames.size})") }
+                )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            if (games.isEmpty()) {
+
+            // --- GAME LIST or EMPTY MESSAGE ---
+            if (gamesToDisplay .isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No games scheduled. Add one or import ICS.")
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(games, key = { it.id }) { game ->
+                    items(gamesToDisplay , key = { it.id }) { game ->
                         GameItem(
                             game = game,
                             onEdit = { onEditGame(game) }, // Call onEditGame
@@ -142,3 +159,4 @@ fun GameItem(game: Game, onEdit: () -> Unit, onDelete: () -> Unit) {
         }
     }
 }
+

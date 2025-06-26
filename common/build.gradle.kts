@@ -5,9 +5,9 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
 //    id("com.google.gms.google-services")
-
-//    id("kotlin-parcelize")
-    kotlin("plugin.serialization") version "2.1.21"
+//    id("org.jetbrains.kotlin.plugin.parcelize")
+    id("kotlin-parcelize")
+     kotlin("plugin.serialization") version "2.1.21"
 }
 
 android {
@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.firebase.firestore.ktx)
 
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)

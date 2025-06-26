@@ -2,13 +2,17 @@ package com.databelay.refwatch.games
 
 import android.util.Log
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GameEvent
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.toObject
+import com.google.gson.Gson
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.json.Json
 
 class GameRepository(private val firestore: FirebaseFirestore) {
 
@@ -18,6 +22,15 @@ class GameRepository(private val firestore: FirebaseFirestore) {
         private const val TAG = "GameRepository"
     }
 
+    // Create these instances once for efficiency
+    private val gson = Gson()
+    private val ktxJson = Json {
+        ignoreUnknownKeys = true
+        // This is needed if your common GameEvent is still in the old format
+        // without the class discriminator property in the JSON itself.
+        // If you are using the 'type' field as we discussed, this is still good practice.
+        classDiscriminator = "eventType" // Or whatever you configured
+    }
     fun getGamesFlow(userId: String): Flow<List<Game>> = callbackFlow {
         // ... (same as before, but now using your new Game class)
         // Ensure your Game class has a no-arg constructor or all fields have defaults
@@ -41,12 +54,24 @@ class GameRepository(private val firestore: FirebaseFirestore) {
             if (snapshots != null) {
                 val games = snapshots.documents.mapNotNull { document ->
                     try {
-                        // Firestore will attempt to map the document to your Game data class
-                        document.toObject<Game>()
-                            ?.copy(id = document.id) // Ensure ID from document is used
+                        // 1. Convert to Game object, this will have an empty `events` list because of @Exclude
+                        val gameBase = document.toObject<Game>()
+
+                        if (gameBase != null) {
+                            // 2. Manually parse the events from the document data
+                            val parsedEvents = parseGameEventsFromDocument(document)
+
+                            // 3. Return a new Game object with the manually parsed events
+                            gameBase.copy(
+                                id = document.id, // Ensure Firestore document ID is used
+                                events = parsedEvents
+                            )
+                        } else {
+                            null
+                        }
                     } catch (ex: Exception) {
                         Log.e(
-                            TAG,
+                            "GameRepository",
                             "Error converting document ${document.id} to Game for user $userId",
                             ex
                         )
@@ -62,6 +87,25 @@ class GameRepository(private val firestore: FirebaseFirestore) {
         awaitClose {
             Log.d(TAG, "Closing games flow listener for user $userId")
             listenerRegistration.remove()
+        }
+    }
+
+    private fun parseGameEventsFromDocument(document: DocumentSnapshot): List<GameEvent> {
+        val eventMaps = document.get("events") as? List<Map<String, Any>> ?: return emptyList()
+
+        return eventMaps.mapNotNull { eventMap ->
+            try {
+                // 1. Use Gson to convert the Firestore Map into a standard JSON String.
+                val jsonString = gson.toJson(eventMap)
+
+                // 2. Use kotlinx.serialization to decode the JSON String into a GameEvent.
+                //    It will automatically use the correct subclass because GameEvent is sealed
+                //    and we added the 'type' (or 'eventType') property to each subclass.
+                ktxJson.decodeFromString<GameEvent>(jsonString)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error decoding a single GameEvent from map: $eventMap", e)
+                null // Skip this event if it's malformed
+            }
         }
     }
 

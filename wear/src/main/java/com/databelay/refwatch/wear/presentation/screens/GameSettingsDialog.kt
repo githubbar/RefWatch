@@ -20,8 +20,9 @@ import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 @Composable
 fun GameSettingsDialog(
     onDismiss: () -> Unit,
-    onViewLog: () -> Unit,
+    onFinishGame: () -> Unit,
     onResetGame: () -> Unit,
+    onViewLog: () -> Unit,
     onToggleTimer: () -> Unit, // New callback
     isTimerRunning: Boolean,  // Current timer state
     isGameActive: Boolean,
@@ -65,20 +66,26 @@ fun GameSettingsDialog(
             }
 
 
-            item {
-                Button(onClick = onViewLog,
+            item { // Finish Game Button
+                Button(onClick = onFinishGame,
                     modifier = Modifier.fillMaxWidth(),
-                    ) {
-                    Text("View Game Log")}
+                ) {
+                    Text("Finish Game")}
             }
 
             item { // Reset/End Game Button
                 Button(onClick = onResetGame,
                     modifier = Modifier.fillMaxWidth(),
                     ) {
-                    Text("Reset/End Game")}
+                    Text("Reset Game")}
             }
 
+            item {
+                Button(onClick = onViewLog,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("View Game Log")}
+            }
             item {
                 Button(onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
