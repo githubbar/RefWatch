@@ -52,10 +52,10 @@ val md_theme_dark_error = Color(0xFFFFB4AB)
 val md_theme_dark_onError = Color(0xFF690005)
 val md_theme_dark_errorContainer = Color(0xFF93000A)
 val md_theme_dark_onErrorContainer = Color(0xFFFFDAD6)
-val md_theme_dark_background = Color(0xFF191C1D)
+val md_theme_dark_background = Color(0xFF000000)
 val md_theme_dark_onBackground = Color(0xFFE1E3E3)
 val md_theme_dark_surface = Color(0xFF191C1D)
-val md_theme_dark_onSurface = Color(0xFFE1E3E3)
+val md_theme_dark_onSurface = Color(0xFFFFFFFF)
 val md_theme_dark_surfaceVariant = Color(0xFF3F484A)
 val md_theme_dark_onSurfaceVariant = Color(0xFFBFC8CA)
 val md_theme_dark_outline = Color(0xFF899294)
@@ -69,8 +69,8 @@ val md_theme_dark_scrim = Color(0xFF000000)
 
 // --- Default Jersey Colors (Conceptually part of your app's "theme") ---
 // These can be some of your M3 palette colors or distinct colors.
-val DefaultHomeJerseyColor: Color = md_theme_light_primary // Example: Use M3 primary for home
-val DefaultAwayJerseyColor: Color = md_theme_light_secondary // Example: Use M3 secondary for away
+val DefaultHomeJerseyColor: Color = Color.White // Example: Use M3 primary for home
+val DefaultAwayJerseyColor: Color = Color.Red // Example: Use M3 secondary for away
 
 // --- Predefined selectable jersey colors ---
 // It's good to offer a palette that works well with your theme.

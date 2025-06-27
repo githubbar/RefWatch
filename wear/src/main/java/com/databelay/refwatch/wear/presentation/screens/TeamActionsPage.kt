@@ -34,7 +34,7 @@ fun TeamActionsPage(
             Button(
                 onClick = onAddGoal,
                 modifier = Modifier.fillMaxWidth(0.85f),
-                colors = ButtonDefaults.buttonColors(backgroundColor = teamColor)
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Green)
             ) {
                 Text("+1 Goal")
             }

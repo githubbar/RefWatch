@@ -1,14 +1,10 @@
-package com.databelay.refwatch.games // New package
+package com.databelay.refwatch.games // Or a subpackage like com.databelay.refwatch.games.addedit
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.databelay.refwatch.common.AgeGroup
-import com.databelay.refwatch.common.Game
-import com.databelay.refwatch.common.GameEvent
-import com.databelay.refwatch.common.GamePhase
-import com.databelay.refwatch.common.Team
+import com.databelay.refwatch.common.*
 import com.databelay.refwatch.common.theme.DefaultAwayJerseyColor
 import com.databelay.refwatch.common.theme.DefaultHomeJerseyColor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,35 +14,38 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 import javax.inject.Inject
 
+// Data class to hold the UI state of the form
+data class AddEditGameUiState(
+    val homeTeamName: String = "Home",
+    val awayTeamName: String = "Away",
+    val venue: String = "",
+    val competition: String = "",
+    val gameDateTimeEpochMillis: Long? = null,
+    val halfDurationMinutes: Int = 45,
+    val halftimeDurationMinutes: Int = 15,
+    val homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
+    val awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
+    val kickOffTeam: Team = Team.HOME,
+    val notes: String = "",
+    val ageGroup: AgeGroup? = null,
+    val errorMessage: String? = null,
+    val isEditing: Boolean = false
+)
+
 @HiltViewModel
 class AddEditGameViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle // For passing gameId if editing
-    // Potentially inject a repository if you need to fetch lists (e.g., predefined competitions)
+    private val savedStateHandle: SavedStateHandle // Hilt provides this
 ) : ViewModel() {
 
-    // UI State for the form
     private val _uiState = MutableStateFlow(AddEditGameUiState())
     val uiState: StateFlow<AddEditGameUiState> = _uiState.asStateFlow()
 
     private var editingGameId: String? = null
 
-    init {
-        // Check if we are editing an existing game (gameId passed via navigation)
-        editingGameId = savedStateHandle.get<String>("gameId")
-        if (editingGameId != null) {
-            // TODO: If editing, load the game's details.
-            // This would typically involve:
-            // 1. A way to get a single game (e.g., from MobileGameViewModel's list or a new repo method)
-            // 2. Populating _uiState with the loaded game's data.
-            // For now, we'll assume new game creation. If you pass a Game object directly
-            // via navigation (not recommended for complex objects), you'd get it here.
-            // For simplicity, if editing, the Game object would be passed to initializeForm.
-        } else {
-            // New game, initialize with defaults
-            initializeForm(null)
-        }
-    }
-
+    /**
+     * Populates the form with data from an existing game for editing,
+     * or sets default values for a new game.
+     */
     fun initializeForm(gameToEdit: Game?) {
         if (gameToEdit != null) {
             editingGameId = gameToEdit.id
@@ -62,62 +61,43 @@ class AddEditGameViewModel @Inject constructor(
                 awayTeamColorArgb = gameToEdit.awayTeamColorArgb,
                 kickOffTeam = gameToEdit.kickOffTeam,
                 notes = gameToEdit.notes ?: "",
+                ageGroup = gameToEdit.ageGroup,
                 isEditing = true
-                // ageGroup = gameToEdit.ageGroup // You'd need to handle AgeGroup state
             )
         } else {
-            // Defaults for a new game
-            _uiState.value = AddEditGameUiState()
+            // New game, initialize with defaults
+            _uiState.value = AddEditGameUiState(
+                // Set a default start time for new games, e.g., current time
+                gameDateTimeEpochMillis = System.currentTimeMillis()
+            )
         }
     }
 
+    // --- Event Handlers for UI Inputs ---
+    fun onHomeTeamNameChange(name: String) { _uiState.value = _uiState.value.copy(homeTeamName = name) }
+    fun onAwayTeamNameChange(name: String) { _uiState.value = _uiState.value.copy(awayTeamName = name) }
+    fun onVenueChange(venue: String) { _uiState.value = _uiState.value.copy(venue = venue) }
+    fun onGameDateTimeChange(epochMillis: Long?) { _uiState.value = _uiState.value.copy(gameDateTimeEpochMillis = epochMillis) }
+    fun onHalfDurationChange(minutes: String) { _uiState.value = _uiState.value.copy(halfDurationMinutes = minutes.toIntOrNull() ?: 45) }
+    fun onHalftimeDurationChange(minutes: String) { _uiState.value = _uiState.value.copy(halftimeDurationMinutes = minutes.toIntOrNull() ?: 15) }
+    fun onHomeColorSelected(color: Color) { _uiState.value = _uiState.value.copy(homeTeamColorArgb = color.toArgb()) }
+    fun onAwayColorSelected(color: Color) { _uiState.value = _uiState.value.copy(awayTeamColorArgb = color.toArgb()) }
+    fun onKickOffTeamSelected(team: Team) { _uiState.value = _uiState.value.copy(kickOffTeam = team) }
+    fun onNotesChanged(newNotes: String) { _uiState.value = _uiState.value.copy(notes = newNotes) }
 
-    // --- Event Handlers for Form Inputs ---
-    fun onHomeTeamNameChange(name: String) {
-        _uiState.value = _uiState.value.copy(homeTeamName = name)
-    }
-
-    fun onAwayTeamNameChange(name: String) {
-        _uiState.value = _uiState.value.copy(awayTeamName = name)
-    }
-
-    fun onVenueChange(venue: String) {
-        _uiState.value = _uiState.value.copy(venue = venue)
-    }
-    // ... Add similar handlers for all other fields (competition, date, time, durations, colors, notes) ...
-
-    fun onGameDateTimeChange(epochMillis: Long?) {
-        _uiState.value = _uiState.value.copy(gameDateTimeEpochMillis = epochMillis)
-    }
-    fun onHalfDurationChange(minutes: String) {
-        _uiState.value = _uiState.value.copy(halfDurationMinutes = minutes.toIntOrNull() ?: _uiState.value.halfDurationMinutes)
-    }
-    fun onHalftimeDurationChange(minutes: String) {
-        _uiState.value = _uiState.value.copy(halftimeDurationMinutes = minutes.toIntOrNull() ?: _uiState.value.halftimeDurationMinutes)
-    }
-    fun onHomeColorSelected(color: Color) {
-        _uiState.value = _uiState.value.copy(homeTeamColorArgb = color.toArgb())
-    }
-    fun onAwayColorSelected(color: Color) {
-        _uiState.value = _uiState.value.copy(awayTeamColorArgb = color.toArgb())
-    }
-    fun onKickOffTeamSelected(team: Team) {
-        _uiState.value = _uiState.value.copy(kickOffTeam = team)
-    }
-    fun onNotesChanged(newNotes: String) {
-        _uiState.value = _uiState.value.copy(notes = newNotes)
-    }
-
-
+    /**
+     * Validates the current UI state and constructs a Game object,
+     * then passes it to the onGameSaved callback.
+     */
     fun onSaveGame(onGameSaved: (Game) -> Unit) {
         val currentState = _uiState.value
-        // Basic Validation (add more as needed)
         if (currentState.homeTeamName.isBlank() || currentState.awayTeamName.isBlank()) {
             _uiState.value = currentState.copy(errorMessage = "Team names cannot be empty.")
             return
         }
-        _uiState.value = currentState.copy(errorMessage = null) // Clear error
+        _uiState.value = currentState.copy(errorMessage = null)
 
+        // Construct the final Game object from the form's state
         val game = Game(
             id = editingGameId ?: UUID.randomUUID().toString(),
             homeTeamName = currentState.homeTeamName,
@@ -131,41 +111,9 @@ class AddEditGameViewModel @Inject constructor(
             awayTeamColorArgb = currentState.awayTeamColorArgb,
             kickOffTeam = currentState.kickOffTeam,
             notes = currentState.notes.takeIf { it.isNotBlank() },
-            lastUpdated = System.currentTimeMillis(),
-            // Ensure other fields from Game data class are initialized (e.g., currentPhase, score, etc. to defaults)
-            currentPhase = if (editingGameId != null) uiState.value.currentPhase else GamePhase.PRE_GAME, // Preserve if editing
-            homeScore = if (editingGameId != null) uiState.value.homeScore else 0,
-            awayScore = if (editingGameId != null) uiState.value.awayScore else 0,
-            events = if (editingGameId != null) uiState.value.events else emptyList(),
-            ageGroup = currentState.ageGroup // Handle age group selection
-            // ... initialize other Game fields ...
+            ageGroup = currentState.ageGroup,
+            lastUpdated = System.currentTimeMillis()
         )
-        onGameSaved(game) // Pass the created/updated game back
+        onGameSaved(game)
     }
 }
-
-// Data class for the UI state of the Add/Edit screen
-data class AddEditGameUiState(
-    val homeTeamName: String = "Home",
-    val awayTeamName: String = "Away",
-    val venue: String = "",
-    val competition: String = "",
-    val gameDateTimeEpochMillis: Long? = null, // Store as Long
-    val halfDurationMinutes: Int = 45,
-    val halftimeDurationMinutes: Int = 15,
-    val homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
-    val awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
-    val kickOffTeam: Team = Team.HOME,
-    val notes: String = "",
-    val ageGroup: AgeGroup? = null, // You'll need a way to select this
-    val errorMessage: String? = null,
-    val isEditing: Boolean = false,
-
-    // Fields from Game that should be preserved if editing, but not directly part of initial form for new game
-    val currentPhase: GamePhase = GamePhase.PRE_GAME,
-    val homeScore: Int = 0,
-    val awayScore: Int = 0,
-    val events: List<GameEvent> = emptyList()
-
-    // ... any other fields needed for the form state ...
-)

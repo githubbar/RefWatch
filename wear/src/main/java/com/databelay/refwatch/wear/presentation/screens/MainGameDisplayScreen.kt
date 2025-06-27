@@ -1,5 +1,6 @@
 package com.databelay.refwatch.presentation.screens.pager // Example package
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,7 @@ import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.formatTime
 import com.databelay.refwatch.common.hasDuration
 import com.databelay.refwatch.common.readable
+import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.wear.presentation.components.ColorIndicator
 
 @Composable
@@ -30,6 +32,8 @@ fun MainGameDisplayScreen(
     onEndPhaseEarly: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val TAG = "MainGameDisplay"
+
     Column(
         modifier = modifier.padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -42,13 +46,12 @@ fun MainGameDisplayScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             ColorIndicator(color = game.homeTeamColor)
-            Box(modifier = Modifier.size(16.dp).background(Color(game.homeTeamColorArgb)))
             Text(
                 "${game.homeScore} - ${game.awayScore}",
                 style = MaterialTheme.typography.display2, // Wear typography
+                color = MaterialTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold
             )
-            Box(modifier = Modifier.size(16.dp).background(Color(game.awayTeamColorArgb)))
             ColorIndicator(color = game.awayTeamColor)
         }
 
@@ -56,138 +59,22 @@ fun MainGameDisplayScreen(
         Text(
             game.currentPhase.readable(),
             style = MaterialTheme.typography.title2,
+            color = MaterialTheme.colors.secondary,
             textAlign = TextAlign.Center
         )
-
         // Main Timer Display
         Text(
             text = game.displayedTimeMillis.formatTime(),
-            style = MaterialTheme.typography.display1.copy(fontSize = 56.sp), // Large timer
+            style = MaterialTheme.typography.display1,
+            fontSize = 56.sp, // Large timer
+            color = MaterialTheme.colors.onSurface,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-
-        // Action Buttons for this page
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Start/Pause Button
-            if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME) {
-                Button(
-                    onClick = onToggleTimer,
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = if (game.isTimerRunning) MaterialTheme.colors.surface else MaterialTheme.colors.primary
-                    ),
-                    modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
-                ) {
-                    Icon(
-                        imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                        contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
-                        modifier = Modifier.size(ButtonDefaults.LargeIconSize)
-                    )
-                }
-            } else {
-                // Placeholder or disabled button if timer cannot be run
-                Spacer(modifier = Modifier.size(ButtonDefaults.LargeButtonSize))
-            }
-
-            // End Phase Early Button
-            if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME && game.currentPhase != GamePhase.PRE_GAME) {
-                Button(
-                    onClick = onEndPhaseEarly,
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray), // Or a distinct color
-                    modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.StopCircle, // Example icon
-                        contentDescription = "End Phase Early",
-                        modifier = Modifier.size(ButtonDefaults.DefaultIconSize)
-                    )
-                }
-            } else {
-                Spacer(modifier = Modifier.size(ButtonDefaults.DefaultButtonSize))
-            }
-        }
         // You might have a small text indicating "Long press for menu"
         Text("Long press for menu", style = MaterialTheme.typography.caption3, textAlign = TextAlign.Center)
     }
 }
-/*
-
-// Note: The `onPauseResume`, `onAddGoalHome`, `onAddGoalAway`, `onLogCard` callbacks
-// are no longer directly used by THIS Composable. They will be used by the Pager wrapper.
-@Composable
-fun SimplifiedGameScreen(
-    gameState: GameState,
-    modifier: Modifier = Modifier // Modifier passed from Pager
-) {
-    val timeToDisplayMillis = gameState.displayedTimeMillis
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(timeToDisplayMillis)
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(timeToDisplayMillis) % 60
-
-    val periodText = when (gameState.currentPhase) {
-        GamePhase.FIRST_HALF -> "1st Half"
-        GamePhase.HALF_TIME -> "Halftime"
-        GamePhase.SECOND_HALF -> "2nd Half"
-        GamePhase.FULL_TIME -> "Full Time"
-        GamePhase.PRE_GAME -> "Pre Game"
-        else -> gameState.currentPhase.name.replace("_", " ").capitalizeWords()
-    }
-
-    Column(
-        modifier = modifier // Use the modifier from the Pager
-            .fillMaxSize()
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center // Center the content vertically now
-    ) {
-        Spacer(Modifier.height(16.dp)) // Space after timer
-
-        // Score and Period
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ColorIndicator(color = gameState.settings.homeTeamColor)
-            androidx.wear.compose.material.Text(
-                "${gameState.homeScore} - ${gameState.awayScore}",
-                style = MaterialTheme.typography.display1,
-                fontWeight = FontWeight.Bold
-            )
-            ColorIndicator(color = gameState.settings.awayTeamColor)
-        }
-        Spacer(Modifier.height(8.dp))
-        androidx.wear.compose.material.Text(
-            periodText,
-            style = MaterialTheme.typography.body1, // Made period text a bit larger
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(16.dp)) // More space before timer
-
-        // Timer
-        androidx.wear.compose.material.Text(
-            String.format("%02d:%02d", minutes, seconds),
-            style = MaterialTheme.typography.display2, // Made timer slightly larger too
-            fontWeight = FontWeight.Bold,
-            fontSize = if (LocalConfiguration.current.isScreenRound) 60.sp else 65.sp,
-            textAlign = TextAlign.Center
-        )
-
-        // Game Over message if applicable
-        if (gameState.currentPhase == GamePhase.FULL_TIME) {
-            Spacer(Modifier.height(16.dp))
-            androidx.wear.compose.material.Text(
-                "Game Over!",
-                style = MaterialTheme.typography.title1
-            )
-        }
-    }
-}
-*/
 
 // Helper extension function for capitalizing words (if not already available)
 //fun String.capitalizeWords(): String = split(" ").joinToString(" ") { it.lowercase().replaceFirstChar(Char::titlecase) }

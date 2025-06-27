@@ -33,8 +33,8 @@ data class Game(
     var notes: String? = null,
 
     // Live State Fields (updated by watch, synced via phone to Firebase)
-    var homeTeamColorArgb: Int = Color.White.toArgb(),
-    var awayTeamColorArgb: Int = Color.Red.toArgb(),
+    var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
+    var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
     var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)
     var currentPeriodKickOffTeam: Team = kickOffTeam, // Actual team kicking off current period (managed by ViewModel)
     var status: GameStatus = GameStatus.SCHEDULED,

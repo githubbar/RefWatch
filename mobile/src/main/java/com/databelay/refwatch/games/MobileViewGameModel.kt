@@ -337,46 +337,25 @@ class MobileGameViewModel @Inject constructor(
         Log.d(TAG, "Registered DataClient listener for updates from watch.")
     }
 
+    // Add this convenience function
     fun addOrUpdateGame(game: Game) {
-        val userId = _currentUserId.value // Use internal state
-        if (userId == null) {
-            Log.w(
-                "MobileVM",
-                "Cannot save single game: User not logged in (currentUserId is null)."
-            )
-            return
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            val gameWithTimestamp = game.copy(lastUpdated = System.currentTimeMillis())
-            gameRepository.addOrUpdateGame(userId, gameWithTimestamp).onFailure {
-                Log.e(TAG, "Failed to add/update game: ${it.localizedMessage}")
-                // Handle error (e.g., show a toast to UI)
-            }
-            // Firestore listener will pick up the change and trigger syncGamesToWatch
-        }
+        addOrUpdateGames(listOf(game))
     }
 
     // When importing ICS, use the new constructor in your Game class
-    fun addOrUpdateGames(games: List<Game>) { // Assuming SimpleIcsEvent is your parser's output
-        val userId = _currentUserId.value // Use internal state
+    fun addOrUpdateGames(games: List<Game>) {
+        val userId = _currentUserId.value
         if (userId == null) {
-            Log.w(
-                "MobileVM",
-                "Cannot save single game: User not logged in (currentUserId is null)."
-            )
+            Log.w(TAG, "Cannot save games: User not logged in.")
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
             games.forEach { game ->
-                gameRepository.addOrUpdateGame(userId, game)
-                    .onFailure { e ->
-                        Log.e(
-                            TAG,
-                            "Failed to save imported game ${game.summary}: ${e.message}"
-                        )
-                    }
+                val gameWithTimestamp = game.copy(lastUpdated = System.currentTimeMillis())
+                gameRepository.addOrUpdateGame(userId, gameWithTimestamp).onFailure { e ->
+                    Log.e(TAG, "Failed to save game ${game.id}: ${e.message}")
+                }
             }
-            Log.i(TAG, "Finished importing and saving ${games.size} games from ICS.")
         }
     }
 

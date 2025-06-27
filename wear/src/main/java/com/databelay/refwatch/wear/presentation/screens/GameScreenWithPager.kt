@@ -77,6 +77,7 @@ fun GameScreenWithPager(
 //        )
         if (showSettingsDialog) {
             GameSettingsDialog(
+                game = activeGame,
                 onDismiss = { showSettingsDialog = false },
                 onViewLog = {
                     showSettingsDialog = false
@@ -97,6 +98,10 @@ fun GameScreenWithPager(
                 onToggleTimer = {
                     showSettingsDialog = false // Also dismiss menu on timer toggle
                     onToggleTimer()
+                },
+                onEndPhaseEarly = {
+                    showSettingsDialog = false // Also dismiss menu on timer toggle
+                    onEndPhaseEarly()
                 },
                 isTimerRunning = activeGame.isTimerRunning, // Get from game state
                 // Determine if game is active or finished based on game.currentPhase

@@ -96,9 +96,9 @@ fun GameListScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(gamesToDisplay , key = { it.id }) { game ->
-                        GameItem(
+                        GameListItem(
                             game = game,
-                            onEdit = { onEditGame(game) }, // Call onEditGame
+                            onClick = { onEditGame(game) }, // <-- Call onEditGame when clicked
                             onDelete = { onDeleteGame(game) }
                         )
                     }
@@ -108,11 +108,13 @@ fun GameListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameItem(game: Game, onEdit: () -> Unit, onDelete: () -> Unit) {
+fun GameListItem(game: Game, onClick: () -> Unit, onDelete: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
 
     Card(
+        onClick = onClick, // <-- Make the whole card clickable for editing
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
