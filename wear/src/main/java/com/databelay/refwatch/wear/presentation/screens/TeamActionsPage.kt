@@ -11,6 +11,8 @@ import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.Vignette
+import androidx.wear.compose.material.VignettePosition
 import com.databelay.refwatch.common.Team
 
 @Composable
@@ -19,11 +21,13 @@ fun TeamActionsPage(
     teamColor: Color,
     onAddGoal: () -> Unit,
     onLogCard: () -> Unit
-) {
+)
+{
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+
     ) {
         item {
             ListHeader {

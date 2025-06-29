@@ -28,25 +28,17 @@ import com.databelay.refwatch.common.Game // Your Game class
 import com.databelay.refwatch.common.SimpleIcsParser
 import com.databelay.refwatch.games.GameListScreen
 import com.databelay.refwatch.games.MobileGameViewModel
-import com.databelay.refwatch.games.AddEditGameScreen // Your new screen
 import com.databelay.refwatch.games.AddEditGameViewModel
+import com.databelay.refwatch.games.AddEditGameScreen
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
+import com.databelay.refwatch.games.GameLogScreen
 import kotlinx.coroutines.delay
 
 const val TAG = "RefWatchNavHost"
 
-// Define your navigation routes if you haven't already
-object MobileNavRoutes {
-    const val LOADING_SCREEN = "loading"
-    const val AUTH_SCREEN = "auth"
-    const val GAME_LIST_SCREEN = "game_list"
-    const val ADD_EDIT_GAME_SCREEN = "add_edit_game_screen" // For navigating to Add/Edit
-    fun addEditGameRoute(gameId: String? = null): String {
-        return if (gameId != null) "$ADD_EDIT_GAME_SCREEN?gameId=$gameId" else ADD_EDIT_GAME_SCREEN
-    }
-}
+
 @Composable
 fun RefWatchNavHost() {
     val navController = rememberNavController()
@@ -158,6 +150,9 @@ fun RefWatchNavHost() {
                     // Navigate to AddEditGameScreen for a new game
                     navController.navigate(MobileNavRoutes.addEditGameRoute(null))
                 },
+                onViewLog = { gameToView -> // <-- This correctly handles navigation for completed games
+                    navController.navigate(MobileNavRoutes.gameLogRoute(gameToView.id))
+                },
                 onEditGame = { gameToEdit ->
                     navController.navigate(MobileNavRoutes.addEditGameRoute(gameToEdit.id))
                 },
@@ -190,7 +185,33 @@ fun RefWatchNavHost() {
                 onSendPing = { mobileGameViewModel.phonePinger.sendPing()}
             )
         }
+        // It tells the NavHost what to display for the "game_log?{gameId}" route.
+        composable(
+            // The route uses the base name and defines an optional query parameter "?gameId={gameId}"
+            route = "${MobileNavRoutes.GAME_LOG_SCREEN}?gameId={gameId}",
+            arguments = listOf(
+                navArgument("gameId") {
+                    type = NavType.StringType
+                    nullable = true // Correctly marked as optional
+                }
+            )
+        ) { backStackEntry ->
+            // 1. Retrieve the gameId from the navigation arguments.
+            //    It can be null if no ID was passed.
+            val gameId = backStackEntry.arguments?.getString("gameId")
 
+            // 2. Find the correct Game object from the ViewModel's list using the ID.
+            //    The '.value' gets the current list from the StateFlow.
+            //    If gameId is null, this 'find' operation will safely return null.
+            val selectedGame = mobileGameViewModel.gamesList.value.find { it.id == gameId }
+
+            // 3. Display the GameLogScreen with the found game.
+            //    Your GameLogScreen should be designed to handle a null game.
+            GameLogScreen(
+                game = selectedGame,
+                navController = navController
+            )
+        }
         composable(
             route = "${MobileNavRoutes.ADD_EDIT_GAME_SCREEN}?gameId={gameId}",
             arguments = listOf(navArgument("gameId") {

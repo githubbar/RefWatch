@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import java.text.SimpleDateFormat
 import java.util.*
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.GameStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,8 +30,9 @@ import com.databelay.refwatch.common.GameStatus
 fun GameListScreen(
     games: List<Game>,
     onAddGame: () -> Unit,
-    onEditGame: (Game) -> Unit, // Callback for editing
-    onDeleteGame: (game: Game) -> Unit,
+    onEditGame: (Game) -> Unit,
+    onViewLog: (Game) -> Unit, // <-- Ensure this is passed
+    onDeleteGame: (Game) -> Unit,
     onSignOut: () -> Unit,
     onImportGames: () -> Unit, // Callback for importing
     onSendPing: () -> Unit
@@ -98,7 +100,8 @@ fun GameListScreen(
                     items(gamesToDisplay , key = { it.id }) { game ->
                         GameListItem(
                             game = game,
-                            onClick = { onEditGame(game) }, // <-- Call onEditGame when clicked
+                            onEditGame = onEditGame,
+                            onViewLog = onViewLog, // <-- Pass it down to the item
                             onDelete = { onDeleteGame(game) }
                         )
                     }
@@ -110,13 +113,25 @@ fun GameListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameListItem(game: Game, onClick: () -> Unit, onDelete: () -> Unit) {
+fun GameListItem(
+    game: Game,
+    onEditGame: (Game) -> Unit,
+    onViewLog: (Game) -> Unit, // The callback to view the log
+    onDelete: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy 'at' HH:mm", Locale.getDefault()) }
 
     Card(
-        onClick = onClick, // <-- Make the whole card clickable for editing
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        // Add conditional logic to the onClick lambda
+        onClick = {
+            if (game.status == GameStatus.SCHEDULED) {
+                // Otherwise (if it's upcoming or in-progress), call the function to edit
+                onEditGame(game)
+            } else {
+                // If the game is finished, call the function to view the log
+                onViewLog(game)
+            }
+        },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier

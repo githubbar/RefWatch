@@ -28,6 +28,7 @@ fun GameScheduleScreen(
     scheduledGames: List<Game>,
     activeGame: Game, // The current game state from the ViewModel
     onGameSelected: (Game) -> Unit,
+    onViewLog: (String) -> Unit, // Callback for viewing a FINISHED game's log
     onNavigateToNewGame: () -> Unit,
     onNavigateToGameScreen: () -> Unit // Simple callback to navigate
 ) {
@@ -123,7 +124,7 @@ fun GameScheduleScreen(
             }
         }
 
-        // --- NEW AD-HOC GAME BUTTON (only on "Upcoming" tab) ---
+        // --- AD-HOC GAME BUTTON (only on "Upcoming" tab) ---
         if (selectedTab == GameStatus.SCHEDULED) {
             item {
                 Chip(
@@ -160,6 +161,10 @@ fun GameScheduleScreen(
                             // TODO: Add a confirmation dialog here if a game is already in progress
                             // "This will replace your current active game. Continue?"
                             onGameSelected(game)
+                        }
+                        else {
+                            // If game is finished, navigate to the log
+                            onViewLog(game.id)
                         }
                     }
                 )

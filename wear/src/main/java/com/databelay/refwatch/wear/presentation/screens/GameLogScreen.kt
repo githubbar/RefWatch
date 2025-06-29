@@ -46,6 +46,7 @@ fun GameLogScreen(events: List<GameEvent>, onDismiss: () -> Unit) {
             if (events.isEmpty()) {
                 item { Text("No events yet.", style = MaterialTheme.typography.body2, textAlign = TextAlign.Center) }
             }
+            // FIXME: shows "no events yet" on copleted game
             items(events.asReversed()) { event -> // Show newest events first
                 EventLogItem(event)
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.3f))
