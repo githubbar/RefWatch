@@ -84,7 +84,7 @@ fun GameLogScreen(
 private fun GameLogItem(event: GameEvent) {
     // Format the wall-clock timestamp for display
     val sdf = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
-    val formattedTimestamp = remember(event.timestamp) { sdf.format(Date(event.timestamp)) }
+    val formattedTimestamp = remember(event.timestamp) { sdf.format(Date(event.timestamp.toLong())) }
 
     ListItem(
         headlineContent = { Text(event.displayString, fontWeight = FontWeight.Medium) },

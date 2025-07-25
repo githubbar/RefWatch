@@ -20,13 +20,28 @@ import java.util.Locale
 
 @OptIn(ExperimentalWearFoundationApi::class)
 @Composable
-fun GameLogScreen(events: List<GameEvent>, onDismiss: () -> Unit) {
+fun GameLogScreen(
+    game: Game?, // <-- Change parameter to be nullable
+    onDismiss: () -> Unit
+) {
     val listState = rememberScalingLazyListState()
     Scaffold(
         timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) }
     ) {
+        // --- ADD THIS NULL CHECK ---
+        if (game == null) {
+            // If the game was not found, show a helpful message.
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Game Log Not Found", textAlign = TextAlign.Center)
+            }
+            // Stop executing the rest of the composable.
+            return@Scaffold
+        }
         ScalingLazyColumn(
             state = listState,
             modifier = Modifier
@@ -43,11 +58,11 @@ fun GameLogScreen(events: List<GameEvent>, onDismiss: () -> Unit) {
                     textAlign = TextAlign.Center
                 )
             }
-            if (events.isEmpty()) {
+
+            if (game.events.isEmpty()) {
                 item { Text("No events yet.", style = MaterialTheme.typography.body2, textAlign = TextAlign.Center) }
             }
-            // FIXME: shows "no events yet" on copleted game
-            items(events.asReversed()) { event -> // Show newest events first
+            items(game.events.asReversed()) { event -> // Show newest events first
                 EventLogItem(event)
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.3f))
             }
@@ -69,7 +84,7 @@ fun EventLogItem(event: GameEvent) {
     // You might still want the wall clock for extra detail, or remove if displayString is enough
     val wallTimestampStr = remember(event.timestamp) {
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        sdf.format(Date(event.timestamp))
+        sdf.format(Date(event.timestamp.toLong()))
     }
 
     // The 'when' statement is no longer needed to build the description

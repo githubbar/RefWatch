@@ -1,6 +1,6 @@
 [versions]
 activityComposeVersion = "1.8.2"
-agp = "8.11.0"
+agp = "8.11.1"
 androidxComposeFoundation = "1.4.1"
 androidxComposeMaterial = "1.4.1"
 androidxJunit = "1.1.5"

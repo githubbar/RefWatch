@@ -59,9 +59,21 @@ class MobileGameViewModel @Inject constructor(
         }
         .catch { e -> Log.e(TAG, "Error in gamesList flow: ${e.message}", e); emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+/*
+    // --- THIS IS THE CRUCIAL CHANGE ---
+    // 1. We introduce a private, mutable StateFlow to act as the ViewModel's
+    //    internal source of truth for the UI.
+    private val _gamesList = MutableStateFlow<List<Game>>(emptyList())
+
+    // 2. The public gamesList simply exposes the private one as a read-only StateFlow.
+    val gamesList: StateFlow<List<Game>> = _gamesList.asStateFlow()
+    // --- END OF CHANGE ---
+*/
 
     // Listener for data changes from the watch
     private val dataChangedListener = DataClient.OnDataChangedListener { dataEvents: DataEventBuffer ->
+
+
         Log.d(TAG, "onDataChanged triggered from watch. Events: ${dataEvents.count}")
         dataEvents.forEach { event ->
             if (event.type == DataEvent.TYPE_CHANGED) {
@@ -199,17 +211,23 @@ class MobileGameViewModel @Inject constructor(
     }
 
     private fun processGameStateUpdateFromWatch(gameIdFromPath: String, updatedGameStateJson: String) {
+
         val userId = _currentUserId.value
         if (userId == null) {
             Log.w(TAG, "processGameStateUpdateFromWatch: Cannot process. _currentUserId is null.")
             return
         }
+        Log.d(TAG, "processGameStateUpdateFromWatch: Processing update for gameId (from path): $gameIdFromPath, User: $userId")
+        Log.v(TAG, "processGameStateUpdateFromWatch: Received JSON: $updatedGameStateJson")
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val updatedGameFromWatch = json.decodeFromString<Game>(updatedGameStateJson)
 
+                Log.i(TAG, "processGameStateUpdateFromWatch: Successfully deserialized game from watch. Parsed Game ID: ${updatedGameFromWatch.id}, Events count: ${updatedGameFromWatch.events.size}")
+                Log.v(TAG, "processGameStateUpdateFromWatch: Deserialized events: ${updatedGameFromWatch.events.joinToString { it.displayString }}") // Assuming displayString or similar exists for logging
+
                 if (updatedGameFromWatch.id != gameIdFromPath) {
-                    Log.e(TAG, "CRITICAL ID MISMATCH: Watch update path gameId '$gameIdFromPath' vs payload gameId '${updatedGameFromWatch.id}'. Using payload ID for saving.")
+                    Log.e(TAG, "processGameStateUpdateFromWatch: CRITICAL ID MISMATCH: Watch update path gameId '$gameIdFromPath' vs payload gameId '${updatedGameFromWatch.id}'. Using payload ID for saving.")
                     // Potentially log this as a more severe issue or analytics event.
                 }
                 // Always use the ID from the payload as the source of truth for the game object itself.
@@ -219,13 +237,32 @@ class MobileGameViewModel @Inject constructor(
                     lastUpdated = System.currentTimeMillis()
                 )
 
-                Log.i(TAG, "Saving updated game state from watch to Firebase for gameId: ${gameToSaveToFirebase.id}, userId: $userId")
+                Log.i(TAG, "processGameStateUpdateFromWatch: Attempting to save game to Firebase. Game ID: ${gameToSaveToFirebase.id}, User ID: $userId, Events count: ${gameToSaveToFirebase.events.size}")
                 val result = gameRepository.addOrUpdateGame(userId, gameToSaveToFirebase)
 
                 if (result.isSuccess) {
-                    Log.i(TAG, "Successfully saved game state update from watch for game ${gameToSaveToFirebase.id}")
+
+                    Log.i(TAG, "processGameStateUpdateFromWatch: Successfully saved game state update from watch for game ${gameToSaveToFirebase.id}")
+
                     // The gamesList flow will automatically update from Firestore, triggering a re-sync
                     // of the full (now updated) list back to the watch, ensuring consistency.
+                /*    // --- OPTIMISTIC UI UPDATE ---
+                    // Now that the save is successful, we manually update our local list
+                    // so the UI updates instantly, without waiting for the Firestore listener.
+                    val currentGames = _gamesList.value.toMutableList()
+                    val index = currentGames.indexOfFirst { it.id == updatedGameFromWatch.id }
+                    if (index != -1) {
+                        currentGames[index] = updatedGameFromWatch
+                    } else {
+                        currentGames.add(0, updatedGameFromWatch)
+                    }
+                    _gamesList.value = currentGames
+                    Log.d(TAG, "Local _gamesList state updated optimistically.")
+
+                    // Emit the newly modified list. Your derived flows (upcomingGames, completedGames)
+                    // will automatically recalculate, and the UI will recompose instantly.
+                    _gamesList.value = currentGames
+                    Log.d(TAG, "Local UI state updated optimistically for game ${updatedGameFromWatch.id}.")*/
                 } else {
                     Log.e(TAG, "Failed to save game state update from watch for game ${gameToSaveToFirebase.id}", result.exceptionOrNull())
                 }

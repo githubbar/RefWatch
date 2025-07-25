@@ -46,7 +46,7 @@ data class Game(
     var isTimerRunning: Boolean = false,
     // Tell Firestore to ignore this field during automatic toObject() mapping.
     // We will populate it manually.
-    @get:Exclude
+    @get:Exclude // Crucial for Firestore to ignore this field during toObject()
     val events: List<GameEvent> = emptyList()
 )  {
     // Constructor to initialize from SimpleIcsEvent

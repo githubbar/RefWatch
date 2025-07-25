@@ -7,7 +7,7 @@ plugins {
 //    id("com.google.gms.google-services")
 //    id("org.jetbrains.kotlin.plugin.parcelize")
     id("kotlin-parcelize")
-     kotlin("plugin.serialization") version "2.1.21"
+    kotlin("plugin.serialization") version "2.1.21"
 }
 
 android {
@@ -64,13 +64,21 @@ dependencies {
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.junit)
+    implementation(libs.kotlinx.serialization.json)
 
-    debugImplementation(libs.ui.test.manifest)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.jetbrains.kotlin.test.junit)
+
+
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
+    debugImplementation(libs.ui.test.manifest)
+    testImplementation(kotlin("test"))
 }

@@ -88,6 +88,20 @@ class WearGameViewModel @Inject constructor(
     private val _activeGame = MutableStateFlow(loadInitialActiveGame())
     val activeGame: StateFlow<Game> = _activeGame.asStateFlow()
 
+    // A unified map of all games known to the watch ---
+    // It combines the scheduled list and the active game.
+    val allGamesMap: StateFlow<Map<String, Game>> =
+        combine(scheduledGames, activeGame) { scheduled, active ->
+            val gameMap = scheduled.associateBy { it.id }.toMutableMap()
+            // The active game always overwrites the scheduled version,
+            // ensuring the log screen sees the most up-to-date "live" data.
+            gameMap[active.id] = active
+            gameMap
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
+        )
     private var gameCountDownTimer: CountDownTimer? = null
     // You can inject the Vibrator too using a Hilt module if you want!
     // For now, let's keep it simple.
@@ -200,7 +214,9 @@ class WearGameViewModel @Inject constructor(
         // Update the local StateFlow immediately for responsive UI, even before sync completes
         _activeGame.value = finalGameData
 
+        Log.d(TAG, "finishAndSyncActiveGame: Events in finalGameData before sending to phone: ${finalGameData.events.size} events. Details: ${finalGameData.events}")
         Log.d(TAG, "Game ${finalGameData.id} marked as COMPLETED. Syncing to phone.")
+
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -327,7 +343,7 @@ class WearGameViewModel @Inject constructor(
     fun confirmSettingsAndStartGame() {
         val currentGame = _activeGame.value
         if (currentGame.currentPhase == GamePhase.PRE_GAME) {
-            val kickOffEvent = GameEvent.GenericLogEvent(message = "${currentGame.kickOffTeam.name} kicks off 1st Half")
+            val kickOffEvent = GenericLogEvent(message = "${currentGame.kickOffTeam.name} kicks off 1st Half")
             _activeGame.update { it.copy(events = it.events + kickOffEvent) } // Log before changing phase
             changePhase(GamePhase.FIRST_HALF) // This will also save state
         }
@@ -347,7 +363,7 @@ class WearGameViewModel @Inject constructor(
     private fun startTimer() {
         val currentGame = _activeGame.value
         if (!currentGame.isTimerRunning && currentGame.displayedTimeMillis > 0 && currentGame.currentPhase.hasDuration()) {
-            val startEvent = GameEvent.GenericLogEvent(message = "Timer Started for ${currentGame.currentPhase.readable()}")
+            val startEvent = GenericLogEvent(message = "Timer Started for ${currentGame.currentPhase.readable()}")
             _activeGame.update {
                 it.copy(
                     isTimerRunning = true,
@@ -363,7 +379,7 @@ class WearGameViewModel @Inject constructor(
     private fun pauseTimer() {
         if (_activeGame.value.isTimerRunning) {
             gameCountDownTimer?.cancel()
-            val pauseEvent = GameEvent.GenericLogEvent(message = "Timer Paused")
+            val pauseEvent = GenericLogEvent(message = "Timer Paused")
             _activeGame.update {
                 it.copy(
                     isTimerRunning = false,
@@ -413,7 +429,7 @@ class WearGameViewModel @Inject constructor(
 
     private fun handleTimerFinish() {
         val currentPhase = _activeGame.value.currentPhase
-        val endEvent = GameEvent.GenericLogEvent(message = "${currentPhase.readable()} Ended (Timer)")
+        val endEvent = GenericLogEvent(message = "${currentPhase.readable()} Ended (Timer)")
         _activeGame.update { it.copy(events = it.events + endEvent) }
 
         when (currentPhase) {
@@ -428,9 +444,9 @@ class WearGameViewModel @Inject constructor(
         val currentGame = _activeGame.value
         if (currentGame.currentPhase.hasDuration() && currentGame.currentPhase != GamePhase.FULL_TIME && currentGame.currentPhase != GamePhase.PRE_GAME) {
             pauseTimer()
-            val earlyEndEvent = GameEvent.GenericLogEvent(
+            val earlyEndEvent = GenericLogEvent(
                 message = "${currentGame.currentPhase.readable()} ended early by referee.",
-                gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis
+                gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble()
             )
             _activeGame.update { it.copy(events = it.events + earlyEndEvent) }
             handleTimerFinish() // Transitions to next phase
@@ -444,9 +460,9 @@ class WearGameViewModel @Inject constructor(
 
         val newHomeScore = if (team == Team.HOME) currentGame.homeScore + 1 else currentGame.homeScore
         val newAwayScore = if (team == Team.AWAY) currentGame.awayScore + 1 else currentGame.awayScore
-        val goalEvent = GameEvent.GoalScoredEvent(
+        val goalEvent = GoalScoredEvent(
             team = team,
-            gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis,
+            gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble(),
             homeScoreAtTime = newHomeScore,
             awayScoreAtTime = newAwayScore
         )
@@ -465,11 +481,11 @@ class WearGameViewModel @Inject constructor(
         val currentGame = _activeGame.value
         if (!currentGame.currentPhase.isPlayablePhase()) return
 
-        val cardEvent = GameEvent.CardIssuedEvent(
+        val cardEvent = CardIssuedEvent(
             team = team,
             playerNumber = playerNumber,
             cardType = cardType,
-            gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis
+            gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble()
         )
         _activeGame.update {
             it.copy(
@@ -490,7 +506,7 @@ class WearGameViewModel @Inject constructor(
         } else {
             currentGame.actualTimeElapsedInPeriodMillis
         }
-        val phaseChangeEvent = GameEvent.PhaseChangedEvent(newPhase = newPhase, gameTimeMillis = gameTimeForChangeEvent)
+        val phaseChangeEvent = PhaseChangedEvent(newPhase = newPhase, gameTimeMillis = gameTimeForChangeEvent.toDouble())
 
         _activeGame.update {
             it.copy(

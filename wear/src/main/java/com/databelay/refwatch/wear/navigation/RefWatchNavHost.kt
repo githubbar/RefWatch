@@ -33,6 +33,7 @@ fun RefWatchNavHost() {
     val gameViewModel: WearGameViewModel = hiltViewModel()
     val scheduledGames by gameViewModel.scheduledGames.collectAsState()
     val activeGame by gameViewModel.activeGame.collectAsState()
+    val allGames by gameViewModel.allGamesMap.collectAsState()
 
     // Determine start destination based on whether a game is resumable
     val startDestination = remember(activeGame) {
@@ -169,10 +170,24 @@ fun RefWatchNavHost() {
                     onCancel = { navController.popBackStack() }
                 )
             }
-            composable(WearNavRoutes.GAME_LOG_SCREEN) {
-                val currentActiveGame by gameViewModel.activeGame.collectAsState()
+            composable("${WearNavRoutes.GAME_LOG_SCREEN}?${WearNavRoutes.GAME_ID_ARG}={${WearNavRoutes.GAME_ID_ARG}}",
+                arguments = listOf(
+                    navArgument(WearNavRoutes.GAME_ID_ARG) { // Tell NavController to expect a "gameId"
+                        type = NavType.StringType
+                    }
+                )
+            ) {backStackEntry ->
+                // 1. Retrieve the gameId from the navigation arguments.
+                val gameId = backStackEntry.arguments?.getString(WearNavRoutes.GAME_ID_ARG)
+
+                // 2. Find the correct game from the permanent 'scheduledGames' list,
+                //    NOT from the 'activeGame' state.
+                val gameForLog = gameId?.let { allGames[it] }
+
+                // 3. Pass the found game (which can be null if not found) to your log screen.
+                //    Your GameLogScreen should take the full Game object to display headers.
                 GameLogScreen(
-                    events = currentActiveGame.events,
+                    game = gameForLog,
                     onDismiss = { navController.popBackStack() }
                 )
             }

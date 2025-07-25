@@ -1,6 +1,7 @@
 package com.databelay.refwatch.wear.presentation.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextField
@@ -26,32 +27,29 @@ fun LogCardScreen(
     onLogCard: (team: Team, playerNumber: Int, cardType: CardType) -> Unit,
     onCancel: () -> Unit
 ) {
+
     var selectedTeam by remember { mutableStateOf(preselectedTeam) }
-    var selectedCardType by remember { mutableStateOf<CardType?>(null) }
+    var selectedCardType by remember { mutableStateOf<CardType?>(CardType.YELLOW) }
     var playerNumberString by remember { mutableStateOf("") }
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
+    val listState = rememberScalingLazyListState()
 
     // Request focus when the screen is first composed
     LaunchedEffect(Unit) {
+        listState.scrollToItem(2)
         delay(200) // A small delay can help ensure the UI is ready for focus
         focusRequester.requestFocus()
     }
-
-    val listState = rememberScalingLazyListState()
-
     Scaffold(
-        timeText = { TimeText(modifier = Modifier.scrollAway(listState)) },
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) }
     ) {
         ScalingLazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             item {
                 Text("Log Card", style = MaterialTheme.typography.title3)
@@ -95,7 +93,7 @@ fun LogCardScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier
-                        .fillMaxWidth(0.5f)
+                        .fillMaxWidth(0.3f)
                         .focusRequester(focusRequester)
                 )
             }
