@@ -1,12 +1,13 @@
 package com.databelay.refwatch.wear.presentation.screens
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi // Keep for Pager
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import com.databelay.refwatch.common.*
@@ -23,14 +24,16 @@ fun GameScreenWithPager(
     onAddGoal: (Team) -> Unit,
     onNavigateToLogCard: (Team) -> Unit, // Changed to pass the team
     onNavigateToGameLog: () -> Unit,
-    onEndPhaseEarly: () -> Unit,
-    onFinishGame: () -> Unit,
+    onKickOff: () -> Unit,
+    onEndPhase: () -> Unit,
     onResetGame: () -> Unit,
+    onStartExtraTime: () -> Unit,
+    onConfirmEndMatch: () -> Unit // To distinguish from onFinishGame
 ) {
     val pagerState = rememberPagerState(initialPage = 1) { 3 } // 0: Home Actions, 1: Main Display, 2: Away Actions
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var showEndGameConfirmDialog by remember { mutableStateOf(false) }
-
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showEndOfMainTimeDialog by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -57,7 +60,8 @@ fun GameScreenWithPager(
                 1 -> MainGameDisplayScreen( // The main timer/score view
                     game = activeGame,
                     onToggleTimer = onToggleTimer,
-                    onEndPhaseEarly = onEndPhaseEarly
+                    onEndPhaseEarly = onEndPhase,
+                    onKickOff = onKickOff
                 )
                 2 -> TeamActionsPage(
                     team = Team.AWAY,
@@ -89,19 +93,24 @@ fun GameScreenWithPager(
                     showSettingsDialog = false
                     // Then, call the onFinishGame callback that was passed from the NavHost.
                     // This signals the user's intent to the parent composable.
-                    onFinishGame()
+                    onConfirmEndMatch()
                 },
+                // FIXME: change to "reset current period timer"
                 onResetGame = { // This is "End Game & Reset" from settings
                     showSettingsDialog = false
-                    showEndGameConfirmDialog = true // Show confirmation for reset
+                    showResetConfirmDialog = true // Show confirmation for reset
                 },
                 onToggleTimer = {
                     showSettingsDialog = false // Also dismiss menu on timer toggle
                     onToggleTimer()
                 },
-                onEndPhaseEarly = {
+                // TODO: "start penalties/end match" after 2nd extra half
+                // TODO: add HOME/AWAY and "record penalty" screen maybe with swiping left and right
+                // TODO: test vibrate alarm at the end of each timed game phase
+                onEndPhase = {
                     showSettingsDialog = false // Also dismiss menu on timer toggle
-                    onEndPhaseEarly()
+                    showEndOfMainTimeDialog = activeGame.currentPhase == GamePhase.SECOND_HALF
+                    if (!showEndOfMainTimeDialog) onEndPhase()
                 },
                 isTimerRunning = activeGame.isTimerRunning, // Get from game state
                 // Determine if game is active or finished based on game.currentPhase
@@ -110,7 +119,7 @@ fun GameScreenWithPager(
             )
         }
 
-        if (showEndGameConfirmDialog) {
+        if (showResetConfirmDialog) {
             val message = if (activeGame.currentPhase == GamePhase.FULL_TIME || activeGame.currentPhase == GamePhase.PRE_GAME) {
                 "Start a new default game? Current game settings will be reset." // Or "Select new game from schedule?"
             } else {
@@ -119,11 +128,25 @@ fun GameScreenWithPager(
             ConfirmationDialog(
                 message = message,
                 onConfirm = {
-                    showEndGameConfirmDialog = false
+                    showResetConfirmDialog = false
                     onResetGame() // Call the passed lambda for resetting
                 },
-                onDismiss = { showEndGameConfirmDialog = false }
+                onDismiss = { showResetConfirmDialog = false }
             )
         }
+
+        // --- New Dialog for End of Main Time ---
+        EndOfMainTimeDialog(
+            showDialog = showEndOfMainTimeDialog,
+            onDismiss = { showEndOfMainTimeDialog = false /* Consider if dismissing should do anything else */ },
+            onStartExtraTime = {
+                showEndOfMainTimeDialog = false
+                onStartExtraTime() // Call the lambda passed from NavHost/ViewModel
+            },
+            onEndMatch = {
+                showEndOfMainTimeDialog = false
+                onConfirmEndMatch() // Call the lambda passed from NavHost/ViewModel
+            }
+        )
     }
 }

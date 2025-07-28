@@ -12,17 +12,15 @@ import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.dialog.Dialog
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PauseCircleFilled
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircleFilled
-import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.hasDuration
+import com.databelay.refwatch.common.readable
 
 @Composable
 fun GameSettingsDialog(
@@ -32,7 +30,7 @@ fun GameSettingsDialog(
     onResetGame: () -> Unit,
     onViewLog: () -> Unit,
     onToggleTimer: () -> Unit,
-    onEndPhaseEarly: () -> Unit,
+    onEndPhase: () -> Unit,
     isTimerRunning: Boolean,  // Current timer state
     isGameActive: Boolean,
     isGameFinished: Boolean
@@ -56,53 +54,37 @@ fun GameSettingsDialog(
 
             // Play/Pause Button - only if game is active (not PRE_GAME or FULL_TIME)
             if (isGameActive) {
-                item {
-                    // Action Buttons for this page
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME) {
+                    item {
                         // Start/Pause Button
-                        if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME) {
-                            Button(
-                                onClick = onToggleTimer,
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = if (game.isTimerRunning) MaterialTheme.colors.surface else MaterialTheme.colors.primary
-                                ),
-                                modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
-                            ) {
-                                Icon(
-                                    imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                                    contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
-                                    modifier = Modifier.size(ButtonDefaults.LargeIconSize)
-                                )
-                            }
-                        } else {
-                            // Placeholder or disabled button if timer cannot be run
-                            Spacer(modifier = Modifier.size(ButtonDefaults.LargeButtonSize))
+                        Button(
+                            onClick = onToggleTimer,
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Green
+                            ),
+                            modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
+                        ) {
+                            Icon(
+                                imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                                contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
+                                modifier = Modifier.size(ButtonDefaults.LargeIconSize)
+                            )
                         }
-
-                        // End Phase Early Button
-                        if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME && game.currentPhase != GamePhase.PRE_GAME) {
-                            Button(
-                                onClick = onEndPhaseEarly,
-                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray), // Or a distinct color
-                                modifier = Modifier.size(ButtonDefaults.DefaultButtonSize)
+                    }
+                }
+                // End Phase Early Button
+                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME && game.currentPhase != GamePhase.PRE_GAME) {
+                    item {
+                        Button(
+                            onClick = onEndPhase,
+                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red), // Or a distinct color
+                            modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.StopCircle, // Example icon
-                                    contentDescription = "End Phase Early",
-                                    modifier = Modifier.size(ButtonDefaults.DefaultIconSize)
-                                )
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.size(ButtonDefaults.DefaultButtonSize))
+                            Text("End ${game.currentPhase.readable()} Early") // Adding text
                         }
                     }
                 }
             }
-
             item { // Finish Game Button
                 Button(onClick = onFinishGame,
                     modifier = Modifier.fillMaxWidth(),

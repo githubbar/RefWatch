@@ -1,5 +1,6 @@
 package com.databelay.refwatch.games // Or a subpackage like com.databelay.refwatch.games.addedit
 
+import androidx.compose.animation.core.copy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.SavedStateHandle
@@ -77,6 +78,7 @@ class AddEditGameViewModel @Inject constructor(
     fun onHomeTeamNameChange(name: String) { _uiState.value = _uiState.value.copy(homeTeamName = name) }
     fun onAwayTeamNameChange(name: String) { _uiState.value = _uiState.value.copy(awayTeamName = name) }
     fun onVenueChange(venue: String) { _uiState.value = _uiState.value.copy(venue = venue) }
+    fun onCompetitionChange(newCompetition: String) { _uiState.value = _uiState.value.copy(competition = newCompetition) }
     fun onGameDateTimeChange(epochMillis: Long?) { _uiState.value = _uiState.value.copy(gameDateTimeEpochMillis = epochMillis) }
     fun onHalfDurationChange(minutes: String) { _uiState.value = _uiState.value.copy(halfDurationMinutes = minutes.toIntOrNull() ?: 45) }
     fun onHalftimeDurationChange(minutes: String) { _uiState.value = _uiState.value.copy(halftimeDurationMinutes = minutes.toIntOrNull() ?: 15) }

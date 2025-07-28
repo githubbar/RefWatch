@@ -19,7 +19,8 @@ import com.databelay.refwatch.navigation.RefWatchNavHost
 import dagger.hilt.android.AndroidEntryPoint
 
 // No need for androidx.hilt.navigation.compose.hiltViewModel here
-
+//TODO: release test into playstore https://play.google.com/console/u/0/developers/7846019045633488606/app-list
+// FIXME: if phone app is not started, watch starts without games; is it a debug artifact?
 @AndroidEntryPoint // Ensures Hilt can inject into this Activity if needed (though usually not for ViewModels directly here)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

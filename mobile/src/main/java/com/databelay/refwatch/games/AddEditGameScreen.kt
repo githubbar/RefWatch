@@ -120,7 +120,7 @@ fun AddEditGameScreen(
             )
             OutlinedTextField(
                 value = uiState.competition,
-                onValueChange = { /* TODO: addEditViewModel::onCompetitionChange */ },
+                onValueChange = addEditViewModel::onCompetitionChange,
                 label = { Text("Competition (Optional)") },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -257,7 +257,7 @@ fun AddEditGameScreen(
                 )
             }
             if (showKickOffPicker) {
-                TeamPickerDialog( // You need to create this dialog
+                TeamPickerDialog(
                     title = "Select Kick-off Team",
                     currentSelection = uiState.kickOffTeam,
                     onTeamSelected = { team ->

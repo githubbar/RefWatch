@@ -20,9 +20,9 @@ data class Game(
     var lastUpdated: Long = System.currentTimeMillis(), // Timestamp for when this was last updated by user
     var halfDurationMinutes: Int = 45,
     var halftimeDurationMinutes: Int = 15,
-    // var extraTimeHalfDurationMinutes: Int = 15, // Optional for future
-    // var extraTimeHalftimeDurationMinutes: Int = 5, // Optional for future
-
+    var extraTimeHalfDurationMinutes: Int = 15, // Optional for future
+    var extraTimeHalftimeDurationMinutes: Int = 1, // Optional for future
+//
     // --- Match Information (can be pre-filled from a schedule) ---
     var homeTeamName: String = "Home", // Default, can be overridden
     var awayTeamName: String = "Away", // Default, can be overridden
@@ -81,6 +81,12 @@ data class Game(
 
     val halftimeDurationMillis: Long
         get() = halftimeDurationMinutes * 60 * 1000L
+
+    val extraTimeHalfDurationMillis: Long
+        get() = extraTimeHalfDurationMinutes * 60 * 1000L
+
+    val extraTimeHalftimeDurationMillis: Long
+        get() = extraTimeHalftimeDurationMinutes * 60 * 1000L
 
     // Optional: Formatted date/time string for display
     val formattedGameDateTime: String?

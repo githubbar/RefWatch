@@ -15,6 +15,7 @@ import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.MaterialTheme
 import com.databelay.refwatch.wear.WearGameViewModel // Your ViewModel
 import com.databelay.refwatch.common.*
+// TODO: rename  kickoff screen to coin toss, show it in first half and first extra half
 
 @Composable
 fun KickOffSelectionScreen(
@@ -35,7 +36,7 @@ fun KickOffSelectionScreen(
         item {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Kickoff",
+                    "Select Kick-Off Team",
                     style = MaterialTheme.typography.caption1, // Same style as DurationSettingStepper label
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 2.dp) // Similar to DurationSettingStepper
@@ -71,7 +72,6 @@ fun KickOffSelectionScreen(
         item {
             Button(
                 onClick = {
-                    gameViewModel.confirmSettingsAndStartGame() // Prepare game state and timer internally
                     onConfirm() // This lambda will navigate to GameScreen
                 },
                 modifier = Modifier.fillMaxWidth(0.8f), // Button takes 80% of width
@@ -79,7 +79,7 @@ fun KickOffSelectionScreen(
                     backgroundColor = MaterialTheme.colors.error
                 )
             ) {
-                Text("Start")
+                Text("Select")
             }
         }
     }

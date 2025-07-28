@@ -39,9 +39,10 @@ enum class GamePhase {
     SECOND_HALF,
     FULL_TIME,
     EXTRA_TIME_FIRST_HALF, // Optional
+    EXTRA_TIME_HALF_TIME, // Optional
     EXTRA_TIME_SECOND_HALF, // Optional
-    EXTRA_TIME_HALF_TIME // Optional
-    // Add more as needed (e.g., PENALTIES)
+    PENALTIES
+    // Add more as needed
 }
 
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---

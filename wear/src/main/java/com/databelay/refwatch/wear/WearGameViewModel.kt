@@ -23,13 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
-import android.content.Context
-import androidx.lifecycle.viewModelScope
-import com.databelay.refwatch.common.*
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import androidx.core.content.edit
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.PutDataMapRequest
@@ -75,7 +69,8 @@ class WearGameViewModel @Inject constructor(
     private val application: Application, // Hilt can provide this
     private val savedStateHandle: SavedStateHandle, // Hilt provides this
     private val gameStorage: GameStorageWear, // Hilt injects your singleton GameStorage
-    private val dataClient: DataClient // For syncing
+    private val dataClient: DataClient, // For syncing
+    private val vibrator: Vibrator? // Vibrator for timer
 ) : AndroidViewModel(application) {
     private val TAG = "WearGameViewModel"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -103,9 +98,6 @@ class WearGameViewModel @Inject constructor(
             initialValue = emptyMap()
         )
     private var gameCountDownTimer: CountDownTimer? = null
-    // You can inject the Vibrator too using a Hilt module if you want!
-    // For now, let's keep it simple.
-    private val vibrator = application.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     init {
         Log.d(TAG, "WearGameViewModel initializing.")
@@ -340,15 +332,25 @@ class WearGameViewModel @Inject constructor(
         saveActiveGameState()
     }
 
-    fun confirmSettingsAndStartGame() {
+    fun confirmKickoffSelection() {
         val currentGame = _activeGame.value
         if (currentGame.currentPhase == GamePhase.PRE_GAME) {
-            val kickOffEvent = GenericLogEvent(message = "${currentGame.kickOffTeam.name} kicks off 1st Half")
-            _activeGame.update { it.copy(events = it.events + kickOffEvent) } // Log before changing phase
             changePhase(GamePhase.FIRST_HALF) // This will also save state
         }
-    }
+        else if (currentGame.currentPhase == GamePhase.SECOND_HALF) {
+            changePhase(GamePhase.EXTRA_TIME_FIRST_HALF) // This will also save state
+        }
 
+    }
+    fun kickOff() {
+        val currentGame = _activeGame.value
+        val teamName = if (currentGame.currentPeriodKickOffTeam == Team.HOME) currentGame.homeTeamName else currentGame.awayTeamName
+        val kickOffMessage = "Kick Off - ${teamName} - ${currentGame.currentPhase.readable()}"
+        val kickOffEvent = GenericLogEvent(message = kickOffMessage)
+
+        _activeGame.update { it.copy(events = it.events + kickOffEvent) } // Log before changing phase
+        startTimer() // Start the timer for the first half immediately after the kickoff
+    }
     fun toggleTimer() {
         val currentGame = _activeGame.value
         if (currentGame.isTimerRunning) {
@@ -422,12 +424,13 @@ class WearGameViewModel @Inject constructor(
                     )
                 }
                 vibrateDevice()
-                handleTimerFinish() // This calls changePhase, which saves state
+                // NOTE: this is done manually by the ref
+                // handlePhaseChange() // This calls changePhase, which saves state
             }
         }.start()
     }
 
-    private fun handleTimerFinish() {
+    private fun handlePhaseChange() {
         val currentPhase = _activeGame.value.currentPhase
         val endEvent = GenericLogEvent(message = "${currentPhase.readable()} Ended (Timer)")
         _activeGame.update { it.copy(events = it.events + endEvent) }
@@ -440,17 +443,17 @@ class WearGameViewModel @Inject constructor(
         }
     }
 
-    fun endCurrentPhaseEarly() {
+    fun endCurrentPhase() {
         val currentGame = _activeGame.value
         if (currentGame.currentPhase.hasDuration() && currentGame.currentPhase != GamePhase.FULL_TIME && currentGame.currentPhase != GamePhase.PRE_GAME) {
             pauseTimer()
             val earlyEndEvent = GenericLogEvent(
-                message = "${currentGame.currentPhase.readable()} ended early by referee.",
+                message = "${currentGame.currentPhase.readable()} ended by referee.",
                 gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble()
             )
             _activeGame.update { it.copy(events = it.events + earlyEndEvent) }
-            handleTimerFinish() // Transitions to next phase
-            Log.d(TAG, "${currentGame.currentPhase.readable()} ended early.")
+            handlePhaseChange() // Transitions to next phase
+            Log.d(TAG, "${currentGame.currentPhase.readable()} ended.")
         }
     }
 
@@ -532,7 +535,10 @@ class WearGameViewModel @Inject constructor(
             val newCurrentKickOff = when (phase) {
                 GamePhase.FIRST_HALF, GamePhase.PRE_GAME -> initialGameKickOffTeam
                 GamePhase.SECOND_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
-                // TODO: Add logic for extra time kick-offs if needed
+                // For extra time, it's typically a new coin toss, or decided by rules.
+                // Assuming the team that kicked off 2nd half also kicks off 1st extra time half.
+                GamePhase.EXTRA_TIME_FIRST_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
+                GamePhase.EXTRA_TIME_SECOND_HALF -> initialGameKickOffTeam // Opposite of 1st extra time kick-off
                 else -> currentGame.currentPeriodKickOffTeam // Keep existing for other phases
             }
             currentGame.copy(currentPeriodKickOffTeam = newCurrentKickOff)
@@ -545,31 +551,63 @@ class WearGameViewModel @Inject constructor(
         return when (phase) {
             GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> gameSettings.halfDurationMillis
             GamePhase.HALF_TIME -> gameSettings.halftimeDurationMillis
-            // Add Extra Time logic based on gameSettings if implemented
+            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> gameSettings.extraTimeHalfDurationMillis
+            GamePhase.EXTRA_TIME_HALF_TIME -> gameSettings.extraTimeHalftimeDurationMillis
             else -> 0L // Default for PRE_GAME, FULL_TIME
         }
     }
 
-    fun resetActiveGameToSelectedSettings(selectedGame: Game) {
-        pauseTimer()
-        // This function is for when a user chooses a game from the list to make it active.
-        // It should reset the live state but keep the schedule/config details.
-        val newActiveGame = selectedGame.copy( // Start with the selected game's settings
-            currentPhase = GamePhase.PRE_GAME,
-            homeScore = 0,
-            awayScore = 0,
-            displayedTimeMillis = getDurationMillisForPhase(GamePhase.FIRST_HALF, selectedGame),
-            actualTimeElapsedInPeriodMillis = 0L,
-            isTimerRunning = false,
-            events = emptyList(),
-            lastUpdated = System.currentTimeMillis(),
-            currentPeriodKickOffTeam = selectedGame.kickOffTeam // Reset to original kick-off
-        )
-        _activeGame.value = newActiveGame
-        updateCurrentPeriodKickOffTeam(GamePhase.PRE_GAME, newActiveGame.kickOffTeam)
-        Log.d(TAG, "Active game reset to settings from game: ${selectedGame.id}")
-        saveActiveGameState()
+    /**
+     * Determines the next phase and its duration based on the current game state.
+     * This function is now more of a suggestion for auto-transitions,
+     * but the actual transition for SECOND_HALF -> EXTRA_TIME is handled by user choice.
+     */
+    private fun determineNextPhase(game: Game): GamePhase {
+        var nextPhase = game.currentPhase
+        var duration = 0L
+
+        when (game.currentPhase) {
+            GamePhase.PRE_GAME -> {
+                nextPhase = GamePhase.FIRST_HALF
+            }
+            GamePhase.FIRST_HALF -> {
+                nextPhase = GamePhase.HALF_TIME
+            }
+            GamePhase.HALF_TIME -> {
+                nextPhase = GamePhase.SECOND_HALF
+            }
+            GamePhase.SECOND_HALF -> {
+                // If extra time is configured and not yet played
+                if (game.extraTimeHalfDurationMinutes > 0) { // Assuming these fields exist
+                    nextPhase = GamePhase.EXTRA_TIME_FIRST_HALF // This is the potential next phase
+                } else {
+                    nextPhase = GamePhase.FULL_TIME // Otherwise, it's full time
+                }
+            }
+            GamePhase.EXTRA_TIME_FIRST_HALF -> {
+                nextPhase = GamePhase.EXTRA_TIME_HALF_TIME
+            }
+            GamePhase.EXTRA_TIME_HALF_TIME -> {
+                nextPhase = GamePhase.EXTRA_TIME_SECOND_HALF
+            }
+            GamePhase.EXTRA_TIME_SECOND_HALF -> {
+                // After this, it could be penalties or full time
+                // For simplicity, let's assume FULL_TIME. Penalties would be another dialog.
+                nextPhase = GamePhase.FULL_TIME
+            }
+            GamePhase.FULL_TIME, GamePhase.PENALTIES -> {
+                // No automatic transition from these states
+            }
+            // Add other phases as needed
+        }
+        return nextPhase
     }
+
+    fun startExtraTime() {
+        if (determineNextPhase(_activeGame.value) == GamePhase.EXTRA_TIME_FIRST_HALF)
+            changePhase(GamePhase.HALF_TIME)
+    }
+
 
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun vibrateDevice() {

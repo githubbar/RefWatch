@@ -91,28 +91,25 @@ fun RefWatchNavHost() {
                 // ViewModel is already available via hiltViewModel or passed if needed
                 PreGameSetupScreen(
                     gameViewModel = gameViewModel, // Pass the ViewModel
-                    onNavigateToKickOff = {
+                    onCreateMatch = {
                         navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
                     },
-                    onStartGameConfirmed = { // New callback for when settings are confirmed
-                        gameViewModel.confirmSettingsAndStartGame() // ViewModel handles phase change
+                )
+            }
+
+            composable(WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
+                KickOffSelectionScreen(
+                    gameViewModel = gameViewModel,
+                    onConfirm = {
+                        gameViewModel.confirmKickoffSelection() // ViewModel handles phase change
+
                         navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {
                                 inclusive = false
                             } // Go back to home, then to game
                             launchSingleTop = true
                         }
-                    }
-                )
-            }
-            composable(WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
-                KickOffSelectionScreen(
-                    gameViewModel = gameViewModel,
-                    onConfirm = {
-                        // confirmSettingsAndStartGame should be called before navigating if this is the final step
-                        // Or, PreGameSetupScreen's "Start Game" button is the one to call confirmSettingsAndStartGame
-                        // For now, let's assume PreGameSetup handles the final confirmation
-                        navController.popBackStack() // Go back to PreGameSetup
+//                        navController.popBackStack() // Go back to PreGameSetup
                     }
                 )
             }
@@ -123,21 +120,12 @@ fun RefWatchNavHost() {
                     // Pass specific lambdas for actions the Pager needs to trigger
                     onToggleTimer = { gameViewModel.toggleTimer() },
                     onAddGoal = { team -> gameViewModel.addGoal(team) },
-                    onEndPhaseEarly = { gameViewModel.endCurrentPhaseEarly() },
+                    onKickOff = { gameViewModel.kickOff() },
+                    // FIXME: we are not proceeding from exratime 1st half, add var to designate if Game.hasExtraTime and use that in endCurrentPhase and handlePhaseChange
+                    onEndPhase = { gameViewModel.endCurrentPhase() },
                     onNavigateToLogCard = { team -> navController.navigate(WearNavRoutes.logCardRoute(team)) }, // Navigation is separate
                     onNavigateToGameLog = { navController.navigate(WearNavRoutes.gameLogRoute(activeGame.id)) },
                     // This lambda defines what happens when the user finishes the game
-                    onFinishGame = {
-                        Log.d("RefWatchWearApp", "Finish Game action triggered from UI.")
-                        gameViewModel.finishAndSyncActiveGame {
-                            Log.d("RefWatchWearApp", "Sync complete. Navigating to Home.")
-                            // Navigate back home and clear the history
-                            navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
-                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    },
                     onResetGame = {
                         Log.d("RefWatchWearApp", "Reset Game action triggered from UI.")
                         // This action simply resets the current active game to a fresh default state.
@@ -145,6 +133,20 @@ fun RefWatchNavHost() {
                         // After resetting, we navigate to the PreGameSetup screen for this new default game.
                         navController.navigate(WearNavRoutes.PRE_GAME_SETUP_SCREEN) {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) // Go back to Home then to PreGameSetup
+                        }
+                    },
+                    onStartExtraTime = {
+                        navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
+                    },
+                    onConfirmEndMatch = {
+                        Log.d("RefWatchWearApp", "Finish Match action triggered from UI.")
+                        gameViewModel.finishAndSyncActiveGame {
+                            Log.d("RefWatchWearApp", "Sync complete. Navigating to Home.")
+                            // Navigate back home and clear the history
+                            navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
+                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )

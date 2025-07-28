@@ -28,8 +28,7 @@ import com.databelay.refwatch.common.theme.*
 @Composable
 fun PreGameSetupScreen(
     gameViewModel: WearGameViewModel,
-    onNavigateToKickOff: () -> Unit,
-    onStartGameConfirmed: () -> Unit
+    onCreateMatch: () -> Unit,
 ) {
     val activeGame by gameViewModel.activeGame.collectAsState()
 
@@ -113,19 +112,19 @@ fun PreGameSetupScreen(
 
         item { Spacer(modifier = Modifier.height(12.dp)) } // Increased spacer before button
 
-        // Start Game Button
+        // Create Match Button
         item {
             Button(
-                onClick = onStartGameConfirmed,
+                onClick = onCreateMatch,
                 modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp), // Made it a bit taller
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = MaterialTheme.colors.error
                 )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Check, contentDescription = "Kickoff")
+                    Icon(Icons.Filled.Check, contentDescription = "Create Match")
                     Spacer(Modifier.width(8.dp)) // Reduced spacer for better balance
-                    Text("Kickoff")
+                    Text("Create")
                 }
             }
         }
