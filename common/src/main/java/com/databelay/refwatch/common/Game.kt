@@ -33,6 +33,8 @@ data class Game(
     var notes: String? = null,
 
     // Live State Fields (updated by watch, synced via phone to Firebase)
+    var hasExtraTime: Boolean = false, // True if extra time has been initiated
+    var hasPenalties: Boolean = false, // True if extra time has been initiated
     var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
     var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
     var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)

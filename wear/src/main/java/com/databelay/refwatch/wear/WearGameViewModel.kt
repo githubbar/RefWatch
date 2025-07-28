@@ -430,31 +430,39 @@ class WearGameViewModel @Inject constructor(
         }.start()
     }
 
-    private fun handlePhaseChange() {
-        val currentPhase = _activeGame.value.currentPhase
-        val endEvent = GenericLogEvent(message = "${currentPhase.readable()} Ended (Timer)")
-        _activeGame.update { it.copy(events = it.events + endEvent) }
-
-        when (currentPhase) {
-            GamePhase.FIRST_HALF -> changePhase(GamePhase.HALF_TIME)
-            GamePhase.HALF_TIME -> changePhase(GamePhase.SECOND_HALF)
-            GamePhase.SECOND_HALF -> changePhase(GamePhase.FULL_TIME)
-            else -> Log.w(TAG, "Timer finished in unhandled phase: $currentPhase")
-        }
-    }
-
     fun endCurrentPhase() {
         val currentGame = _activeGame.value
-        if (currentGame.currentPhase.hasDuration() && currentGame.currentPhase != GamePhase.FULL_TIME && currentGame.currentPhase != GamePhase.PRE_GAME) {
-            pauseTimer()
-            val earlyEndEvent = GenericLogEvent(
-                message = "${currentGame.currentPhase.readable()} ended by referee.",
-                gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble()
-            )
-            _activeGame.update { it.copy(events = it.events + earlyEndEvent) }
-            handlePhaseChange() // Transitions to next phase
-            Log.d(TAG, "${currentGame.currentPhase.readable()} ended.")
+        pauseTimer() // Pause timer if running
+        val earlyEndEvent = GenericLogEvent(
+            message = "${currentGame.currentPhase.readable()} ended.",
+            gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble()
+        )
+        Log.d(TAG, "${currentGame.currentPhase.readable()} ended.")
+        _activeGame.update { it.copy(events = it.events + earlyEndEvent) }
+
+        val currentPhase = _activeGame.value.currentPhase
+
+        when (currentPhase) {
+            GamePhase.PRE_GAME ->  changePhase(GamePhase.FIRST_HALF)
+            GamePhase.FIRST_HALF -> changePhase(GamePhase.HALF_TIME)
+            GamePhase.HALF_TIME -> changePhase(GamePhase.SECOND_HALF)
+            GamePhase.SECOND_HALF ->
+                if (_activeGame.value.hasExtraTime)
+                    changePhase(GamePhase.EXTRA_TIME_FIRST_HALF)
+                else
+                    changePhase(GamePhase.FULL_TIME)
+            GamePhase.EXTRA_TIME_FIRST_HALF -> changePhase(GamePhase.EXTRA_TIME_HALF_TIME)
+            GamePhase.EXTRA_TIME_HALF_TIME -> changePhase(GamePhase.EXTRA_TIME_SECOND_HALF)
+            GamePhase.EXTRA_TIME_SECOND_HALF ->
+                if (_activeGame.value.hasPenalties)
+                    changePhase(GamePhase.PENALTIES)
+                else
+                    changePhase(GamePhase.FULL_TIME)
+            GamePhase.PENALTIES -> changePhase(GamePhase.FULL_TIME)
+
+            else -> Log.w(TAG, "Timer finished in unhandled phase: $currentPhase")
         }
+        saveActiveGameState()
     }
 
     fun addGoal(team: Team) {
@@ -556,59 +564,17 @@ class WearGameViewModel @Inject constructor(
             else -> 0L // Default for PRE_GAME, FULL_TIME
         }
     }
-
-    /**
-     * Determines the next phase and its duration based on the current game state.
-     * This function is now more of a suggestion for auto-transitions,
-     * but the actual transition for SECOND_HALF -> EXTRA_TIME is handled by user choice.
-     */
-    private fun determineNextPhase(game: Game): GamePhase {
-        var nextPhase = game.currentPhase
-        var duration = 0L
-
-        when (game.currentPhase) {
-            GamePhase.PRE_GAME -> {
-                nextPhase = GamePhase.FIRST_HALF
-            }
-            GamePhase.FIRST_HALF -> {
-                nextPhase = GamePhase.HALF_TIME
-            }
-            GamePhase.HALF_TIME -> {
-                nextPhase = GamePhase.SECOND_HALF
-            }
-            GamePhase.SECOND_HALF -> {
-                // If extra time is configured and not yet played
-                if (game.extraTimeHalfDurationMinutes > 0) { // Assuming these fields exist
-                    nextPhase = GamePhase.EXTRA_TIME_FIRST_HALF // This is the potential next phase
-                } else {
-                    nextPhase = GamePhase.FULL_TIME // Otherwise, it's full time
-                }
-            }
-            GamePhase.EXTRA_TIME_FIRST_HALF -> {
-                nextPhase = GamePhase.EXTRA_TIME_HALF_TIME
-            }
-            GamePhase.EXTRA_TIME_HALF_TIME -> {
-                nextPhase = GamePhase.EXTRA_TIME_SECOND_HALF
-            }
-            GamePhase.EXTRA_TIME_SECOND_HALF -> {
-                // After this, it could be penalties or full time
-                // For simplicity, let's assume FULL_TIME. Penalties would be another dialog.
-                nextPhase = GamePhase.FULL_TIME
-            }
-            GamePhase.FULL_TIME, GamePhase.PENALTIES -> {
-                // No automatic transition from these states
-            }
-            // Add other phases as needed
-        }
-        return nextPhase
+    fun setToHaveExtraTime() {
+        // Mark that extra time will be played
+        _activeGame.update { it.copy(hasExtraTime = true, lastUpdated = System.currentTimeMillis()) }
+        saveActiveGameState()
     }
 
-    fun startExtraTime() {
-        if (determineNextPhase(_activeGame.value) == GamePhase.EXTRA_TIME_FIRST_HALF)
-            changePhase(GamePhase.HALF_TIME)
+    fun setToHavePenalties() {
+        // Mark that extra time will be played
+        _activeGame.update { it.copy(hasPenalties = true, lastUpdated = System.currentTimeMillis()) }
+        saveActiveGameState()
     }
-
-
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun vibrateDevice() {
         try {

@@ -41,6 +41,8 @@ fun KickOffSelectionScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 2.dp) // Similar to DurationSettingStepper
                 )
+
+                Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -67,7 +69,7 @@ fun KickOffSelectionScreen(
             }
         }
 
-        item { Spacer(Modifier.height(8.dp)) } // Spacer before confirm button
+        item { Spacer(Modifier.height(4.dp)) } // Spacer before confirm button
 
         item {
             Button(

@@ -135,15 +135,6 @@ fun RefWatchNavHost() {
 
         composable(MobileNavRoutes.GAME_LIST_SCREEN) {
             val games by mobileGameViewModel.gamesList.collectAsState()
-
-            // Make sure MobileGameViewModel is aware of user changes for Firestore queries
-            // This is now handled by MobileGameViewModel observing authViewModel.currentUser
-            // LaunchedEffect(authViewModel.currentUser.value) {
-            //     authViewModel.currentUser.value?.let { user ->
-            //         mobileGameViewModel.onUserChanged(user) // Or however your VM listens to auth state
-            //     }
-            // }
-
             GameListScreen(
                 games = games,
                 onAddGame = {
@@ -195,7 +186,8 @@ fun RefWatchNavHost() {
                     nullable = true // Correctly marked as optional
                 }
             )
-        ) { backStackEntry ->
+        ) {
+            backStackEntry ->
             // 1. Retrieve the gameId from the navigation arguments.
             //    It can be null if no ID was passed.
             val gameId = backStackEntry.arguments?.getString("gameId")

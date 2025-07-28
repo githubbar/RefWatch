@@ -136,7 +136,8 @@ fun RefWatchNavHost() {
                         }
                     },
                     onStartExtraTime = {
-                        navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
+                            gameViewModel.setToHaveExtraTime()
+                            navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
                     },
                     onConfirmEndMatch = {
                         Log.d("RefWatchWearApp", "Finish Match action triggered from UI.")
