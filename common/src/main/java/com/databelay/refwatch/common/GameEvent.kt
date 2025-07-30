@@ -5,8 +5,21 @@ import com.google.firebase.firestore.Exclude
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import java.util.UUID
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
+import kotlinx.serialization.modules.SerializersModule
 
+val gameEventModule = SerializersModule {
+    polymorphic(GameEvent::class) {
+        subclass(GoalScoredEvent::class)
+        subclass(CardIssuedEvent::class)
+        subclass(PhaseChangedEvent::class)
+        subclass(GenericLogEvent::class)
+    }
+}
 // --- Game Event data Class and its Subclasses ---
 @Serializable
 sealed class GameEvent : Parcelable {

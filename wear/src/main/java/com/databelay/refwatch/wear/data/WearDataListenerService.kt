@@ -1,22 +1,27 @@
 package com.databelay.refwatch.wear.data
 
 import android.util.Log
+import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GameEvent
 import com.databelay.refwatch.common.WearSyncConstants
-import com.google.android.gms.wearable.*
+import com.databelay.refwatch.common.gameEventModule
+import com.google.android.gms.wearable.DataEvent
+import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.WearableListenerService
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.ListSerializer // For List<Game>
-import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
 import javax.inject.Inject
 
-import com.google.android.gms.wearable.DataEventBuffer
-import com.google.android.gms.wearable.WearableListenerService
-import java.nio.charset.StandardCharsets
 @AndroidEntryPoint // <<<< ADD THIS
 class WearDataListenerService : WearableListenerService() {
 
@@ -24,11 +29,6 @@ class WearDataListenerService : WearableListenerService() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private val TAG = "WearDataListener"
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        classDiscriminator = "eventType" // If needed for GameEvent
-    }
     @Inject // <<<< ADD THIS for field injection
     lateinit var gameStorage: GameStorageWear
 
@@ -36,11 +36,10 @@ class WearDataListenerService : WearableListenerService() {
         super.onMessageReceived(messageEvent)
 
         Log.d(TAG, "Message received! Path: ${messageEvent.path}")
-        val message = String(messageEvent.data, StandardCharsets.UTF_8)
+        val message = String(messageEvent.data, Charsets.UTF_8)
         Log.d(TAG, "Received message: $message")
 
     }
-
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d(TAG, "onDataChanged received ${dataEvents.count} events.")
@@ -55,14 +54,13 @@ class WearDataListenerService : WearableListenerService() {
                         if (gamesJsonString != null) {
                             Log.d(TAG, "Received games JSON string (length: ${gamesJsonString.length})")
                             // Deserialize List<Game>
-                            val gameList = json.decodeFromString(ListSerializer(Game.serializer()), gamesJsonString)
-                            Log.i(TAG, "Successfully deserialized ${gameList.size} games.")
+                            val gameList = AppJsonConfiguration.decodeFromString<List<Game>>(gamesJsonString)
+
+                            Log.i(TAG, "Successfully deserialized ${gameList.size} games using AppJson.decodeFromJsonElement.")
+
 
                             serviceScope.launch {
                                 gameStorage.saveGamesList(gameList)
-                                // TODO: Optionally, notify active UI/ViewModel to refresh
-                                // This could be via a LocalBroadcastManager, a SharedFlow in a singleton,
-                                // or the ViewModel re-fetching on next observation.
                             }
                         } else {
                             Log.w(TAG, "Games JSON string is null in DataItem.")
@@ -81,7 +79,6 @@ class WearDataListenerService : WearableListenerService() {
                     Log.i(TAG, "Game list DataItem deleted by phone. Clearing local storage.")
                     serviceScope.launch {
                         gameStorage.clearGamesList()
-                        // TODO: Notify UI/ViewModel
                     }
                 }
             }

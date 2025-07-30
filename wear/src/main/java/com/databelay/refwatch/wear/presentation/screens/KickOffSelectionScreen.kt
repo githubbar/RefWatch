@@ -15,7 +15,6 @@ import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.MaterialTheme
 import com.databelay.refwatch.wear.WearGameViewModel // Your ViewModel
 import com.databelay.refwatch.common.*
-// TODO: rename  kickoff screen to coin toss, show it in first half and first extra half
 
 @Composable
 fun KickOffSelectionScreen(
@@ -24,7 +23,7 @@ fun KickOffSelectionScreen(
 ) {
     val activeGame by gameViewModel.activeGame.collectAsState()
     val selectedTeam = activeGame.kickOffTeam // Get current selection from ViewModel
-
+    //FIXME: doesn't set kickoff during extra time correctly (kickoff stays the same for both halves)
     // Use ScalingLazyColumn for standard Wear OS screen structure
     ScalingLazyColumn(
         modifier = Modifier

@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
-import com.databelay.refwatch.wear.navigation.RefWatchNavHost
+import com.databelay.refwatch.wear.navigation.NavigationRoutes
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             RefWatchWearTheme {
                 // Call your main Composable that contains the navigation logic.
-                RefWatchNavHost()
+                NavigationRoutes()
             }
         }
     }

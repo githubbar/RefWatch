@@ -1,20 +1,9 @@
 package com.databelay.refwatch.common // Or your package
 
-import android.os.Parcelable
 import androidx.compose.ui.graphics.Color // If GameSettings is in this file
-import androidx.compose.ui.graphics.toArgb
-import java.util.UUID
 import java.util.Locale // For capitalizeWords if defined here
 import java.util.concurrent.TimeUnit // For formatTime
-import com.databelay.refwatch.common.theme.*
-import com.google.firebase.firestore.Exclude
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient // Import for non-serializable fields
-import java.text.SimpleDateFormat
-import java.time.ZoneId
-import java.util.Date
-import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.IgnoredOnParcel
 
 // --- Enums (Ensure these are defined in this file or imported) ---
 @Serializable
@@ -34,15 +23,29 @@ enum class GameStatus {
 @Serializable
 enum class GamePhase {
     PRE_GAME,
+
+    // For first half
+    KICK_OFF_SELECTION_FIRST_HALF,
     FIRST_HALF,
     HALF_TIME,
+    // For second half
     SECOND_HALF,
-    FULL_TIME,
-    EXTRA_TIME_FIRST_HALF, // Optional
-    EXTRA_TIME_HALF_TIME, // Optional
-    EXTRA_TIME_SECOND_HALF, // Optional
-    PENALTIES
-    // Add more as needed
+
+    // For Extra Time
+    KICK_OFF_SELECTION_EXTRA_TIME,
+    EXTRA_TIME_FIRST_HALF,
+    EXTRA_TIME_HALF_TIME,
+    EXTRA_TIME_SECOND_HALF,
+
+
+    // For Penalties
+    KICK_OFF_SELECTION_PENALTIES,
+    PENALTIES,
+    GAME_ENDED,
+    // Terminal states
+    ABANDONED;
+
+    // --- All properties and methods like displayName, durationMillis, hasDuration(), etc., are REMOVED from here ---
 }
 
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
@@ -63,7 +66,7 @@ fun GamePhase.readable(): String {
         GamePhase.FIRST_HALF -> "1st Half"
         GamePhase.HALF_TIME -> "Halftime"
         GamePhase.SECOND_HALF -> "2nd Half"
-        GamePhase.FULL_TIME -> "Full Time"
+        GamePhase.GAME_ENDED -> "Full Time"
         GamePhase.PRE_GAME -> "Pre Game"
         else -> this.name.replace("_", " ").capitalizeWords()
     }
@@ -80,6 +83,14 @@ fun GamePhase.hasDuration(): Boolean {
 }
 
 fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be recorded
+    return this == GamePhase.FIRST_HALF ||
+            this == GamePhase.SECOND_HALF ||
+            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
+            this == GamePhase.EXTRA_TIME_SECOND_HALF ||
+            this == GamePhase.PENALTIES
+}
+
+fun GamePhase.hasKickoff(): Boolean { // Phases where kick of starts the phase
     return this == GamePhase.FIRST_HALF ||
             this == GamePhase.SECOND_HALF ||
             this == GamePhase.EXTRA_TIME_FIRST_HALF ||

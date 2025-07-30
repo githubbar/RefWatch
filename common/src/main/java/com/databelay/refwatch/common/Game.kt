@@ -37,8 +37,9 @@ data class Game(
     var hasPenalties: Boolean = false, // True if extra time has been initiated
     var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
     var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
-    var kickOffTeam: Team = Team.HOME, // Who is designated to kick off (can be changed pre-game)
-    var currentPeriodKickOffTeam: Team = kickOffTeam, // Actual team kicking off current period (managed by ViewModel)
+    var kickOffTeam: Team = Team.HOME, // Actual team kicking off current period (managed by ViewModel)
+    var penaltiesTakenHome: Int = 0, // Number of penalties scored by home team
+    var penaltiesTakenAway: Int = 0, // Number of penalties scored by away team
     var status: GameStatus = GameStatus.SCHEDULED,
     var currentPhase: GamePhase = GamePhase.PRE_GAME,
     var homeScore: Int = 0,
@@ -71,6 +72,9 @@ data class Game(
         // other fields with defaults
     )
     // --- Computed Properties for UI ---
+
+    val isTied: Boolean
+        get() = homeScore == awayScore
 
     val homeTeamColor: Color
         get() = Color(homeTeamColorArgb)

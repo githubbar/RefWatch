@@ -63,7 +63,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.compose.material) // Replace with latest version
     implementation(libs.androidx.material3)
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android) // You likely have this or core
     implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(platform(libs.firebase.bom))

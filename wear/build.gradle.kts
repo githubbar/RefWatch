@@ -79,10 +79,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.play.services.wearable) // Crucial
     implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
+    implementation(libs.gson) // Or latest version
+
 //    implementation("androidx.wear.compose.foundation.lazy")
 
     ksp(libs.hilt.compiler)
-
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

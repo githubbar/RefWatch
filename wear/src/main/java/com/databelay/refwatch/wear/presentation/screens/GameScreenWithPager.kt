@@ -13,27 +13,48 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.databelay.refwatch.common.*
 import com.databelay.refwatch.wear.presentation.components.ConfirmationDialog
 import com.databelay.refwatch.presentation.screens.pager.MainGameDisplayScreen
-import com.databelay.refwatch.wear.presentation.components.TeamActionsPage
+import com.databelay.refwatch.presentation.screens.pager.PenaltyShootoutScreen
+import com.databelay.refwatch.wear.WearGameViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GameScreenWithPager(
-    activeGame: Game,                   // <<< Receives the active Game state
-    // Lambdas for actions the Pager or its settings dialog might trigger
+    gameViewModel: WearGameViewModel,
+// Lambdas for actions the Pager or its settings dialog might trigger
     onToggleTimer: () -> Unit,
     onAddGoal: (Team) -> Unit,
-    onNavigateToLogCard: (Team) -> Unit, // Changed to pass the team
+    onNavigateToLogCard: (team: Team, cardType: CardType) -> Unit,
     onNavigateToGameLog: () -> Unit,
     onKickOff: () -> Unit,
     onEndPhase: () -> Unit,
     onResetGame: () -> Unit,
-    onStartExtraTime: () -> Unit,
-    onConfirmEndMatch: () -> Unit // To distinguish from onFinishGame
+    onConfirmEndMatch: () -> Unit, // To distinguish from onFinishGame
+    onPenaltyAttemptRecorded: (scored: Boolean) -> Unit, // New callback for penalty attempts
 ) {
+    val activeGame by gameViewModel.activeGame.collectAsState()
     val pagerState = rememberPagerState(initialPage = 1) { 3 } // 0: Home Actions, 1: Main Display, 2: Away Actions
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showEndOfMainTimeDialog by remember { mutableStateOf(false) }
+    val isPenaltiesPhase = activeGame.currentPhase == GamePhase.PENALTIES
+    // If in penalties, we only want the main display. Otherwise, 3 pages.
+    val pagerPageCount = if (isPenaltiesPhase) 1 else 3
+    // If in penalties, always ensure the pager is on the (now only) main page.
+    // The initialPage calculation needs to be smart if the phase can change while this screen is active.
+    val initialPage = if (isPenaltiesPhase) 0 else 1 // Page 0 of 1, or Page 1 of 3
+    // If the phase changes to PENALTIES while the user is on a TeamActionsPage,
+    // snap them back to the MainGameDisplayScreen.
+    LaunchedEffect(isPenaltiesPhase, pagerPageCount) {
+        if (isPenaltiesPhase && pagerState.currentPage != 0) { // If penalties and not on the (new) page 0
+            pagerState.scrollToPage(0) // Snap to the main display (which is now page 0)
+        } else if (!isPenaltiesPhase && pagerState.currentPage != 1 && pagerPageCount == 3) {
+            // Optional: If phase changes *from* penalties back to something else,
+            // and you want to ensure they are on the central page (page 1 of 3).
+            // This might be less critical or could be handled by user expectation.
+            // pagerState.scrollToPage(1)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -45,40 +66,50 @@ fun GameScreenWithPager(
                 )
             }
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            // beyondBoundsPageCount = 1 // Consider if needed for performance/preloading
-        ) { page ->
-            when (page) {
-                0 -> TeamActionsPage(
-                    team = Team.HOME,
-                    teamColor = activeGame.homeTeamColor,
-                    onAddGoal = { onAddGoal(Team.HOME) },
-                    onLogCard = { onNavigateToLogCard(Team.HOME) }
-                )
-                1 -> MainGameDisplayScreen( // The main timer/score view
-                    game = activeGame,
-                    onToggleTimer = onToggleTimer,
-                    onEndPhaseEarly = onEndPhase,
-                    onKickOff = onKickOff
-                )
-                2 -> TeamActionsPage(
-                    team = Team.AWAY,
-                    teamColor = activeGame.awayTeamColor,
-                    onAddGoal = { onAddGoal(Team.AWAY) },
-                    onLogCard = { onNavigateToLogCard(Team.AWAY) }
-                )
+        if (isPenaltiesPhase) {
+            // Only one page: MainGameDisplayScreen
+            // Here, pageIndexInPager will always be 0
+            PenaltyShootoutScreen(
+                game = activeGame,
+                onPenaltyAttemptRecorded = onPenaltyAttemptRecorded,
+                modifier = Modifier.fillMaxSize() // It takes the whole screen
+            )
+        } else {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                // beyondBoundsPageCount = 1 // Consider if needed for performance/preloading
+            ) { page ->
+                when (page) {
+                    0 -> TeamActionsPage(
+                        team = Team.HOME,
+                        game = activeGame,
+                        onAddGoal = { onAddGoal(Team.HOME) },
+                        onNavigateToLogCard = onNavigateToLogCard
+                    )
+
+                    1 -> MainGameDisplayScreen( // The main timer/score view
+                        game = activeGame,
+                        onKickOff = onKickOff
+                    )
+                    /*                        onEndPhase = {
+                                                // If this button is used for SECOND_HALF, it should also trigger the dialog
+                                                if (activeGame.currentPhase == GamePhase.SECOND_HALF && activeGame.isTied)
+                                                    showEndOfMainTimeDialog = true
+                                                else                            // For other phases, call general end phase
+                                                    onEndPhase()
+                                            },*/
+
+                    2 -> TeamActionsPage(
+                        team = Team.AWAY,
+                        game = activeGame,
+                        onAddGoal = { onAddGoal(Team.AWAY) },
+                        onNavigateToLogCard = onNavigateToLogCard
+                    )
+                }
             }
         }
 
-//        HorizontalPagerIndicator(
-//            pagerState = pagerState,
-//            modifier = Modifier
-//                .align(Alignment.BottomCenter)
-//                .padding(bottom = 8.dp)
-//            // ... other indicator properties
-//        )
         if (showSettingsDialog) {
             GameSettingsDialog(
                 game = activeGame,
@@ -105,22 +136,22 @@ fun GameScreenWithPager(
                     onToggleTimer()
                 },
                 // TODO: "start penalties/end match" after 2nd extra half
-                // TODO: add HOME/AWAY and "record penalty" screen maybe with swiping left and right
                 // TODO: test vibrate alarm at the end of each timed game phase
                 onEndPhase = {
                     showSettingsDialog = false // Also dismiss menu on timer toggle
-                    showEndOfMainTimeDialog = activeGame.currentPhase == GamePhase.SECOND_HALF
-                    if (!showEndOfMainTimeDialog) onEndPhase()
+                    if (activeGame.currentPhase == GamePhase.SECOND_HALF && activeGame.isTied)
+                        showEndOfMainTimeDialog = true
+                    else                            // For other phases, call general end phase
+                        onEndPhase()
                 },
                 isTimerRunning = activeGame.isTimerRunning, // Get from game state
-                // Determine if game is active or finished based on game.currentPhase
-                isGameActive = activeGame.currentPhase != GamePhase.FULL_TIME && activeGame.currentPhase != GamePhase.PRE_GAME,
-                isGameFinished = activeGame.currentPhase == GamePhase.FULL_TIME
+                isGameActive = activeGame.currentPhase != GamePhase.GAME_ENDED && activeGame.currentPhase != GamePhase.PRE_GAME,
+                isGameFinished = activeGame.currentPhase == GamePhase.GAME_ENDED
             )
         }
 
         if (showResetConfirmDialog) {
-            val message = if (activeGame.currentPhase == GamePhase.FULL_TIME || activeGame.currentPhase == GamePhase.PRE_GAME) {
+            val message = if (activeGame.currentPhase == GamePhase.GAME_ENDED || activeGame.currentPhase == GamePhase.PRE_GAME) {
                 "Start a new default game? Current game settings will be reset." // Or "Select new game from schedule?"
             } else {
                 "End the current game and reset to pre-game defaults?"
@@ -136,17 +167,21 @@ fun GameScreenWithPager(
         }
 
         // --- New Dialog for End of Main Time ---
-        EndOfMainTimeDialog(
-            showDialog = showEndOfMainTimeDialog,
-            onDismiss = { showEndOfMainTimeDialog = false /* Consider if dismissing should do anything else */ },
-            onStartExtraTime = {
-                showEndOfMainTimeDialog = false
-                onStartExtraTime() // Call the lambda passed from NavHost/ViewModel
-            },
-            onEndMatch = {
-                showEndOfMainTimeDialog = false
-                onConfirmEndMatch() // Call the lambda passed from NavHost/ViewModel
-            }
-        )
+        if (showEndOfMainTimeDialog)
+            EndOfMainTimeDialog(
+                onDismiss = {
+                    showEndOfMainTimeDialog = false /* Consider if dismissing should do anything else */
+                },
+                onStartExtraTime = {
+                    showEndOfMainTimeDialog = false
+                    gameViewModel.setToHaveExtraTime()
+                    onEndPhase()
+                },
+                onEndMatch = {
+                    showEndOfMainTimeDialog = false
+                    onConfirmEndMatch() // Call the lambda passed from NavHost/ViewModel
+                    onEndPhase()
+                }
+            )
     }
 }

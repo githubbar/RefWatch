@@ -24,12 +24,13 @@ import kotlinx.coroutines.delay
 @Composable
 fun LogCardScreen(
     preselectedTeam: Team?,
+    cardType: CardType,
     onLogCard: (team: Team, playerNumber: Int, cardType: CardType) -> Unit,
     onCancel: () -> Unit
 ) {
 
     var selectedTeam by remember { mutableStateOf(preselectedTeam) }
-    var selectedCardType by remember { mutableStateOf<CardType?>(CardType.YELLOW) }
+//    var selectedCardType by remember { mutableStateOf<CardType?>(CardType.YELLOW) }
     var playerNumberString by remember { mutableStateOf("") }
     val context = LocalContext.current
     val focusRequester = remember { FocusRequester() }
@@ -54,28 +55,13 @@ fun LogCardScreen(
             item {
                 Text("Log Card", style = MaterialTheme.typography.title3)
             }
-            // Card Type Selection
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Button(
-                        onClick = { selectedCardType = CardType.YELLOW },
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (selectedCardType == CardType.YELLOW) Color.Yellow else Color.Yellow.copy(alpha = 0.4f),
-                            contentColor = Color.Black
-                        ),
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Yellow") }
-                    Button(
-                        onClick = { selectedCardType = CardType.RED },
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = if (selectedCardType == CardType.RED) Color.Red else Color.Red.copy(alpha = 0.4f),
-                            contentColor = Color.White
-                        ),
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Red") }
+            preselectedTeam?.let {
+                item {
+                    Text(
+                        "For Team: ${it.name}",
+                        style = MaterialTheme.typography.caption1,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
                 }
             }
 
@@ -93,7 +79,7 @@ fun LogCardScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier
-                        .fillMaxWidth(0.3f)
+                        .fillMaxWidth(0.4f)
                         .focusRequester(focusRequester)
                 )
             }
@@ -112,14 +98,21 @@ fun LogCardScreen(
                     Button(
                         onClick = {
                             val playerNum = playerNumberString.toIntOrNull()
-                            if (selectedTeam != null && selectedCardType != null && playerNum != null && playerNum > 0) {
-                                // Call the updated onLogCard lambda with all the details
-                                onLogCard(selectedTeam!!, playerNum, selectedCardType!!)
+                            // Read selectedTeam into a local immutable variable
+                            val currentSelectedTeam = selectedTeam // selectedTeam is MutableState<Team?>
+
+                            if (currentSelectedTeam != null && playerNum != null && playerNum > 0) {
+                                // Now currentSelectedTeam can be smart-cast to Team
+                                onLogCard(currentSelectedTeam, playerNum, cardType)
                             } else {
-                                Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                                if (currentSelectedTeam == null) {
+                                    Toast.makeText(context, "No team selected", Toast.LENGTH_SHORT).show()
+                                } else { // playerNum is null or not > 0
+                                    Toast.makeText(context, "Enter a valid player number", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
-                        enabled = selectedTeam != null && selectedCardType != null && playerNumberString.isNotBlank(),
+                        enabled = selectedTeam != null && playerNumberString.isNotBlank(),
                         modifier = Modifier.weight(1f)
                     ) { Text("Log") }
                 }

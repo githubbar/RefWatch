@@ -23,79 +23,76 @@ import androidx.wear.compose.material.dialog.Dialog // More general Dialog from 
 
 @Composable
 fun EndOfMainTimeDialog(
-    showDialog: Boolean, // Control visibility from the caller
     onDismiss: () -> Unit,
     onStartExtraTime: () -> Unit,
     onEndMatch: () -> Unit
 ) {
-    if (showDialog) { // Control rendering based on the showDialog state
-        Dialog( // Use androidx.wear.compose.material.dialog.Dialog
-            showDialog = true, // This is a bit redundant if the outer `if` controls it, but Dialog needs it
-            onDismissRequest = onDismiss,
-            // You can also use the simpler `Alert` if it fits your needs:
-            // Alert(
-            //    title = { Text("Main Time Finished", textAlign = TextAlign.Center, color = MaterialTheme.colors.onSurface) },
-            //    onDismissRequest = onDismiss,
-            //    positiveButton = {}, // Alert has specific slots for buttons
-            //    negativeButton = {}
-            // ) { // Content slot for Alert
-            //    // ... content for Alert ...
-            // }
+    Dialog( // Use androidx.wear.compose.material.dialog.Dialog
+        showDialog = true, // This is a bit redundant if the outer `if` controls it, but Dialog needs it
+        onDismissRequest = onDismiss,
+        // You can also use the simpler `Alert` if it fits your needs:
+        // Alert(
+        //    title = { Text("Main Time Finished", textAlign = TextAlign.Center, color = MaterialTheme.colors.onSurface) },
+        //    onDismissRequest = onDismiss,
+        //    positiveButton = {}, // Alert has specific slots for buttons
+        //    negativeButton = {}
+        // ) { // Content slot for Alert
+        //    // ... content for Alert ...
+        // }
+    ) {
+        // Content of the Dialog
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 24.dp), // Adjust padding as needed
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Content of the Dialog
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 24.dp), // Adjust padding as needed
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Text(
+                text = "Main Time Finished",
+                style = MaterialTheme.typography.title3, // Use Wear typography
+                color = MaterialTheme.colors.onSurface, // Use Wear theme colors
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "Choose an option:",
+                style = MaterialTheme.typography.body1,
+                color = MaterialTheme.colors.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Button( // androidx.wear.compose.material.Button
+                onClick = onStartExtraTime,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.primary, // Use Wear theme colors
+                    contentColor = MaterialTheme.colors.onPrimary
+                )
             ) {
-                Text(
-                    text = "Main Time Finished",
-                    style = MaterialTheme.typography.title3, // Use Wear typography
-                    color = MaterialTheme.colors.onSurface, // Use Wear theme colors
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "Choose an option:",
-                    style = MaterialTheme.typography.body1,
-                    color = MaterialTheme.colors.onSurface,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                Button( // androidx.wear.compose.material.Button
-                    onClick = onStartExtraTime,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.primary, // Use Wear theme colors
-                        contentColor = MaterialTheme.colors.onPrimary
-                    )
-                ) {
-                    Text("Start Extra Time")
-                }
-
-                Button( // androidx.wear.compose.material.Button
-                    onClick = onEndMatch,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.secondary, // Use Wear theme colors
-                        contentColor = MaterialTheme.colors.onSecondary
-                    )
-                ) {
-                    Text("End Match")
-                }
-
-                // Optional: A dismiss/cancel button if needed and not just relying on onDismissRequest
-                // Button(
-                // onClick = onDismiss,
-                // modifier = Modifier.fillMaxWidth(),
-                // colors = ButtonDefaults.outlinedButtonColors() // Example for an outlined/secondary action
-                // ) {
-                // Text("Cancel")
-                // }
+                Text("Start Extra Time")
             }
+
+            Button( // androidx.wear.compose.material.Button
+                onClick = onEndMatch,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.secondary, // Use Wear theme colors
+                    contentColor = MaterialTheme.colors.onSecondary
+                )
+            ) {
+                Text("End Match")
+            }
+
+            // Optional: A dismiss/cancel button if needed and not just relying on onDismissRequest
+            // Button(
+            // onClick = onDismiss,
+            // modifier = Modifier.fillMaxWidth(),
+            // colors = ButtonDefaults.outlinedButtonColors() // Example for an outlined/secondary action
+            // ) {
+            // Text("Cancel")
+            // }
         }
     }
 }

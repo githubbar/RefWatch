@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import com.databelay.refwatch.games.GameLogScreen
-import kotlinx.coroutines.delay
 
 const val TAG = "RefWatchNavHost"
 
@@ -147,7 +146,7 @@ fun RefWatchNavHost() {
                 onEditGame = { gameToEdit ->
                     navController.navigate(MobileNavRoutes.addEditGameRoute(gameToEdit.id))
                 },
-                onDeleteGame = { gameToDelete -> mobileGameViewModel.deleteGame(gameToDelete) },
+                onDeleteGame = { gameToDelete -> mobileGameViewModel.deleteGame(games, gameToDelete) },
                 onSignOut = {
                     authViewModel.signOut() // Initiate sign out, AuthState change will trigger navigation
                 },

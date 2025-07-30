@@ -2,7 +2,9 @@ package com.databelay.refwatch.wear.navigation
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -17,18 +19,21 @@ import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
+import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.wear.WearGameViewModel
 import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
-import com.databelay.refwatch.wear.presentation.screens.GameScheduleScreen
+import com.databelay.refwatch.wear.presentation.screens.GameListScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
 import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupScreen
+import kotlinx.coroutines.delay
+import kotlin.text.uppercase
 
-const val TAG = "RefWatchNavHost"
+const val TAG = "NavigationRoutes"
 
 @Composable
-fun RefWatchNavHost() {
+fun NavigationRoutes() {
     val navController = rememberSwipeDismissableNavController()
     val gameViewModel: WearGameViewModel = hiltViewModel()
     val scheduledGames by gameViewModel.scheduledGames.collectAsState()
@@ -39,7 +44,7 @@ fun RefWatchNavHost() {
     val startDestination = remember(activeGame) {
         // If there's an active game in progress, start directly on the game screen.
         // Otherwise, start on the schedule/home screen.
-        if (activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.FULL_TIME) {
+        if (activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.GAME_ENDED) {
             // A more robust check for a default/empty game state
             val isDefaultGame = activeGame.homeTeamName == "Home" && activeGame.awayTeamName == "Away" && activeGame.events.isEmpty()
             if (!isDefaultGame) {
@@ -52,7 +57,30 @@ fun RefWatchNavHost() {
         }
     }
 
-    Log.d("RefWatchWearApp", "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
+    Log.d(TAG, "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
+
+    // NEW: Observe currentPhase to trigger navigation to KickOffSelectionScreen
+    LaunchedEffect(activeGame.currentPhase) {
+        Log.d(TAG, "Current phase changed to: ${activeGame.currentPhase}")
+        when (activeGame.currentPhase) {
+            GamePhase.KICK_OFF_SELECTION_FIRST_HALF,
+            GamePhase.KICK_OFF_SELECTION_EXTRA_TIME,
+            GamePhase.KICK_OFF_SELECTION_PENALTIES -> {
+                // Check if current route is not already kick off selection to avoid loop
+                if (navController.currentBackStackEntry?.destination?.route != WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
+                    Log.d(TAG, "Navigating to KICK_OFF_SELECTION_SCREEN for phase: ${activeGame.currentPhase}")
+                    navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
+                        // Decide on popUpTo logic. Maybe popUpTo GameScreen so back goes to game?
+                        // Or a more specific popUpTo behavior.
+                        // For now, let's assume it should appear on top.
+                    }
+                }
+            }
+            else -> {
+                // Not a kick-off selection phase
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.background(MaterialTheme.colors.background), // Use Wear MaterialTheme
@@ -64,8 +92,8 @@ fun RefWatchNavHost() {
         ) {
             composable(WearNavRoutes.GAME_LIST_SCREEN) {
                 val scheduledGames by gameViewModel.scheduledGames.collectAsState()
-                GameScheduleScreen(
-                    scheduledGames = scheduledGames,
+                GameListScreen(
+                    games = scheduledGames,
                     activeGame = activeGame,
                     onGameSelected = { selectedGame ->
                         gameViewModel.selectGameToStart(selectedGame) // Prepare the selected game
@@ -92,6 +120,8 @@ fun RefWatchNavHost() {
                 PreGameSetupScreen(
                     gameViewModel = gameViewModel, // Pass the ViewModel
                     onCreateMatch = {
+                        gameViewModel.activeGame.value.currentPhase = GamePhase.KICK_OFF_SELECTION_FIRST_HALF
+//                        gameViewModel.activeGame.value.currentPhase = GamePhase.EXTRA_TIME_SECOND_HALF // TODO: TEMP for testing
                         navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
                     },
                 )
@@ -102,7 +132,7 @@ fun RefWatchNavHost() {
                     gameViewModel = gameViewModel,
                     onConfirm = {
                         gameViewModel.confirmKickoffSelection() // ViewModel handles phase change
-
+                        gameViewModel.endCurrentPhase()
                         navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {
                                 inclusive = false
@@ -114,20 +144,20 @@ fun RefWatchNavHost() {
                 )
             }
             composable(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
-                val currentActiveGame by gameViewModel.activeGame.collectAsState()
                 GameScreenWithPager( // Ensure this screen observes the activeGame state
-                    activeGame = currentActiveGame, // Pass the whole Game object
                     // Pass specific lambdas for actions the Pager needs to trigger
+                    gameViewModel = gameViewModel,
                     onToggleTimer = { gameViewModel.toggleTimer() },
                     onAddGoal = { team -> gameViewModel.addGoal(team) },
-                    onKickOff = { gameViewModel.kickOff() },
-                    // FIXME: we are not proceeding from exratime 1st half, add var to designate if Game.hasExtraTime and use that in endCurrentPhase and handlePhaseChange
+                    onKickOff = {gameViewModel.kickOff()},
                     onEndPhase = { gameViewModel.endCurrentPhase() },
-                    onNavigateToLogCard = { team -> navController.navigate(WearNavRoutes.logCardRoute(team)) }, // Navigation is separate
+                    onNavigateToLogCard = { team: Team, cardType: CardType ->
+                        navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
+                    },
                     onNavigateToGameLog = { navController.navigate(WearNavRoutes.gameLogRoute(activeGame.id)) },
                     // This lambda defines what happens when the user finishes the game
                     onResetGame = {
-                        Log.d("RefWatchWearApp", "Reset Game action triggered from UI.")
+                        Log.d(TAG, "Reset Game action triggered from UI.")
                         // This action simply resets the current active game to a fresh default state.
                         gameViewModel.createNewDefaultGame()
                         // After resetting, we navigate to the PreGameSetup screen for this new default game.
@@ -135,43 +165,60 @@ fun RefWatchNavHost() {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) // Go back to Home then to PreGameSetup
                         }
                     },
-                    onStartExtraTime = {
-                            gameViewModel.setToHaveExtraTime()
-                            navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
-                    },
                     onConfirmEndMatch = {
-                        Log.d("RefWatchWearApp", "Finish Match action triggered from UI.")
+                        Log.d(TAG, "Finish Match action triggered from UI.")
                         gameViewModel.finishAndSyncActiveGame {
-                            Log.d("RefWatchWearApp", "Sync complete. Navigating to Home.")
+                            Log.d(TAG, "Sync complete. Navigating to Home.")
                             // Navigate back home and clear the history
                             navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
                                 popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
+                    },
+                    onPenaltyAttemptRecorded = {
+                        scored -> gameViewModel.recordPenaltyAttempt(scored)
                     }
                 )
             }
-            composable(route = WearNavRoutes.LOG_CARD_SCREEN,
-                arguments = listOf(
-                    navArgument(WearNavRoutes.TEAM_ARG) { // The argument name must match the placeholder
-                        type = NavType.StringType
-                        // It's a required part of the path, so it's not nullable
-                    }
-                )
-            ) { backStackEntry ->
-                // Extract the team name from the route, convert it to the Enum
-                val teamName = backStackEntry.arguments?.getString(WearNavRoutes.TEAM_ARG)
-                val preselectedTeam = teamName?.let { Team.valueOf(it) }
 
-                LogCardScreen(
-                    preselectedTeam = preselectedTeam, // Pass the preselected team
-                    onLogCard = { team, number, cardType ->
-                        gameViewModel.addCard(team, number, cardType)
-                        navController.popBackStack() // Go back after logging
-                    },
-                    onCancel = { navController.popBackStack() }
+            composable(route = "${WearNavRoutes.LOG_CARD_SCREEN}/{${WearNavRoutes.TEAM_ARG}}/{${WearNavRoutes.CARD_TYPE_ARG}}",
+                arguments = listOf(
+                    navArgument(WearNavRoutes.TEAM_ARG) { type = NavType.StringType },
+                    navArgument(WearNavRoutes.CARD_TYPE_ARG) { type = NavType.StringType } // CardType passed as String
                 )
+            )
+            { backStackEntry ->
+                val teamId = backStackEntry.arguments?.getString(WearNavRoutes.TEAM_ARG)
+                val cardTypeString = backStackEntry.arguments?.getString("cardType")
+
+                // Convert teamId string back to Team enum (you'll need a robust way to do this)
+                val team =
+                    teamId?.let { Team.valueOf(it.uppercase()) } // Example, ensure this is safe
+                // Convert cardTypeString back to CardType enum
+                val cardType = cardTypeString?.let { CardType.valueOf(it.uppercase()) }
+
+                if (team != null && cardType != null) {
+                    LogCardScreen(
+                        preselectedTeam = team,
+                        cardType = cardType,
+                        onLogCard = { loggedTeam, playerNum, loggedCardType ->
+                            // Handle the logged card (e.g., call ViewModel)
+                            gameViewModel.addCard(team, playerNum, cardType)
+                            navController.popBackStack()
+                        },
+                        onCancel = {
+                            navController.popBackStack()
+                        }
+                    )
+                } else {
+                    // Handle error: team or cardType not found, perhaps popBackStack or show error
+                    Text("Error: Invalid navigation arguments for Log Card.")
+                    LaunchedEffect(Unit) {
+                        delay(2000)
+                        navController.popBackStack()
+                    }
+                }
             }
             composable("${WearNavRoutes.GAME_LOG_SCREEN}?${WearNavRoutes.GAME_ID_ARG}={${WearNavRoutes.GAME_ID_ARG}}",
                 arguments = listOf(

@@ -1,11 +1,12 @@
 package com.databelay.refwatch.games
 
 import android.util.Log
-import androidx.compose.foundation.layout.add
+import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GameEvent
-import com.databelay.refwatch.common.GenericLogEvent
-import com.databelay.refwatch.common.PhaseChangedEvent
+import com.databelay.refwatch.common.jsonObjectToMap
+import com.databelay.refwatch.common.mapToJsonObject
+
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -14,20 +15,9 @@ import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.map // Import for flow transformation
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.encodeToString // Explicit import for clarity
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
-import kotlinx.serialization.json.JsonElement // <-- Add this import
-import kotlinx.serialization.json.JsonObject // <-- Add this import
-import kotlinx.serialization.json.JsonPrimitive // <-- Add this import
-import kotlinx.serialization.json.JsonNull // <-- Add this import
-import kotlinx.serialization.json.JsonArray // <-- Add this import
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
+
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 
@@ -39,25 +29,6 @@ class GameRepository(private val firestore: FirebaseFirestore) {
         private const val GAMES_COLLECTION = "games"
         private const val TAG = "GameRepository"
     }
-
-    // Configure ktxJson - this MUST match the config in your common module,
-    // watch app, and phone's MobileGameViewModel or DataLayerListenerService
-    private val ktxJson = Json {
-        prettyPrint = true
-        classDiscriminator = "eventType"
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        serializersModule = SerializersModule {
-            polymorphic(GameEvent::class) {
-                subclass(GenericLogEvent::class)
-                subclass(PhaseChangedEvent::class)
-            }
-        }
-    }
-
-    // We no longer need Gson for parsing events if using ktxJson consistently
-    // private val gson = Gson()
-
 
     fun getGamesFlow(userId: String): Flow<List<Game>> {
         if (userId.isBlank()) {
@@ -151,7 +122,7 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                 // 2. Deserialize the JsonObject TO a GameEvent object
                 // ktxJson needs classDiscriminator and SerializersModule configured to work here.
                 // This also works if GameEvent is a sealed class and setup for polymorphism
-                val event: GameEvent = ktxJson.decodeFromJsonElement(jsonObject)
+                val event: GameEvent = AppJsonConfiguration.decodeFromJsonElement(jsonObject)
                 // LOG 5: Log the successfully decoded event
                 Log.d(TAG, "parseGameEventsFromDocument: Successfully decoded event for doc ${document.id}: $event")
                 event
@@ -165,9 +136,6 @@ class GameRepository(private val firestore: FirebaseFirestore) {
         }
     }
 
-
-    // Ensure ktxJson is defined as a class member or accessible, configured correctly
-    // private val ktxJson = Json { ignoreUnknownKeys = true; classDiscriminator = "eventType"; encodeDefaults = true }
 
     suspend fun addOrUpdateGame(userId: String, game: Game): Result<Unit> {
         Log.d(TAG, "addOrUpdateGame: User: $userId, Game ID: ${game.id}, Events in Game object: ${game.events.size}")
@@ -205,7 +173,6 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                 "homeTeamColorArgb" to game.homeTeamColorArgb,
                 "awayTeamColorArgb" to game.awayTeamColorArgb,
                 "kickOffTeam" to game.kickOffTeam.name,
-                "currentPeriodKickOffTeam" to game.currentPeriodKickOffTeam.name,
                 "status" to game.status.name,
                 "currentPhase" to game.currentPhase.name,
                 "homeScore" to game.homeScore,
@@ -223,13 +190,13 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                     // This uses the specific serializer for the concrete type of 'event'
                     // (e.g., GoalScoredEvent.serializer(), GenericLogEvent.serializer())
                     // and includes the classDiscriminator if configured.
-                    val eventJsonString = ktxJson.encodeToString(event)
+                    val eventJsonString = AppJsonConfiguration.encodeToString(event)
                     Log.v(TAG, "addOrUpdateGame: Serialized event to JSON string: $eventJsonString")
 
 
                     // 2. Parse the JSON String into a kotlinx.serialization.json.JsonObject
                     // This is a generic JSON object structure.
-                    val jsonObject = ktxJson.parseToJsonElement(eventJsonString).jsonObject
+                    val jsonObject = AppJsonConfiguration.parseToJsonElement(eventJsonString).jsonObject
                     Log.v(TAG, "addOrUpdateGame: Parsed JSON string to JsonObject: $jsonObject")
 
                     // 3. Convert the JsonObject to Map<String, Any?>
@@ -258,67 +225,7 @@ class GameRepository(private val firestore: FirebaseFirestore) {
 
     }
 
-    // Helper function to convert JsonElement to Any? for Firestore compatibility
-    // Make sure this is part of your GameRepository class or accessible to it.
-    private fun jsonElementToAny(jsonElement: JsonElement): Any? {
-        return when (jsonElement) {
-            is JsonNull -> null
-            is JsonPrimitive -> {
-                if (jsonElement.isString) jsonElement.content
-                else if (jsonElement.content == "true" || jsonElement.content == "false") jsonElement.content.toBoolean()
-                else jsonElement.content.toDoubleOrNull() ?: jsonElement.content.toLongOrNull() ?: jsonElement.content // Fallback to string if not clearly number/boolean
-            }
-            is JsonObject -> jsonObjectToMap(jsonElement)
-            is JsonArray -> jsonArrayToList(jsonElement)
-        }
-    }
 
-    // Helper function to convert JsonObject to Map<String, Any?>
-    private fun jsonObjectToMap(jsonObject: JsonObject): Map<String, Any?> {
-        return jsonObject.entries.associate { (key, jsonElement) ->
-            key to jsonElementToAny(jsonElement)
-        }
-    }
-
-    // Helper function to convert JsonArray to List<Any?>
-    private fun jsonArrayToList(jsonArray: JsonArray): List<Any?> {
-        return jsonArray.map { jsonElementToAny(it) }
-    }
-
-    // Helper function to convert a Map<String, Any?> from Firestore to JsonObject
-// This needs to handle various types Firestore might return
-    private fun mapToJsonObject(map: Map<String, Any?>): JsonObject {
-        return buildJsonObject {
-            map.forEach { (key, value) ->
-                put(key, anyToJsonElement(value))
-            }
-        }
-    }
-
-    // Helper function to convert Any? from Firestore map value to JsonElement
-    private fun anyToJsonElement(value: Any?): JsonElement {
-        return when (value) {
-            null -> JsonNull
-            is String -> JsonPrimitive(value)
-            is Number -> JsonPrimitive(value) // Handles Int, Long, Double, Float
-            is Boolean -> JsonPrimitive(value)
-            is Map<*, *> -> {
-                // Ensure keys are Strings for JsonObject
-                @Suppress("UNCHECKED_CAST")
-                mapToJsonObject(value as? Map<String, Any?> ?: emptyMap())
-            }
-            is List<*> -> buildJsonArray {
-                value.forEach { item -> add(anyToJsonElement(item)) }
-            }
-            else -> {
-                // Fallback for unknown types: try converting to string.
-                // This might not be ideal for all complex types but can prevent crashes.
-                // Consider logging a warning here if you hit this case often.
-                Log.w(TAG, "anyToJsonElement: Encountered an unknown type (${value::class.java.name}), converting to JsonPrimitive string: $value")
-                JsonPrimitive(value.toString())
-            }
-        }
-    }
     suspend fun deleteGame(userId: String, gameId: String): Result<Unit> {
         return try {
             if (userId.isEmpty()) return Result.failure(IllegalArgumentException("User ID cannot be empty"))

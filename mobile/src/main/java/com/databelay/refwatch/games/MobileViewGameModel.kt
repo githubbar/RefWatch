@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.databelay.refwatch.PhonePinger
+import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.WearSyncConstants
 import com.databelay.refwatch.di.UserIdFlow
@@ -72,8 +73,6 @@ class MobileGameViewModel @Inject constructor(
 
     // Listener for data changes from the watch
     private val dataChangedListener = DataClient.OnDataChangedListener { dataEvents: DataEventBuffer ->
-
-
         Log.d(TAG, "onDataChanged triggered from watch. Events: ${dataEvents.count}")
         dataEvents.forEach { event ->
             if (event.type == DataEvent.TYPE_CHANGED) {
@@ -138,30 +137,37 @@ class MobileGameViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            gamesList.collect { games ->
-                if (_currentUserId.value != null) { // Sync if there's a user
-                    Log.d(
-                        "MobileVM",
-                        "Games list updated for user ${_currentUserId.value} (${games.size} games). Syncing to watch."
-                    )
-                    syncGamesToWatch(games)
-                } else if (games.isEmpty() && _currentUserId.value == null) {
-                    // If user becomes null (logged out) and gamesList is consequently empty,
-                    // send empty list to clear watch.
-                    Log.d(
-                        "MobileVM",
-                        "User logged out and games list is empty. Syncing empty list to watch."
-                    )
-                    syncGamesToWatch(emptyList())
+            gamesList // This StateFlow emits whenever the list of games changes for the current user
+                // .drop(1) // Optional: If you don't want to sync the initial value immediately on collection start
+                // (e.g., if it's an empty list before the first fetch and you want to avoid an initial empty sync)
+                // However, syncing the initial state (even if empty) is often desirable.
+                .collectLatest { currentGamesList -> // Use collectLatest if syncGamesToWatch is suspending and you want to cancel previous syncs if a new list comes quickly
+                    // .collect { currentGamesList -> // Use collect if syncGamesToWatch is fast or you want all syncs to complete
+                    val userId = _currentUserId.value
+                    if (userId != null) {
+                        Log.d(TAG, "Games list changed for user $userId (${currentGamesList.size} games). Syncing to watch.")
+                        syncGamesToWatch(currentGamesList)
+                    } else if (currentGamesList.isEmpty()) {
+                        // This handles the case where the user logs out.
+                        // gamesList will emit emptyList() because _currentUserId became null.
+                        Log.d(TAG, "User logged out, games list is empty. Syncing empty list to clear watch.")
+                        syncGamesToWatch(emptyList()) // Explicitly sync empty list
+                    } else {
+                        // This case should ideally not happen if gamesList correctly emits emptyList() when userId is null.
+                        // But as a safeguard:
+                        Log.w(TAG, "User is null, but gamesList is not empty (${currentGamesList.size}). Syncing empty list to be safe.")
+                        syncGamesToWatch(emptyList())
+                    }
+                    // No 'else' needed if userId is null and currentGamesList is empty, as that's covered.
                 }
-            }
         }
+
         dataClient.addListener(dataChangedListener)
         Log.d("MobileVM", "DataChangedListener added for watch updates.")
     }
 
 
-    fun deleteGame(game: Game) {
+    fun deleteGame(games: List<Game>, game: Game) {
         val userId = _currentUserId.value // Use internal state
         if (userId == null) {
             Log.w("MobileVM", "Cannot delete game ${game.id}: User not logged in.")
@@ -172,7 +178,6 @@ class MobileGameViewModel @Inject constructor(
                 Log.e(TAG, "Failed to delete game: ${it.localizedMessage}")
             }
         }
-
     }
 
     private fun syncGamesToWatch(games: List<Game>) {
@@ -194,7 +199,7 @@ class MobileGameViewModel @Inject constructor(
                 Log.i(TAG, "PHONE: Connected nodes: ${nodes.joinToString { it.displayName }}")
             }
             try {
-                val jsonString = json.encodeToString(games)
+                val jsonString = AppJsonConfiguration.encodeToString(games)
                 Log.d(TAG, "syncGamesToWatch: Sending to watch. Path: ${WearSyncConstants.GAMES_LIST_PATH}, User: $userIdForSync, Games: ${games.size}")
                 // ... (rest of PutDataMapRequest logic) ...
                 val putDataMapReq = PutDataMapRequest.create(WearSyncConstants.GAMES_LIST_PATH)

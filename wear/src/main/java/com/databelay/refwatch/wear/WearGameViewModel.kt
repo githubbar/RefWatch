@@ -136,7 +136,7 @@ class WearGameViewModel @Inject constructor(
     private fun syncNewAdHocGameToPhone(newGame: Game) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val jsonString = json.encodeToString(newGame)
+                val jsonString = AppJsonConfiguration.encodeToString(newGame)
                 val putDataMapReq = PutDataMapRequest.create(WearSyncConstants.NEW_AD_HOC_GAME_PATH)
                 putDataMapReq.dataMap.putString(WearSyncConstants.NEW_GAME_PAYLOAD_KEY, jsonString)
                 putDataMapReq.dataMap.putLong("timestamp", System.currentTimeMillis())
@@ -198,7 +198,7 @@ class WearGameViewModel @Inject constructor(
         // The game is now considered completed.
         // We update the local activeGame state before sending it.
         val finalGameData = _activeGame.value.copy(
-            currentPhase = GamePhase.FULL_TIME, // Ensure it's marked as full time
+            currentPhase = GamePhase.GAME_ENDED, // Ensure it's marked as full time
             status = GameStatus.COMPLETED,      // <<< NEW: Mark the game as completed
             lastUpdated = System.currentTimeMillis()
         )
@@ -213,7 +213,7 @@ class WearGameViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Serialize the *finalGameData* object which now has the COMPLETED status
-                val jsonString = json.encodeToString(finalGameData)
+                val jsonString = AppJsonConfiguration.encodeToString(finalGameData)
                 val path = "${WearSyncConstants.GAME_UPDATE_FROM_WATCH_PATH_PREFIX}/${finalGameData.id}"
                 // ... (rest of your DataClient logic to send the data)
                 val putDataMapReq = PutDataMapRequest.create(path)
@@ -259,7 +259,7 @@ class WearGameViewModel @Inject constructor(
             events = emptyList(),
             lastUpdated = System.currentTimeMillis(),
             // Ensure kickOffTeam is set correctly for the first half
-            currentPeriodKickOffTeam = game.kickOffTeam
+            kickOffTeam = game.kickOffTeam
         )
         _activeGame.value = cleanGameForStart
         Log.d(TAG, "Selected game ${game.id} to start. Phase: PRE_GAME.")
@@ -279,8 +279,7 @@ class WearGameViewModel @Inject constructor(
     fun setKickOffTeam(team: Team) { // This is the overall designated kick-off team for 1st half
         _activeGame.update {
             it.copy(
-                kickOffTeam = team,
-                currentPeriodKickOffTeam = team, // Also update for current pre-game/first-half
+                kickOffTeam = team, // Also update for current pre-game/first-half
                 lastUpdated = System.currentTimeMillis()
             )
         }
@@ -333,6 +332,7 @@ class WearGameViewModel @Inject constructor(
     }
 
     fun confirmKickoffSelection() {
+        Log.d(TAG, "confirmKickoffSelection called during phase ${_activeGame.value.currentPhase}.")
         val currentGame = _activeGame.value
         if (currentGame.currentPhase == GamePhase.PRE_GAME) {
             changePhase(GamePhase.FIRST_HALF) // This will also save state
@@ -344,7 +344,7 @@ class WearGameViewModel @Inject constructor(
     }
     fun kickOff() {
         val currentGame = _activeGame.value
-        val teamName = if (currentGame.currentPeriodKickOffTeam == Team.HOME) currentGame.homeTeamName else currentGame.awayTeamName
+        val teamName = if (currentGame.kickOffTeam == Team.HOME) currentGame.homeTeamName else currentGame.awayTeamName
         val kickOffMessage = "Kick Off - ${teamName} - ${currentGame.currentPhase.readable()}"
         val kickOffEvent = GenericLogEvent(message = kickOffMessage)
 
@@ -443,22 +443,28 @@ class WearGameViewModel @Inject constructor(
         val currentPhase = _activeGame.value.currentPhase
 
         when (currentPhase) {
-            GamePhase.PRE_GAME ->  changePhase(GamePhase.FIRST_HALF)
+            GamePhase.PRE_GAME ->  changePhase(GamePhase.KICK_OFF_SELECTION_FIRST_HALF)
+            GamePhase.KICK_OFF_SELECTION_FIRST_HALF ->  changePhase(GamePhase.FIRST_HALF)
             GamePhase.FIRST_HALF -> changePhase(GamePhase.HALF_TIME)
             GamePhase.HALF_TIME -> changePhase(GamePhase.SECOND_HALF)
             GamePhase.SECOND_HALF ->
                 if (_activeGame.value.hasExtraTime)
-                    changePhase(GamePhase.EXTRA_TIME_FIRST_HALF)
+                    changePhase(GamePhase.KICK_OFF_SELECTION_EXTRA_TIME)
                 else
-                    changePhase(GamePhase.FULL_TIME)
+                    changePhase(GamePhase.GAME_ENDED)
+            GamePhase.KICK_OFF_SELECTION_EXTRA_TIME -> changePhase(GamePhase.EXTRA_TIME_FIRST_HALF)
             GamePhase.EXTRA_TIME_FIRST_HALF -> changePhase(GamePhase.EXTRA_TIME_HALF_TIME)
             GamePhase.EXTRA_TIME_HALF_TIME -> changePhase(GamePhase.EXTRA_TIME_SECOND_HALF)
             GamePhase.EXTRA_TIME_SECOND_HALF ->
-                if (_activeGame.value.hasPenalties)
-                    changePhase(GamePhase.PENALTIES)
+                // If score is tied up after extra time move to penalties
+                if (_activeGame.value.homeScore == _activeGame.value.awayScore) {
+                    _activeGame.update { it.copy(hasPenalties = true) }
+                    changePhase(GamePhase.KICK_OFF_SELECTION_PENALTIES)
+                }
                 else
-                    changePhase(GamePhase.FULL_TIME)
-            GamePhase.PENALTIES -> changePhase(GamePhase.FULL_TIME)
+                    changePhase(GamePhase.GAME_ENDED)
+            GamePhase.KICK_OFF_SELECTION_PENALTIES -> changePhase(GamePhase.PENALTIES)
+            GamePhase.PENALTIES -> changePhase(GamePhase.GAME_ENDED)
 
             else -> Log.w(TAG, "Timer finished in unhandled phase: $currentPhase")
         }
@@ -532,7 +538,7 @@ class WearGameViewModel @Inject constructor(
         // Update kick-off team for the new period
         updateCurrentPeriodKickOffTeam(newPhase, _activeGame.value.kickOffTeam) // Pass the original kickOffTeam
 
-        if (newPhase == GamePhase.HALF_TIME) { // Auto-start halftime timer
+        if (newPhase == GamePhase.HALF_TIME || newPhase == GamePhase.EXTRA_TIME_HALF_TIME) { // Auto-start halftime timers
             startTimer()
         }
         saveActiveGameState() // Save state after all updates for the phase change
@@ -547,13 +553,122 @@ class WearGameViewModel @Inject constructor(
                 // Assuming the team that kicked off 2nd half also kicks off 1st extra time half.
                 GamePhase.EXTRA_TIME_FIRST_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
                 GamePhase.EXTRA_TIME_SECOND_HALF -> initialGameKickOffTeam // Opposite of 1st extra time kick-off
-                else -> currentGame.currentPeriodKickOffTeam // Keep existing for other phases
+                GamePhase.PENALTIES -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
+                else -> currentGame.kickOffTeam // Keep existing for other phases
             }
-            currentGame.copy(currentPeriodKickOffTeam = newCurrentKickOff)
+            currentGame.copy(kickOffTeam = newCurrentKickOff)
             // No need to save state here, changePhase or other callers will save
         }
+        Log.d("$TAG:updateCurrentPeriodKickOffTeam", "Updated kick-off team for phase $phase to ${_activeGame.value.kickOffTeam}")
+
     }
 
+    /**
+     * Records the result of a penalty attempt during a shootout.
+     *
+     * @param scored True if the penalty was scored, false otherwise.
+     */
+    fun recordPenaltyAttempt(scored: Boolean) {
+        val currentGame = _activeGame.value
+        val taker = currentGame.kickOffTeam // Get the calculated current taker
+
+        if (currentGame.currentPhase != GamePhase.PENALTIES) {
+            Log.w(TAG, "recordPenaltyAttempt called but game is not in PENALTIES phase.")
+            return
+        }
+
+        Log.d(TAG, "Recording penalty attempt for ${taker.name}. Scored: $scored")
+
+        _activeGame.update { game ->
+            var newScoreHome = game.homeScore
+            var newScoreAway = game.awayScore
+            val newKickOffTeam = if (taker == Team.HOME) Team.AWAY else Team.HOME
+            var updatedPenaltiesTakenHome = game.penaltiesTakenHome
+            var updatedPenaltiesTakenAway = game.penaltiesTakenAway
+
+            val eventMessage: String
+
+            if (taker == Team.HOME) {
+                updatedPenaltiesTakenHome++
+                if (scored) {
+                    newScoreHome++
+                }
+                eventMessage = "Penalty by ${game.homeTeamName} (${taker.name}): ${if (scored) "SCORED" else "MISSED/SAVED"}"
+            } else { // taker == Team.AWAY
+                updatedPenaltiesTakenAway++
+                if (scored) {
+                    newScoreAway++
+                }
+                eventMessage = "Penalty by ${game.awayTeamName} (${taker.name}): ${if (scored) "SCORED" else "MISSED/SAVED"}"
+            }
+
+            val penaltyEvent = GenericLogEvent( message = eventMessage)
+            val updatedEvents = game.events + penaltyEvent
+
+            // This is a critical piece.
+            // Example conditions:
+            // 1. After 5 kicks each, if scores are different.
+            // 2. Before 5 kicks if one team has an unassailable lead
+            //    (e.g., Home scores 3, Away misses 3; Home leads 3-0 with 2 kicks left for Away, Away can only reach 2).
+            // 3. In sudden death (after 5 kicks each and scores are tied), if one team scores and the other misses in the same round.
+            var newPhase = game.currentPhase
+            if (checkShootoutEndCondition(newScoreHome, newScoreAway, updatedPenaltiesTakenHome, updatedPenaltiesTakenAway)) {
+                newPhase = GamePhase.GAME_ENDED
+                Log.i(TAG, "Penalty shootout ended. Final Score: H $newScoreHome - A $newScoreAway")
+                // You might want to set a flag or specific event indicating the shootout winner
+            }
+
+            game.copy(
+                homeScore = newScoreHome,
+                awayScore = newScoreAway,
+                penaltiesTakenHome = updatedPenaltiesTakenHome,
+                penaltiesTakenAway = updatedPenaltiesTakenAway,
+                events = updatedEvents,
+                kickOffTeam = newKickOffTeam,
+                currentPhase = newPhase // Update phase if shootout ended
+            )
+        }
+        // syncActiveGameToMobile() // Sync after update
+    }
+
+    /**
+     * Placeholder for logic to determine if the penalty shootout has concluded.
+     * This needs to be implemented thoroughly.
+     */
+    private fun checkShootoutEndCondition(
+        currentHomeScore: Int,
+        currentAwayScore: Int,
+        penaltiesTakenHome: Int,
+        penaltiesTakenAway: Int,
+        shootoutRoundLimit: Int = 5 // Standard is 5 rounds before sudden death
+    ): Boolean {
+        // Only check if both teams have taken the same number of penalties
+        // or if one team has completed their set of 'shootoutRoundLimit' kicks
+        // and the other team cannot catch up.
+
+        // If less than shootoutRoundLimit kicks each, check for unassailable lead
+        if (penaltiesTakenHome < shootoutRoundLimit || penaltiesTakenAway < shootoutRoundLimit) {
+            val kicksRemainingHome = shootoutRoundLimit - penaltiesTakenHome
+            val kicksRemainingAway = shootoutRoundLimit - penaltiesTakenAway
+
+            // Home has unassailable lead
+            if (currentHomeScore > currentAwayScore + kicksRemainingAway) return true
+            // Away has unassailable lead
+            if (currentAwayScore > currentHomeScore + kicksRemainingHome) return true
+        }
+
+        // After shootoutRoundLimit kicks (or during if unassailable lead isn't met but kicks are equal)
+        if (penaltiesTakenHome >= shootoutRoundLimit && penaltiesTakenAway >= shootoutRoundLimit && penaltiesTakenHome == penaltiesTakenAway) {
+            return currentHomeScore != currentAwayScore // If scores are different after 5 rounds, it's over
+        }
+
+        // Sudden death logic (both teams have taken same number of kicks beyond shootoutRoundLimit)
+        if (penaltiesTakenHome > shootoutRoundLimit && penaltiesTakenHome == penaltiesTakenAway) {
+            return currentHomeScore != currentAwayScore // In any sudden death round, if scores differ, it's over
+        }
+
+        return false // Shootout continues
+    }
 
     private fun getDurationMillisForPhase(phase: GamePhase, gameSettings: Game): Long {
         return when (phase) {
@@ -590,6 +705,7 @@ class WearGameViewModel @Inject constructor(
             Log.e(TAG, "Vibration failed", e)
         }
     }
+
 
     override fun onCleared() {
         super.onCleared()

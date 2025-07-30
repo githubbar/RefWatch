@@ -11,6 +11,7 @@ import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import androidx.compose.ui.text.style.TextAlign
 import androidx.wear.compose.material.dialog.Dialog
 import androidx.compose.material.icons.filled.PauseCircleFilled
 import androidx.compose.material.icons.filled.PlayCircleFilled
@@ -54,7 +55,7 @@ fun GameSettingsDialog(
 
             // Play/Pause Button - only if game is active (not PRE_GAME or FULL_TIME)
             if (isGameActive) {
-                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME) {
+                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.GAME_ENDED) {
                     item {
                         // Start/Pause Button
                         Button(
@@ -73,14 +74,17 @@ fun GameSettingsDialog(
                     }
                 }
                 // End Phase Early Button
-                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.FULL_TIME && game.currentPhase != GamePhase.PRE_GAME) {
+                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.GAME_ENDED && game.currentPhase != GamePhase.PRE_GAME) {
                     item {
                         Button(
                             onClick = onEndPhase,
                             colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red), // Or a distinct color
                             modifier = Modifier.fillMaxWidth(),
                             ) {
-                            Text("End ${game.currentPhase.readable()} Early") // Adding text
+                            Text(
+                                text = "End ${game.currentPhase.readable()}",
+                                textAlign = TextAlign.Center
+                            ) // Adding text
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 package com.databelay.refwatch.wear.navigation
 
+import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Team
 
 /**
@@ -12,6 +13,7 @@ object WearNavRoutes {
     // Define argument names as constants to avoid typos
     const val GAME_ID_ARG = "gameId"
     const val TEAM_ARG = "team"
+    const val CARD_TYPE_ARG = "cardType"
 
     // --- Route Definitions ---
     // Base routes are simple constants
@@ -20,7 +22,7 @@ object WearNavRoutes {
     const val KICK_OFF_SELECTION_SCREEN = "kick_off_selection"
     const val GAME_IN_PROGRESS_SCREEN = "game_in_progress"
     const val GAME_LOG_SCREEN = "game_log"
-    const val LOG_CARD_SCREEN = "log_card/{$TEAM_ARG}"
+    const val LOG_CARD_SCREEN = "log_card"
     // --- Route Helper Functions ---
 
     /**
@@ -43,6 +45,8 @@ object WearNavRoutes {
      * Creates the navigation route for the log card screen.
      * This route requires a team to be pre-selected.
      */
-    fun logCardRoute(team: Team): String = "log_card/${team.name}"
+    fun logCardRoute(team: Team, cardType: CardType): String {
+        return "$LOG_CARD_SCREEN/${team.name}/${cardType.name}" // Use path segments
+    }
 
 }

@@ -15,17 +15,16 @@ import androidx.wear.compose.material.*
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.GameStatus
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
-import androidx.compose.ui.res.painterResource
-import com.databelay.refwatch.R
+
+private const val TAG = "GameScheduleScreen"
 
 
 @Composable
-fun GameScheduleScreen(
-    scheduledGames: List<Game>,
+fun GameListScreen(
+    games: List<Game>,
     activeGame: Game, // The current game state from the ViewModel
     onGameSelected: (Game) -> Unit,
     onViewLog: (String) -> Unit, // Callback for viewing a FINISHED game's log
@@ -33,21 +32,32 @@ fun GameScheduleScreen(
     onNavigateToGameScreen: () -> Unit // Simple callback to navigate
 ) {
     var selectedTab by remember { mutableStateOf(GameStatus.SCHEDULED) }
-
-    val (upcomingGames, pastGames) = remember(scheduledGames) {
-        val (scheduled, completed) = scheduledGames.partition { it.status == GameStatus.SCHEDULED }
-        val sortedUpcoming = scheduled.sortedBy { it.gameDateTimeEpochMillis }
-        val sortedPast = completed.sortedByDescending { it.gameDateTimeEpochMillis }
-        Pair(sortedUpcoming, sortedPast)
+    LaunchedEffect(games) { // Log whenever the games list changes
+        Log.d(TAG, "Received games list: Count = ${games.size}")
+        games.forEachIndexed { index, game ->
+            Log.d(TAG, "Game $index: ID=${game.id}, Status=${game.status}, DateTimeEpoch=${game.gameDateTimeEpochMillis}, Home=${game.homeTeamName}")
+        }
     }
-
+    // Filter and sort the lists, just like on the watch
+    val (upcomingGames, pastGames) = remember(games) {
+        val (scheduled, completed) = games.partition { it.status == GameStatus.SCHEDULED }
+        Log.d(TAG, "Scheduled partition: Count = ${scheduled.size}")
+        Log.d(TAG, "Completed partition (Past Games): Count = ${completed.size}")
+        completed.forEach { game -> // Log details of games considered "past"
+            Log.d(TAG, "Past Game (after partition): ID=${game.id}, Status=${game.status}, Home=${game.homeTeamName}")
+        }
+        Pair(
+            scheduled.sortedBy { it.gameDateTimeEpochMillis },
+            completed.sortedByDescending { it.gameDateTimeEpochMillis }
+        )
+    }
     val gamesToDisplay = if (selectedTab == GameStatus.SCHEDULED) upcomingGames else pastGames
 
     // --- LOGIC TO DETERMINE IF A GAME IS RESUMABLE ---
     val isGameResumable = remember(activeGame) {
         // A game is resumable if it's not in its initial pre-game state
         // AND not in a final state.
-        activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.FULL_TIME
+        activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.GAME_ENDED
     }
 
     ScalingLazyColumn(
