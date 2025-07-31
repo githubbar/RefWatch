@@ -13,6 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.core.content.edit
+import com.databelay.refwatch.common.AppJsonConfiguration
 
 @Singleton // Hilt will create only one instance of this class for the entire app
 class GameStorageWear @Inject constructor(
@@ -34,7 +35,7 @@ class GameStorageWear @Inject constructor(
 
     fun saveGamesList(games: List<Game>) {
         try {
-            val jsonString = json.encodeToString(games)
+            val jsonString = AppJsonConfiguration.encodeToString(games)
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit {
                     putString(KEY_GAMES_LIST, jsonString)

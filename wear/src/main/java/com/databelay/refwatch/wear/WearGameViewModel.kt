@@ -35,11 +35,10 @@ import kotlinx.coroutines.tasks.await
 object WearAppStorage {
     private const val PREFS_NAME = "RefWatchWearPrefs"
     private const val KEY_SCHEDULED_GAMES = "scheduledGames"
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun saveScheduledGames(context: Application, games: List<Game>) {
         try {
-            val jsonString = json.encodeToString(games)
+            val jsonString = AppJsonConfiguration.encodeToString(games)
             context.getSharedPreferences(PREFS_NAME, Application.MODE_PRIVATE).edit {
                 putString(KEY_SCHEDULED_GAMES, jsonString)
             }
@@ -53,7 +52,7 @@ object WearAppStorage {
             val jsonString = context.getSharedPreferences(PREFS_NAME, Application.MODE_PRIVATE)
                 .getString(KEY_SCHEDULED_GAMES, null)
             if (jsonString != null) {
-                json.decodeFromString<List<Game>>(jsonString)
+                AppJsonConfiguration.decodeFromString<List<Game>>(jsonString)
             } else {
                 emptyList()
             }
@@ -73,7 +72,6 @@ class WearGameViewModel @Inject constructor(
     private val vibrator: Vibrator? // Vibrator for timer
 ) : AndroidViewModel(application) {
     private val TAG = "WearGameViewModel"
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     // =================== Scheduled Game List (Received from Phone) ===================
     // The ViewModel now gets the list by observing the flow from the injected GameStorage
@@ -155,7 +153,7 @@ class WearGameViewModel @Inject constructor(
         return if (savedGameJson != null) {
             try {
                 Log.d(TAG, "Loading active game from SavedStateHandle.")
-                json.decodeFromString<Game>(savedGameJson)
+                AppJsonConfiguration.decodeFromString<Game>(savedGameJson)
             } catch (e: Exception) {
                 Log.e(TAG, "Error decoding active game from JSON, using default.", e)
                 Game() // Default new game
@@ -182,7 +180,7 @@ class WearGameViewModel @Inject constructor(
 
     private fun saveActiveGameState() {
         try {
-            val activeGameJson = json.encodeToString(_activeGame.value)
+            val activeGameJson = AppJsonConfiguration.encodeToString(_activeGame.value)
             savedStateHandle["activeGameJson"] = activeGameJson
             Log.d(TAG, "Active game state saved to SavedStateHandle.")
             // sendActiveGameUpdateToPhone(_activeGame.value)
@@ -209,6 +207,7 @@ class WearGameViewModel @Inject constructor(
         Log.d(TAG, "finishAndSyncActiveGame: Events in finalGameData before sending to phone: ${finalGameData.events.size} events. Details: ${finalGameData.events}")
         Log.d(TAG, "Game ${finalGameData.id} marked as COMPLETED. Syncing to phone.")
 
+        // TODO: Doesn't go to Past games tab after saving (check w/ phone)
 
         viewModelScope.launch(Dispatchers.IO) {
             try {

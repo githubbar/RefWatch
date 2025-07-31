@@ -155,7 +155,6 @@ fun NavigationRoutes() {
                     },
                     onConfirmEndMatch = {
                         Log.d(TAG, "Finish Match action triggered from UI.")
-                        // TODO: Doesn't go to Past games tab after saving (check w/ phone)
                         gameViewModel.finishAndSyncActiveGame {
                             Log.d(TAG, "Sync complete. Navigating to Home.")
                             // Navigate back home and clear the history

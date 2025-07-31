@@ -12,10 +12,10 @@ import com.databelay.refwatch.common.WearSyncConstants
 import com.databelay.refwatch.di.UserIdFlow
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
+import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
-import com.google.android.gms.wearable.DataEventBuffer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import javax.inject.Inject
+
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -41,8 +41,7 @@ class MobileGameViewModel @Inject constructor(
     }
 
     private val dataClient by lazy { Wearable.getDataClient(application) }
-    private val json =
-        Json { ignoreUnknownKeys = true; encodeDefaults = true } // Kotlinx Serialization
+
     private val _currentUserId = MutableStateFlow<String?>(null) // To store current user ID
 
     // gamesList now directly uses the injected userIdFlow via flatMapLatest
@@ -84,7 +83,7 @@ class MobileGameViewModel @Inject constructor(
                         val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
                         val newGameJson = dataMap.getString(WearSyncConstants.NEW_GAME_PAYLOAD_KEY)
                         if (newGameJson != null) {
-                            val newGame = json.decodeFromString<Game>(newGameJson)
+                            val newGame = AppJsonConfiguration.decodeFromString<Game>(newGameJson)
                             Log.i(TAG, "Received new ad-hoc game ${newGame.id} from watch. Saving to Firebase.")
                             // Call the existing method to save it to Firestore
                             addOrUpdateGame(newGame)
@@ -199,7 +198,7 @@ class MobileGameViewModel @Inject constructor(
                 Log.i(TAG, "PHONE: Connected nodes: ${nodes.joinToString { it.displayName }}")
             }
             try {
-                val jsonString = AppJsonConfiguration.encodeToString(games)
+                val jsonString = com.databelay.refwatch.common.AppJsonConfiguration.encodeToString(games)
                 Log.d(TAG, "syncGamesToWatch: Sending to watch. Path: ${WearSyncConstants.GAMES_LIST_PATH}, User: $userIdForSync, Games: ${games.size}")
                 // ... (rest of PutDataMapRequest logic) ...
                 val putDataMapReq = PutDataMapRequest.create(WearSyncConstants.GAMES_LIST_PATH)
@@ -226,7 +225,7 @@ class MobileGameViewModel @Inject constructor(
         Log.v(TAG, "processGameStateUpdateFromWatch: Received JSON: $updatedGameStateJson")
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val updatedGameFromWatch = json.decodeFromString<Game>(updatedGameStateJson)
+                val updatedGameFromWatch = AppJsonConfiguration.decodeFromString<Game>(updatedGameStateJson)
 
                 Log.i(TAG, "processGameStateUpdateFromWatch: Successfully deserialized game from watch. Parsed Game ID: ${updatedGameFromWatch.id}, Events count: ${updatedGameFromWatch.events.size}")
                 Log.v(TAG, "processGameStateUpdateFromWatch: Deserialized events: ${updatedGameFromWatch.events.joinToString { it.displayString }}") // Assuming displayString or similar exists for logging
@@ -305,7 +304,7 @@ class MobileGameViewModel @Inject constructor(
                                         // Watch could send the full Game object or just GameEvents
                                         // Option A: Watch sends the full updated Game object
                                         val updatedGameFromWatch =
-                                            json.decodeFromString<Game>(gameUpdateJson)
+                                            AppJsonConfiguration.decodeFromString<Game>(gameUpdateJson)
                                         // val updatedGameFromWatch = gson.fromJson(gameUpdateJson, Game::class.java)
 
                                         Log.d(

@@ -11,6 +11,10 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 
 // If gameEventModule is also defined in the common module, you can refer to it directly.
 // Otherwise, ensure it's accessible or pass it as a parameter if it varies.
@@ -46,12 +50,20 @@ val AppJsonConfiguration: Json = Json {
 // Helper function to convert a Map<String, Any?> from Firestore to JsonObject
 // This needs to handle various types Firestore might return
 fun mapToJsonObject(map: Map<String, Any?>): JsonObject {
-    return buildJsonObject {
-        map.forEach { (key, value) ->
-            put(key, anyToJsonElement(value))
+    val elements = map.mapValues { (_, value) ->
+        when (value) {
+            null -> JsonNull
+            is String -> JsonPrimitive(value)
+            is Number -> JsonPrimitive(value) // This might turn Int 1 into JsonPrimitive(1.0) if value is Double 1.0
+            is Boolean -> JsonPrimitive(value)
+            is List<*> -> JsonArray(value.map { anyToJsonElement(it) }) // mapToJsonElement needed
+            is Map<*, *> -> mapToJsonObject(value as Map<String, Any?>)
+            else -> throw IllegalArgumentException("Unsupported type in map: ${value::class.simpleName}")
         }
     }
+    return JsonObject(elements)
 }
+// Helper needed for mapToJsonElement if not already present
 // Helper function to convert JsonElement to Any? for Firestore compatibility
 // Make sure this is part of your GameRepository class or accessible to it.
 fun jsonElementToAny(jsonElement: JsonElement): Any? {
@@ -70,10 +82,27 @@ fun jsonElementToAny(jsonElement: JsonElement): Any? {
 // Helper function to convert JsonObject to Map<String, Any?>
 fun jsonObjectToMap(jsonObject: JsonObject): Map<String, Any?> {
     return jsonObject.entries.associate { (key, jsonElement) ->
-        key to jsonElementToAny(jsonElement)
+        key to jsonElementToPrimitive(jsonElement)
     }
 }
 
+private fun jsonElementToPrimitive(jsonElement: JsonElement): Any? {
+    return when (jsonElement) {
+        is JsonNull -> null
+        is JsonPrimitive -> {
+            if (jsonElement.isString) jsonElement.content
+            // VVVVVVVVVV CRITICAL PART VVVVVVVVVVV
+            else if (jsonElement.booleanOrNull != null) jsonElement.boolean
+            else {
+                // Try to preserve integer types if possible
+                jsonElement.longOrNull ?: jsonElement.doubleOrNull ?: jsonElement.content
+            }
+            // VVVVVVVVVV END CRITICAL PART VVVVVVVVVVV
+        }
+        is JsonObject -> jsonObjectToMap(jsonElement)
+        is JsonArray -> jsonArrayToList(jsonElement)
+    }
+}
 // Helper function to convert JsonArray to List<Any?>
 fun jsonArrayToList(jsonArray: JsonArray): List<Any?> {
     return jsonArray.map { jsonElementToAny(it) }
