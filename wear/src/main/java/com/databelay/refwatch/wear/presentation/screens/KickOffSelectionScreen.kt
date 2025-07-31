@@ -23,7 +23,6 @@ fun KickOffSelectionScreen(
 ) {
     val activeGame by gameViewModel.activeGame.collectAsState()
     val selectedTeam = activeGame.kickOffTeam // Get current selection from ViewModel
-    //FIXME: doesn't set kickoff during extra time correctly (kickoff stays the same for both halves)
     // Use ScalingLazyColumn for standard Wear OS screen structure
     ScalingLazyColumn(
         modifier = Modifier

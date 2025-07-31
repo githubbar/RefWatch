@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.unit.sp
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.Team
@@ -16,7 +17,10 @@ import com.databelay.refwatch.common.formatTime
 import com.databelay.refwatch.common.hasDuration
 import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
+import androidx.compose.ui.tooling.preview.Preview
+import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.wear.presentation.components.ColorIndicator
+import com.databelay.refwatch.wear.presentation.screens.TeamActionsPage
 
 @Composable
 fun MainGameDisplayScreen(
@@ -28,10 +32,13 @@ fun MainGameDisplayScreen(
     onEndPhase: () -> Unit, // For ending phase early, if needed*/
     val TAG = "MainGameDisplayScreen"
     Column(
-        modifier = modifier.padding(8.dp),
+        modifier = modifier // Apply passed modifier first
+            .fillMaxSize()    // Then ensure it fills the available space
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround // Distribute elements
     ) {
+        Spacer(Modifier.weight(12f))
         // Score and Team Colors
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -95,8 +102,26 @@ fun MainGameDisplayScreen(
                 )
             }
         }
-
+        Spacer(Modifier.weight(12f))
         // You might have a small text indicating "Long press for menu"
-        Text("Long press for menu", style = MaterialTheme.typography.caption3, textAlign = TextAlign.Center)
+        Text(
+            "Long press for menu",
+            style = MaterialTheme.typography.body2,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colors.secondary)
     }
+}
+
+@Preview(device = "id:wearos_large_round", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true)
+@Composable
+fun MainGameDisplayScreenPreviewLarge() {
+    MainGameDisplayScreen(
+        game = Game.defaults().copy( // Use your Game.defaults() or a sample game
+            id = "previewGame",
+            currentPhase = GamePhase.FIRST_HALF,
+            homeTeamName = "Red Team",
+            homeScore = 2
+        ),
+        onKickOff = {} // Example callback
+    )
 }

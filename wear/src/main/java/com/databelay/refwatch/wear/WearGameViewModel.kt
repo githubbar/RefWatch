@@ -330,18 +330,6 @@ class WearGameViewModel @Inject constructor(
         }
         saveActiveGameState()
     }
-
-    fun confirmKickoffSelection() {
-        Log.d(TAG, "confirmKickoffSelection called during phase ${_activeGame.value.currentPhase}.")
-        val currentGame = _activeGame.value
-        if (currentGame.currentPhase == GamePhase.PRE_GAME) {
-            changePhase(GamePhase.FIRST_HALF) // This will also save state
-        }
-        else if (currentGame.currentPhase == GamePhase.SECOND_HALF) {
-            changePhase(GamePhase.EXTRA_TIME_FIRST_HALF) // This will also save state
-        }
-
-    }
     fun kickOff() {
         val currentGame = _activeGame.value
         val teamName = if (currentGame.kickOffTeam == Team.HOME) currentGame.homeTeamName else currentGame.awayTeamName
@@ -362,7 +350,7 @@ class WearGameViewModel @Inject constructor(
         }
     }
 
-    private fun startTimer() {
+    fun startTimer() {
         val currentGame = _activeGame.value
         if (!currentGame.isTimerRunning && currentGame.displayedTimeMillis > 0 && currentGame.currentPhase.hasDuration()) {
             val startEvent = GenericLogEvent(message = "Timer Started for ${currentGame.currentPhase.readable()}")
@@ -378,7 +366,8 @@ class WearGameViewModel @Inject constructor(
         }
     }
 
-    private fun pauseTimer() {
+    fun pauseTimer() {
+        stopVibrate()
         if (_activeGame.value.isTimerRunning) {
             gameCountDownTimer?.cancel()
             val pauseEvent = GenericLogEvent(message = "Timer Paused")
@@ -393,6 +382,18 @@ class WearGameViewModel @Inject constructor(
         }
     }
 
+    fun resetTimer() {
+        pauseTimer()
+        val currentGame = _activeGame.value
+        _activeGame.update {
+            it.copy(
+                displayedTimeMillis = getDurationMillisForPhase(currentGame.currentPhase, currentGame),
+                actualTimeElapsedInPeriodMillis = 0L, // Reset elapsed time for the current period
+                lastUpdated = System.currentTimeMillis()
+            )
+        }
+        saveActiveGameState()
+    }
     private fun startTimerLogic(durationMillisToRun: Long) {
         gameCountDownTimer?.cancel()
         val gameAtTimerStart = _activeGame.value // Capture state at the moment timer starts
@@ -424,8 +425,6 @@ class WearGameViewModel @Inject constructor(
                     )
                 }
                 vibrateDevice()
-                // NOTE: this is done manually by the ref
-                // handlePhaseChange() // This calls changePhase, which saves state
             }
         }.start()
     }
@@ -547,14 +546,9 @@ class WearGameViewModel @Inject constructor(
     private fun updateCurrentPeriodKickOffTeam(phase: GamePhase, initialGameKickOffTeam: Team) {
         _activeGame.update { currentGame ->
             val newCurrentKickOff = when (phase) {
-                GamePhase.FIRST_HALF, GamePhase.PRE_GAME -> initialGameKickOffTeam
                 GamePhase.SECOND_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
-                // For extra time, it's typically a new coin toss, or decided by rules.
-                // Assuming the team that kicked off 2nd half also kicks off 1st extra time half.
-                GamePhase.EXTRA_TIME_FIRST_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
-                GamePhase.EXTRA_TIME_SECOND_HALF -> initialGameKickOffTeam // Opposite of 1st extra time kick-off
-                GamePhase.PENALTIES -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
-                else -> currentGame.kickOffTeam // Keep existing for other phases
+                GamePhase.EXTRA_TIME_SECOND_HALF -> if (initialGameKickOffTeam == Team.HOME) Team.AWAY else Team.HOME
+                else -> initialGameKickOffTeam // Keep existing for other phases
             }
             currentGame.copy(kickOffTeam = newCurrentKickOff)
             // No need to save state here, changePhase or other callers will save
@@ -690,16 +684,33 @@ class WearGameViewModel @Inject constructor(
         _activeGame.update { it.copy(hasPenalties = true, lastUpdated = System.currentTimeMillis()) }
         saveActiveGameState()
     }
+
     @RequiresPermission(Manifest.permission.VIBRATE)
     private fun vibrateDevice() {
         try {
             if (vibrator?.hasVibrator() == true) { // Check hasVibrator before using
-                val timings = longArrayOf(0, 300, 200, 300)
-                val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
-                val effect = VibrationEffect.createWaveform(timings, amplitudes, -1)
+                Log.d(TAG, "Starting continuous vibration")
+                // Vibrate continuously: pattern of 500ms on, 500ms off, repeat indefinitely (index 0)
+                val timings = longArrayOf(0, 300, 300) // Start immediately, on for 500ms, off for 500ms
+                val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0) // Corresponding amplitudes
+                val effect = VibrationEffect.createWaveform(timings, amplitudes, 0) // Repeat from index 0
                 vibrator?.vibrate(effect)
             } else {
                 Log.w(TAG, "No vibrator available or permission denied.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Vibration failed", e)
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.VIBRATE)
+    fun stopVibrate() {
+        try {
+            if (vibrator?.hasVibrator() == true) {
+                Log.d(TAG, "Stopping vibration")
+                vibrator?.cancel()
+            } else {
+                Log.w(TAG, "No vibrator available to stop or permission denied.")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Vibration failed", e)

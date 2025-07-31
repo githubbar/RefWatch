@@ -55,7 +55,8 @@ navigationRuntimeAndroid = "2.9.0"
 androidxCoreKtx = "1.16.0" # Or your desired version of androidx.core:core-ktx
 androidxConstraintlayout = "2.2.1"
 firebaseAuthKtx = "23.2.1"
-firebaseFirestoreKtx = "25.1.4" # Or your desired/latest stable version of ConstraintLayout
+firebaseFirestoreKtx = "25.1.4"
+uiTooling = "1.8.3" # Or your desired/latest stable version of ConstraintLayout
 
 
 [libraries]
@@ -130,6 +131,7 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroid" }
 firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+androidx-compose-ui-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiTooling" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

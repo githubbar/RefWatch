@@ -168,7 +168,6 @@ fun GameListScreen(
                     game = game,
                     onClick = {
                         if (game.status == GameStatus.SCHEDULED) {
-                            // TODO: Add a confirmation dialog here if a game is already in progress
                             // "This will replace your current active game. Continue?"
                             onGameSelected(game)
                         }

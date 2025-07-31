@@ -56,7 +56,7 @@ fun EndOfMainTimeDialog(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Choose an option:",
+                text = "Extra Time?",
                 style = MaterialTheme.typography.body1,
                 color = MaterialTheme.colors.onSurface,
                 textAlign = TextAlign.Center,
@@ -71,7 +71,7 @@ fun EndOfMainTimeDialog(
                     contentColor = MaterialTheme.colors.onPrimary
                 )
             ) {
-                Text("Start Extra Time")
+                Text("Yes")
             }
 
             Button( // androidx.wear.compose.material.Button
@@ -82,7 +82,7 @@ fun EndOfMainTimeDialog(
                     contentColor = MaterialTheme.colors.onSecondary
                 )
             ) {
-                Text("End Match")
+                Text("No")
             }
 
             // Optional: A dismiss/cancel button if needed and not just relying on onDismissRequest

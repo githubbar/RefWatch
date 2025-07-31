@@ -228,9 +228,6 @@ fun AddEditGameScreen(
                     }
                 }
             }
-            Button(onClick = { showKickOffPicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Kick-off: ${uiState.kickOffTeam.name}")
-            }
 
             if (showHomeColorPicker) {
                 ColorPickerDialog(
@@ -256,18 +253,6 @@ fun AddEditGameScreen(
                     onDismiss = { showAwayColorPicker = false }
                 )
             }
-            if (showKickOffPicker) {
-                TeamPickerDialog(
-                    title = "Select Kick-off Team",
-                    currentSelection = uiState.kickOffTeam,
-                    onTeamSelected = { team ->
-                        addEditViewModel.onKickOffTeamSelected(team)
-                        showKickOffPicker = false
-                    },
-                    onDismiss = { showKickOffPicker = false }
-                )
-            }
-
 
             OutlinedTextField(
                 value = uiState.notes,

@@ -44,20 +44,14 @@ fun NavigationRoutes() {
     val startDestination = remember(activeGame) {
         // If there's an active game in progress, start directly on the game screen.
         // Otherwise, start on the schedule/home screen.
-        if (activeGame.currentPhase != GamePhase.PRE_GAME && activeGame.currentPhase != GamePhase.GAME_ENDED) {
-            // A more robust check for a default/empty game state
-            val isDefaultGame = activeGame.homeTeamName == "Home" && activeGame.awayTeamName == "Away" && activeGame.events.isEmpty()
-            if (!isDefaultGame) {
-                WearNavRoutes.GAME_IN_PROGRESS_SCREEN // Base route name for the pager screen
-            } else {
-                WearNavRoutes.GAME_LIST_SCREEN // Default start
-            }
+        if (activeGame.currentPhase != GamePhase.PRE_GAME) {
+            WearNavRoutes.GAME_IN_PROGRESS_SCREEN // Base route name for the pager screen
         } else {
             WearNavRoutes.GAME_LIST_SCREEN
         }
     }
 
-    Log.d(TAG, "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
+//    Log.d(TAG, "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
 
     // NEW: Observe currentPhase to trigger navigation to KickOffSelectionScreen
     LaunchedEffect(activeGame.currentPhase) {
@@ -121,7 +115,7 @@ fun NavigationRoutes() {
                     gameViewModel = gameViewModel, // Pass the ViewModel
                     onCreateMatch = {
                         gameViewModel.activeGame.value.currentPhase = GamePhase.KICK_OFF_SELECTION_FIRST_HALF
-//                        gameViewModel.activeGame.value.currentPhase = GamePhase.EXTRA_TIME_SECOND_HALF // TODO: TEMP for testing
+//                        gameViewModel.activeGame.value.currentPhase = GamePhase.SECOND_HALF // TODO: TEMP for testing
                         navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
                     },
                 )
@@ -131,7 +125,6 @@ fun NavigationRoutes() {
                 KickOffSelectionScreen(
                     gameViewModel = gameViewModel,
                     onConfirm = {
-                        gameViewModel.confirmKickoffSelection() // ViewModel handles phase change
                         gameViewModel.endCurrentPhase()
                         navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {
@@ -156,17 +149,13 @@ fun NavigationRoutes() {
                     },
                     onNavigateToGameLog = { navController.navigate(WearNavRoutes.gameLogRoute(activeGame.id)) },
                     // This lambda defines what happens when the user finishes the game
-                    onResetGame = {
-                        Log.d(TAG, "Reset Game action triggered from UI.")
-                        // This action simply resets the current active game to a fresh default state.
-                        gameViewModel.createNewDefaultGame()
-                        // After resetting, we navigate to the PreGameSetup screen for this new default game.
-                        navController.navigate(WearNavRoutes.PRE_GAME_SETUP_SCREEN) {
-                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) // Go back to Home then to PreGameSetup
-                        }
+                    onResetPeriodTimer = {
+                        Log.d(TAG, "Reset period action triggered from UI.")
+                        gameViewModel.resetTimer()
                     },
                     onConfirmEndMatch = {
                         Log.d(TAG, "Finish Match action triggered from UI.")
+                        // TODO: Doesn't go to Past games tab after saving (check w/ phone)
                         gameViewModel.finishAndSyncActiveGame {
                             Log.d(TAG, "Sync complete. Navigating to Home.")
                             // Navigate back home and clear the history

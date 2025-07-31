@@ -28,13 +28,10 @@ fun GameSettingsDialog(
     game: Game,
     onDismiss: () -> Unit,
     onFinishGame: () -> Unit,
-    onResetGame: () -> Unit,
+    onResetPeriodTimer: () -> Unit,
     onViewLog: () -> Unit,
     onToggleTimer: () -> Unit,
     onEndPhase: () -> Unit,
-    isTimerRunning: Boolean,  // Current timer state
-    isGameActive: Boolean,
-    isGameFinished: Boolean
 ) {
     Dialog(
         showDialog = true,
@@ -54,38 +51,34 @@ fun GameSettingsDialog(
             }
 
             // Play/Pause Button - only if game is active (not PRE_GAME or FULL_TIME)
-            if (isGameActive) {
-                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.GAME_ENDED) {
-                    item {
-                        // Start/Pause Button
-                        Button(
-                            onClick = onToggleTimer,
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = Color.Green
-                            ),
-                            modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
-                        ) {
-                            Icon(
-                                imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                                contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
-                                modifier = Modifier.size(ButtonDefaults.LargeIconSize)
-                            )
-                        }
+            if (game.currentPhase.hasDuration()) {
+                item {
+                    // Start/Pause Button
+                    Button(
+                        onClick = onToggleTimer,
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color.Green
+                        ),
+                        modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
+                    ) {
+                        Icon(
+                            imageVector = if (game.isTimerRunning) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                            contentDescription = if (game.isTimerRunning) "Pause Timer" else "Start Timer",
+                            modifier = Modifier.size(ButtonDefaults.LargeIconSize)
+                        )
                     }
                 }
-                // End Phase Early Button
-                if (game.currentPhase.hasDuration() && game.currentPhase != GamePhase.GAME_ENDED && game.currentPhase != GamePhase.PRE_GAME) {
-                    item {
-                        Button(
-                            onClick = onEndPhase,
-                            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red), // Or a distinct color
-                            modifier = Modifier.fillMaxWidth(),
-                            ) {
-                            Text(
-                                text = "End ${game.currentPhase.readable()}",
-                                textAlign = TextAlign.Center
-                            ) // Adding text
-                        }
+            // End Phase Early Button
+                item {
+                    Button(
+                        onClick = onEndPhase,
+                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red), // Or a distinct color
+                        modifier = Modifier.fillMaxWidth(),
+                        ) {
+                        Text(
+                            text = "End ${game.currentPhase.readable()}",
+                            textAlign = TextAlign.Center
+                        ) // Adding text
                     }
                 }
             }
@@ -97,10 +90,10 @@ fun GameSettingsDialog(
             }
 
             item { // Reset/End Game Button
-                Button(onClick = onResetGame,
+                Button(onClick = onResetPeriodTimer,
                     modifier = Modifier.fillMaxWidth(),
                     ) {
-                    Text("Reset Game")}
+                    Text("Reset Period Timer")}
             }
 
             item {

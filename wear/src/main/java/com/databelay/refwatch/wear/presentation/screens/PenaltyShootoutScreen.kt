@@ -63,12 +63,21 @@ fun PenaltyShootoutScreen(
             )
         }
 
+        // Display current penalties taken
+        Text(
+            text = "Taken: ${game.penaltiesTakenHome} - ${game.penaltiesTakenAway}",
+            style = MaterialTheme.typography.title3, // Or a suitable style
+            color = MaterialTheme.colors.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 8.dp) // Add some spacing
+        )
+
         val takerName = if (game.kickOffTeam == Team.HOME) game.homeTeamName else game.awayTeamName
         val takerAbbreviation = takerName.take(3).uppercase()
 
         Text(
             text = "Scored?",
-            style = MaterialTheme.typography.display2,
+            style = MaterialTheme.typography.body1,
             color = MaterialTheme.colors.onSurface,
 
             textAlign = TextAlign.Center,

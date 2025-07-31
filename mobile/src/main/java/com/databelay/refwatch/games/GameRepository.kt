@@ -20,6 +20,7 @@ import kotlinx.serialization.encodeToString // Explicit import for clarity
 
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
+import kotlin.Boolean
 
 
 class GameRepository(private val firestore: FirebaseFirestore) {
@@ -155,6 +156,7 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                 .document(game.id) // Using game.id as the document ID
 
             // Convert Game object to a Map for Firestore
+            // Update serialization to include newly added fields
             val gameDataForFirestore = mutableMapOf<String, Any?>(
                 "id" to game.id,
                 "lastUpdated" to game.lastUpdated,
@@ -162,24 +164,22 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                 "halftimeDurationMinutes" to game.halftimeDurationMinutes,
                 "homeTeamName" to game.homeTeamName,
                 "awayTeamName" to game.awayTeamName,
-
+                "hasExtraTime" to game.hasExtraTime, // True if extra time has been initiated
+                "hasPenalties" to game.hasPenalties, // True if penalties have been initiated
+                "penaltiesTakenHome" to game.penaltiesTakenHome, // Number of penalties taken by home team
+                "penaltiesTakenAway" to game.penaltiesTakenAway, // Number of penalties taken by away team
                 // Correctly handling AgeGroup (which is an enum)
                 "ageGroup" to game.ageGroup?.name, // Store the enum constant's name as a String
-
                 "competition" to game.competition,
                 "venue" to game.venue,
                 "gameDateTimeEpochMillis" to game.gameDateTimeEpochMillis,
                 "notes" to game.notes,
                 "homeTeamColorArgb" to game.homeTeamColorArgb,
                 "awayTeamColorArgb" to game.awayTeamColorArgb,
-                "kickOffTeam" to game.kickOffTeam.name,
                 "status" to game.status.name,
                 "currentPhase" to game.currentPhase.name,
                 "homeScore" to game.homeScore,
                 "awayScore" to game.awayScore,
-                "displayedTimeMillis" to game.displayedTimeMillis,
-                "actualTimeElapsedInPeriodMillis" to game.actualTimeElapsedInPeriodMillis,
-                "isTimerRunning" to game.isTimerRunning,
                 "userId" to userId
             )
 
@@ -194,7 +194,7 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                     Log.v(TAG, "addOrUpdateGame: Serialized event to JSON string: $eventJsonString")
 
 
-                    // 2. Parse the JSON String into a kotlinx.serialization.json.JsonObject
+                    // 2. Parse the JSON String into a kotlinx.serialization.json.JsonObje  ct
                     // This is a generic JSON object structure.
                     val jsonObject = AppJsonConfiguration.parseToJsonElement(eventJsonString).jsonObject
                     Log.v(TAG, "addOrUpdateGame: Parsed JSON string to JsonObject: $jsonObject")

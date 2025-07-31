@@ -79,7 +79,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.play.services.wearable) // Crucial
     implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
-    implementation(libs.gson) // Or latest version
+    implementation(libs.gson)
+    implementation(libs.androidx.compose.ui.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.ui.tooling) // Or latest version
 
 //    implementation("androidx.wear.compose.foundation.lazy")
 

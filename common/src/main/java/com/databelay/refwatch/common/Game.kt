@@ -2,6 +2,7 @@ package com.databelay.refwatch.common
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.databelay.refwatch.common.GameEvent
 import com.databelay.refwatch.common.theme.DefaultAwayJerseyColor
 import com.databelay.refwatch.common.theme.DefaultHomeJerseyColor
 import kotlinx.serialization.Serializable
@@ -11,6 +12,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import com.google.firebase.firestore.Exclude
+import kotlin.Int
 
 // --- Game Settings ---
 @Serializable // Add this
@@ -52,6 +54,39 @@ data class Game(
     @get:Exclude // Crucial for Firestore to ignore this field during toObject()
     val events: List<GameEvent> = emptyList()
 )  {
+    companion object {
+        fun defaults(): Game {
+            val game = Game(
+                id = UUID.randomUUID().toString(), // Or a default placeholder ID
+                homeTeamName = "Home",
+                awayTeamName = "Away",
+                homeTeamColorArgb = DefaultHomeJerseyColor.toArgb(),
+                awayTeamColorArgb = DefaultAwayJerseyColor.toArgb(),
+                // Other fields will use their default values from the primary constructor
+            )
+            // Initialize other fields if their defaults in the primary constructor are not sufficient
+            // or if you want specific values for the "defaults" case.
+            game.lastUpdated = System.currentTimeMillis()
+            game.halfDurationMinutes = 45
+            game.halftimeDurationMinutes = 15
+            game.extraTimeHalfDurationMinutes = 15
+            game.extraTimeHalftimeDurationMinutes = 1
+            game.ageGroup = null
+            game.competition = null
+            game.venue = null
+            game.gameDateTimeEpochMillis = null
+            game.notes = null
+            game.hasExtraTime = false
+            game.hasPenalties = false
+            game.kickOffTeam = Team.HOME
+            game.penaltiesTakenHome = 0
+            game.penaltiesTakenAway = 0
+            game.status = GameStatus.SCHEDULED
+            game.currentPhase = GamePhase.PRE_GAME
+            // displayedTimeMillis, actualTimeElapsedInPeriodMillis, isTimerRunning already defaulted
+            return game
+        }
+    }
     // Constructor to initialize from SimpleIcsEvent
     constructor(icsEvent: SimpleIcsEvent) : this(
         id = icsEvent.uid ?: UUID.randomUUID().toString(), // Assign if uid is not null, otherwise generate
