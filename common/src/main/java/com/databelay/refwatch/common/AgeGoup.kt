@@ -87,18 +87,26 @@ enum class AgeGroup(
         // This is simplified and would live in your ICS parsing logic, not here.
         // Just for conceptual reference related to `fromCalculatedAge`.
         fun getAgeFromTeamName(teamName: String?, currentYear: Int = LocalDate.now().year): Int? {
-            if (teamName == null) return null
+            if (teamName == null) return null // Early exit for null teamName
+
             // Regex to find birth years like 2009, 2009/10, 2010B, etc.
+            // Ensure your regex for group(1) is what you expect for the year.
             val birthYearPattern = Pattern.compile("\\b(20\\d{2}|19\\d{2})(?:[/\\-]\\d{2,4})?\\b")
             val matcher = birthYearPattern.matcher(teamName)
+
             if (matcher.find()) {
-                val yearStr = matcher.group(1)
-                try {
-                    val year = yearStr.toInt()
-                    if (year in 1950..(currentYear - 3)) {
-                        return currentYear - year
-                    }
-                } catch (e: NumberFormatException) { /* ignore */ }
+                val yearStr = matcher.group(1) // This is String?
+
+                // Use toIntOrNull() for safe parsing
+                val year = yearStr?.toIntOrNull()
+
+                if (year != null && year in 1950..(currentYear - 3)) {
+                    return currentYear - year
+                }
+                // Optionally log if yearStr was found but couldn't be parsed or was out of range
+                // else if (yearStr != null) {
+                //     Log.d("AgeGroup", "Parsed year '$year' from '$yearStr' is out of valid range or not a number.")
+                // }
             }
             return null
         }

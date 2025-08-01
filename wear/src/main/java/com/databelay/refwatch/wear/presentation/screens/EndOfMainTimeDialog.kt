@@ -1,25 +1,24 @@
 package com.databelay.refwatch.wear.presentation.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 // Remove M3 AlertDialog import if not used elsewhere in this file
 // import androidx.compose.material3.AlertDialog
 // import androidx.compose.material3.Button // Use Wear Button
 // import androidx.compose.material3.Text   // Use Wear Text
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.Button // Import Wear Button
+import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.MaterialTheme // Wear MaterialTheme
-import androidx.wear.compose.material.Text // Import Wear Text
-import androidx.wear.compose.material.dialog.Alert // Specific Alert dialog from Wear
-import androidx.wear.compose.material.dialog.Dialog // More general Dialog from Wear
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.dialog.Dialog
 
 @Composable
 fun EndOfMainTimeDialog(

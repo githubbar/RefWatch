@@ -1,23 +1,30 @@
 package com.databelay.refwatch.wear.presentation.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi // Keep for Pager
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import com.databelay.refwatch.common.*
-
-import com.databelay.refwatch.wear.presentation.components.ConfirmationDialog
-import com.databelay.refwatch.presentation.screens.pager.MainGameDisplayScreen
+import com.databelay.refwatch.common.CardType
+import com.databelay.refwatch.common.GamePhase
+import com.databelay.refwatch.common.Team
+import com.databelay.refwatch.common.hasDuration
+import com.databelay.refwatch.common.isPlayablePhase
+import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.presentation.screens.pager.PenaltyShootoutScreen
 import com.databelay.refwatch.wear.WearGameViewModel
+import com.databelay.refwatch.wear.presentation.components.ConfirmationDialog
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

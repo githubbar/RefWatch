@@ -17,18 +17,17 @@ import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
-import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.wear.WearGameViewModel
-import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
 import com.databelay.refwatch.wear.presentation.screens.GameListScreen
+import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
 import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupScreen
 import kotlinx.coroutines.delay
-import kotlin.text.uppercase
 
 const val TAG = "NavigationRoutes"
 
@@ -36,7 +35,6 @@ const val TAG = "NavigationRoutes"
 fun NavigationRoutes() {
     val navController = rememberSwipeDismissableNavController()
     val gameViewModel: WearGameViewModel = hiltViewModel()
-    val scheduledGames by gameViewModel.scheduledGames.collectAsState()
     val activeGame by gameViewModel.activeGame.collectAsState()
     val allGames by gameViewModel.allGamesMap.collectAsState()
 
@@ -53,6 +51,7 @@ fun NavigationRoutes() {
 
 //    Log.d(TAG, "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
 
+    // FIXME: kickoff choice flicker before the first half (comes up twice?)
     // NEW: Observe currentPhase to trigger navigation to KickOffSelectionScreen
     LaunchedEffect(activeGame.currentPhase) {
         Log.d(TAG, "Current phase changed to: ${activeGame.currentPhase}")
@@ -85,16 +84,12 @@ fun NavigationRoutes() {
             startDestination = startDestination // Dynamic start destination
         ) {
             composable(WearNavRoutes.GAME_LIST_SCREEN) {
-                val scheduledGames by gameViewModel.scheduledGames.collectAsState()
                 GameListScreen(
-                    games = scheduledGames,
-                    activeGame = activeGame,
+                    viewModel = gameViewModel, // Pass the shared ViewModel
                     onGameSelected = { selectedGame ->
-                        gameViewModel.selectGameToStart(selectedGame) // Prepare the selected game
-                        navController.navigate(WearNavRoutes.PRE_GAME_SETUP_SCREEN) {
-                            // Clear back stack to home or make sense for your flow
-                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN)
-                        }
+                        gameViewModel.selectGameToStart(selectedGame) // ViewModel updates activeGame
+                        navController.navigate(WearNavRoutes.PRE_GAME_SETUP_SCREEN)
+                        // popUpTo can be tricky here if startDestination was PRE_GAME_SETUP_SCREEN
                     },
                     onViewLog = { gameId ->
                         navController.navigate(WearNavRoutes.gameLogRoute(gameId))
@@ -146,6 +141,7 @@ fun NavigationRoutes() {
                     onEndPhase = { gameViewModel.endCurrentPhase() },
                     onNavigateToLogCard = { team: Team, cardType: CardType ->
                         navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
+                        // TODO: Return to main tab after logging a card
                     },
                     onNavigateToGameLog = { navController.navigate(WearNavRoutes.gameLogRoute(activeGame.id)) },
                     // This lambda defines what happens when the user finishes the game
@@ -208,7 +204,7 @@ fun NavigationRoutes() {
                     }
                 }
             }
-            composable("${WearNavRoutes.GAME_LOG_SCREEN}?${WearNavRoutes.GAME_ID_ARG}={${WearNavRoutes.GAME_ID_ARG}}",
+            composable("${WearNavRoutes.GAME_LOG_SCREEN}/{${WearNavRoutes.GAME_ID_ARG}}",
                 arguments = listOf(
                     navArgument(WearNavRoutes.GAME_ID_ARG) { // Tell NavController to expect a "gameId"
                         type = NavType.StringType

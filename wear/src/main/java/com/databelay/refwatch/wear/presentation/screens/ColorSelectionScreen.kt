@@ -1,19 +1,36 @@
 package com.databelay.refwatch.wear.presentation.screens // Your package
 
-import androidx.compose.foundation.layout.*
+// No items(count) or items(list) import needed here as we use item { Row { ... } } for the grid rows
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.ExperimentalWearFoundationApi // Still needed for ScalingLazyColumn features
+import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-// No items(count) or items(list) import needed here as we use item { Row { ... } } for the grid rows
-import androidx.wear.compose.material.* // For Scaffold, Text, Button, Chip, etc.
-import com.databelay.refwatch.wear.presentation.components.ColorIndicator // Your ColorIndicator
-import com.databelay.refwatch.common.*
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.Chip
+import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.PositionIndicator
+import androidx.wear.compose.material.Scaffold
+import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.TimeText
+import androidx.wear.compose.material.Vignette
+import androidx.wear.compose.material.VignettePosition
+import androidx.wear.compose.material.scrollAway
+import com.databelay.refwatch.common.luminance
+import com.databelay.refwatch.common.predefinedColors
+import com.databelay.refwatch.wear.presentation.components.ColorIndicator
 
 @OptIn(ExperimentalWearFoundationApi::class)
 @Composable

@@ -1,5 +1,6 @@
 package com.databelay.refwatch.wear.navigation
 
+import android.util.Log
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Team
 
@@ -38,7 +39,8 @@ object WearNavRoutes {
      * This route requires a gameId.
      */
     fun gameLogRoute(gameId: String): String {
-        return "$GAME_LOG_SCREEN?$GAME_ID_ARG=$gameId"
+        Log.d(TAG, "Game log route created: $GAME_LOG_SCREEN/${gameId}")
+        return "$GAME_LOG_SCREEN/${gameId}"
     }
 
     /**

@@ -45,6 +45,7 @@ runner = "1.6.2"
 slf4jNop = "1.7.32"
 truth = "1.1.5"
 ui = "1.8.3"
+wearOngoing = "1.1.0-beta01"
 wearToolingPreview = "1.0.0"
 activityCompose = "1.8.0"
 coreSplashscreen = "1.0.1"
@@ -85,6 +86,7 @@ androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", versi
 androidx-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "ui" }
 androidx-ui-tooling = { module = "androidx.ui:ui-tooling", version.ref = "ui" }
 androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "ui" }
+androidx-wear-ongoing = { module = "androidx.wear:wear-ongoing", version.ref = "wearOngoing" }
 compose-foundation-v130 = { module = "androidx.wear.compose:compose-foundation", version.ref = "composeFoundationVersion" }
 compose-material-v130 = { module = "androidx.wear.compose:compose-material", version.ref = "composeMaterialVersion" }
 compose-navigation = { module = "androidx.wear.compose:compose-navigation", version.ref = "composeNavigation" }

@@ -81,11 +81,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
     implementation(libs.gson)
     implementation(libs.androidx.compose.ui.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.ui.tooling) // Or latest version
-
-//    implementation("androidx.wear.compose.foundation.lazy")
+    implementation(libs.androidx.wear.ongoing)
 
     ksp(libs.hilt.compiler)
+    debugImplementation(libs.androidx.compose.ui.ui.tooling) // Or latest version
     debugImplementation(libs.ui.test.manifest)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

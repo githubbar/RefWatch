@@ -1,6 +1,11 @@
 package com.databelay.refwatch.navigation // Create this package
 
+import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -31,19 +36,40 @@ import com.databelay.refwatch.games.MobileGameViewModel
 import com.databelay.refwatch.games.AddEditGameViewModel
 import com.databelay.refwatch.games.AddEditGameScreen
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.games.GameLogScreen
+import kotlinx.coroutines.launch
 
 const val TAG = "RefWatchNavHost"
 
-
+/**
+ * Creates and remembers an ActivityResultLauncher for picking a single content item (e.g., a file).
+ *
+ * @param onResult Callback function that will be invoked with the Uri of the selected content,
+ *                 or null if the selection was cancelled or failed.
+ * @return A ManagedActivityResultLauncher that you can call `.launch()` on.
+ */
+@Composable
+fun rememberFilePickerLauncher(
+    onResult: (Uri?) -> Unit
+): ManagedActivityResultLauncher<String, Uri?> {
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = onResult
+    )
+}
 @Composable
 fun RefWatchNavHost() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
     val mobileGameViewModel: MobileGameViewModel = hiltViewModel() // GameViewModel for game list
     val authState by authViewModel.authState.collectAsState()
+    val coroutineScope = rememberCoroutineScope() // For parsing in a background thread
 
     // ---- STATE TO CONTROL DELAYED COMPOSITION ----
     var canInitializeViewModels by remember { mutableStateOf(false) }
@@ -100,6 +126,31 @@ fun RefWatchNavHost() {
         }
     }
 
+    // Define the file picker launcher within the scope where you need it (or pass it down)
+    // The onResult lambda will now handle parsing and updating the ViewModel
+    val filePickerLauncher = rememberFilePickerLauncher { uri: Uri? ->
+        if (uri != null) {
+            // Use a coroutine to parse the file off the main thread
+            coroutineScope.launch {
+                Log.d(TAG, "URI selected: $uri. Starting ICS parsing.")
+                val icsEvents: List<SimpleIcsEvent>? =
+                    SimpleIcsParser.parseUri(context.contentResolver, uri)
+
+                if (icsEvents != null) {
+                    Log.d(TAG, "Successfully parsed ${icsEvents.size} events from URI.")
+                    val gamesToImport = icsEvents.map { Game(it) } // Convert SimpleIcsEvent to Game
+                    mobileGameViewModel.addOrUpdateGames(gamesToImport)
+                    // Optionally, show a success message to the user (e.g., via a Snackbar or Toast)
+                } else {
+                    Log.e(TAG, "Failed to parse ICS events from URI.")
+                    // Optionally, show an error message
+                }
+            }
+        } else {
+            Log.d(TAG, "File selection cancelled.")
+            // Optionally, inform the user that selection was cancelled
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -152,27 +203,29 @@ fun RefWatchNavHost() {
                 },
                 onImportGames = {
                     // Example Import (replace with your actual file picker logic)
-                    val icsEvents = SimpleIcsParser.parse(
-                        """
-                        BEGIN:VEVENT
-                        DTSTAMP:20250327T113750Z
-                        UID:4829e374-f5e1-48d1-8c21-044404e66152
-                        DTSTART;TZID=America/New_York:20250329T143000
-                        DTEND;TZID=America/New_York:20250329T163000
-                        SUMMARY:Referee Assignment: Asst Referee 1 - 3071 Cutters SC U18 Boys Red vs.  Indy Eleven 2007/2008B White - ISL SPRING 2025 (11U-19/20U\, All Divisions)
-                        END:VEVENT
-                        BEGIN:VEVENT
-                        DTSTAMP:20250327T113750Z
-                        UID:826d01cc-f123-4018-bbd3-08c820b36cc6
-                        DTSTART;TZID=America/New_York:20250330T130000
-                        DTEND;TZID=America/New_York:20250330T144500
-                        SUMMARY:Referee Assignment: Referee - 2846 Cutters SC 2009/10 Boys Red vs.   SCSA Eleven 2009B Red - ISL SPRING 2025 (11U-19/20U\, All Divisions)
-                        END:VEVENT"""
-                    )
-                    val gamesToImport = icsEvents.map { Game(it) }
-                    mobileGameViewModel.addOrUpdateGames(gamesToImport)
+                    Log.d(TAG, "onImportGames triggered. Launching file picker.")
+                    filePickerLauncher.launch("text/calendar")
+
+//                    val icsEvents = SimpleIcsParser.parse(
+//                        """
+//                        BEGIN:VEVENT
+//                        DTSTAMP:20250327T113750Z
+//                        UID:4829e374-f5e1-48d1-8c21-044404e66152
+//                        DTSTART;TZID=America/New_York:20250329T143000
+//                        DTEND;TZID=America/New_York:20250329T163000
+//                        SUMMARY:Referee Assignment: Asst Referee 1 - 3071 Cutters SC U18 Boys Red vs.  Indy Eleven 2007/2008B White - ISL SPRING 2025 (11U-19/20U\, All Divisions)
+//                        END:VEVENT
+//                        BEGIN:VEVENT
+//                        DTSTAMP:20250327T113750Z
+//                        UID:826d01cc-f123-4018-bbd3-08c820b36cc6
+//                        DTSTART;TZID=America/New_York:20250330T130000
+//                        DTEND;TZID=America/New_York:20250330T144500
+//                        SUMMARY:Referee Assignment: Referee - 2846 Cutters SC 2009/10 Boys Red vs.   SCSA Eleven 2009B Red - ISL SPRING 2025 (11U-19/20U\, All Divisions)
+//                        END:VEVENT"""
+//                    )
+//                    val gamesToImport = icsEvents.map { Game(it) }
+//                    mobileGameViewModel.addOrUpdateGames(gamesToImport)
                 },
-                onSendPing = { mobileGameViewModel.phonePinger.sendPing()}
             )
         }
         // It tells the NavHost what to display for the "game_log?{gameId}" route.

@@ -6,23 +6,33 @@ package com.databelay.refwatch.wear.presentation.screens
 // import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 // import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.* // Keep this for Column, Row, Spacer, Modifiers
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview // Keep for previews
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.* // Keep for Button, Text, MaterialTheme
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Text
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
-import com.databelay.refwatch.common.GamePhase // For GamePhaseUtils
+import com.databelay.refwatch.common.isDark
 import com.databelay.refwatch.common.isPlayablePhase
 
 
@@ -41,6 +51,7 @@ fun TeamActionsPage(
     Column(
         modifier = modifier
             .fillMaxSize()
+            // You can be more specific with WindowInsetsSides.Top if only top is an issue
             .padding(all = 16.dp), // Add overall padding for the content within the screen
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround
@@ -51,9 +62,10 @@ fun TeamActionsPage(
     ) {
         // Text: Team Name and Score
         Text(
+            modifier = Modifier.padding(top=20.dp),
             text = "$teamName - Score: $score",
-            style = MaterialTheme.typography.title2,
-            color = teamColor.let { Color(it.red, it.green, it.blue, it.alpha) },
+            style = MaterialTheme.typography.body1,
+            color = if (teamColor.isDark()) Color.White else teamColor.let { Color(it.red, it.green, it.blue, it.alpha) },
             textAlign = TextAlign.Center // Center text if it wraps
         )
 
@@ -152,6 +164,8 @@ fun TeamActionsPagePreview() {
                 id = "previewGame",
                 currentPhase = GamePhase.FIRST_HALF,
                 homeTeamName = "Red Team",
+                homeTeamColorArgb = android.graphics.Color.BLACK,
+                awayTeamColorArgb = android.graphics.Color.YELLOW,
                 homeScore = 2
             ),
             onAddGoal = {},

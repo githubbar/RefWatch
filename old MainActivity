@@ -243,16 +243,7 @@ fun CompanionScreen() {
     }
 
 
-    // Function to handle processing the URI
-    val processUriAndParse = { uri: Uri, sourceDescription: String ->
-        isLoading = true
-        statusMessage = "Reading ICS file from $sourceDescription..."
-//        parsedGameSettingsList = emptyList()
-        coroutineScope.launch {
-            val icsContent = readTextFromUri(context, uri)
-            parseIcsContentAndUpdateUi(icsContent, sourceDescription)
-        }
-    }
+
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),

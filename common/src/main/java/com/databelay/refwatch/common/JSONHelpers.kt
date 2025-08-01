@@ -91,13 +91,13 @@ private fun jsonElementToPrimitive(jsonElement: JsonElement): Any? {
         is JsonNull -> null
         is JsonPrimitive -> {
             if (jsonElement.isString) jsonElement.content
-            // VVVVVVVVVV CRITICAL PART VVVVVVVVVVV
+            //  CRITICAL PART
             else if (jsonElement.booleanOrNull != null) jsonElement.boolean
             else {
                 // Try to preserve integer types if possible
                 jsonElement.longOrNull ?: jsonElement.doubleOrNull ?: jsonElement.content
             }
-            // VVVVVVVVVV END CRITICAL PART VVVVVVVVVVV
+            // END CRITICAL PART
         }
         is JsonObject -> jsonObjectToMap(jsonElement)
         is JsonArray -> jsonArrayToList(jsonElement)

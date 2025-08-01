@@ -38,7 +38,6 @@ fun GameListScreen(
     onDeleteGame: (Game) -> Unit,
     onSignOut: () -> Unit,
     onImportGames: () -> Unit, // Callback for importing
-    onSendPing: () -> Unit
 ) {
     Log.d("GameListScreen", "Received games: ${games.map { it.id + " -> " + it.status }}") // Log input games
 

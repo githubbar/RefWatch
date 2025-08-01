@@ -82,6 +82,12 @@ fun GamePhase.hasDuration(): Boolean {
             this == GamePhase.EXTRA_TIME_HALF_TIME
 }
 
+//
+fun GamePhase.isBreak(): Boolean {
+    return this == GamePhase.HALF_TIME ||
+            this == GamePhase.EXTRA_TIME_HALF_TIME
+}
+
 fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be recorded
     return this == GamePhase.FIRST_HALF ||
             this == GamePhase.SECOND_HALF ||
@@ -125,6 +131,7 @@ fun Color.luminance(): Float {
 
 // From your common module or defined consistently
 object WearSyncConstants {
+    const val PHONE_APP_CAPABILITY = "phone_app_capability"
     const val GAMES_LIST_PATH = "/games_list_all"
     const val GAME_SETTINGS_KEY = "games_json"
     const val GAME_UPDATE_FROM_WATCH_PATH_PREFIX = "/game_update_from_watch"

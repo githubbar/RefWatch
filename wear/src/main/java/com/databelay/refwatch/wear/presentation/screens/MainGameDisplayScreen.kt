@@ -1,26 +1,33 @@
-package com.databelay.refwatch.presentation.screens.pager // Example package
+package com.databelay.refwatch.wear.presentation.screens // Example package
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text // Use Material 3 Text
-import androidx.wear.compose.material.* // Use Wear Material
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
+import androidx.wear.compose.material.MaterialTheme
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.formatTime
 import com.databelay.refwatch.common.hasDuration
 import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
-import androidx.compose.ui.tooling.preview.Preview
-import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.wear.presentation.components.ColorIndicator
-import com.databelay.refwatch.wear.presentation.screens.TeamActionsPage
 
 @Composable
 fun MainGameDisplayScreen(
@@ -47,7 +54,7 @@ fun MainGameDisplayScreen(
         ) {
             val homeHasKickOff = game.kickOffTeam == Team.HOME &&
                     game.currentPhase.isPlayablePhase()
-
+            // FIXME: at fulltime disable back navigation
             ColorIndicator(
                 color = game.homeTeamColor,
                 hasKickOffBorder = homeHasKickOff,
@@ -108,7 +115,9 @@ fun MainGameDisplayScreen(
             "Long press for menu",
             style = MaterialTheme.typography.body2,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colors.secondary)
+            color = MaterialTheme.colors.secondary
+        )
+        Spacer(Modifier.weight(8f))
     }
 }
 
@@ -120,6 +129,10 @@ fun MainGameDisplayScreenPreviewLarge() {
             id = "previewGame",
             currentPhase = GamePhase.FIRST_HALF,
             homeTeamName = "Red Team",
+            awayTeamName = "Blue Team",
+            homeTeamColorArgb = android.graphics.Color.BLACK,
+            awayTeamColorArgb = android.graphics.Color.YELLOW,
+            kickOffTeam = Team.AWAY,
             homeScore = 2
         ),
         onKickOff = {} // Example callback

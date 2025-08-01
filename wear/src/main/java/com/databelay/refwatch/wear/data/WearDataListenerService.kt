@@ -3,9 +3,8 @@ package com.databelay.refwatch.wear.data
 import android.util.Log
 import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
-import com.databelay.refwatch.common.GameEvent
 import com.databelay.refwatch.common.WearSyncConstants
-import com.databelay.refwatch.common.gameEventModule
+import com.google.android.gms.wearable.CapabilityInfo
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
@@ -16,85 +15,105 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.ListSerializer // For List<Game>
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
 import javax.inject.Inject
 
-@AndroidEntryPoint // <<<< ADD THIS
+@AndroidEntryPoint
 class WearDataListenerService : WearableListenerService() {
+    private val TAG = "WearDataListenerSvc"
 
     private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-    private val TAG = "WearDataListener"
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
-    @Inject // <<<< ADD THIS for field injection
-    lateinit var gameStorage: GameStorageWear
-
-    override fun onMessageReceived(messageEvent: MessageEvent) {
-        super.onMessageReceived(messageEvent)
-
-        Log.d(TAG, "Message received! Path: ${messageEvent.path}")
-        val message = String(messageEvent.data, Charsets.UTF_8)
-        Log.d(TAG, "Received message: $message")
-
-    }
+    @Inject
+    lateinit var gameStorage: GameStorageWear // Injected by Hilt
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
+        super.onDataChanged(dataEvents)
         Log.d(TAG, "onDataChanged received ${dataEvents.count} events.")
+
         dataEvents.forEach { event ->
+            Log.d(TAG, "Event: type=${event.type}, path=${event.dataItem.uri.path}")
             if (event.type == DataEvent.TYPE_CHANGED) {
                 val dataItem = event.dataItem
                 if (dataItem.uri.path == WearSyncConstants.GAMES_LIST_PATH) {
-                    Log.i(TAG, "Game list data item changed from phone.")
+                    Log.i(TAG, "Games list DataItem changed from phone.")
                     try {
                         val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
-                        val gamesJsonString = dataMap.getString(WearSyncConstants.GAME_SETTINGS_KEY)
+                        val gamesJsonString = dataMap.getString(WearSyncConstants.GAME_SETTINGS_KEY) // Ensure this key is correct
                         if (gamesJsonString != null) {
-                            Log.d(TAG, "Received games JSON string (length: ${gamesJsonString.length})")
-                            // Deserialize List<Game>
+                            Log.d(TAG, "Received games JSON (length: ${gamesJsonString.length})")
+                            // Before parsing, set status to FETCHING (or it's implicit that phone sent data)
+                            // gameStorage.updateDataFetchStatus(DataFetchStatus.FETCHING) // Optional
                             val gameList = AppJsonConfiguration.decodeFromString<List<Game>>(gamesJsonString)
-
-                            Log.i(TAG, "Successfully deserialized ${gameList.size} games using AppJson.decodeFromJsonElement.")
-
-
                             serviceScope.launch {
-                                gameStorage.saveGamesList(gameList)
+                                gameStorage.saveGamesListFromPhone(gameList) // This sets SUCCESS or NO_DATA_AVAILABLE
                             }
                         } else {
-                            Log.w(TAG, "Games JSON string is null in DataItem.")
-                            // This might mean the phone sent an empty list to clear data
-                            // or an error occurred. If phone sends empty list to clear,
-                            // we should clear local storage.
-                            // Let's assume phone sends empty JSON array "[]" for empty list.
-                            // If it's truly null, maybe it's a deletion of the DataItem path.
+                            Log.w(TAG, "Games JSON string is null in DataItem. Phone sent empty data.")
+                            serviceScope.launch {
+                                gameStorage.saveGamesListFromPhone(emptyList()) // Results in NO_DATA_AVAILABLE
+                            }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error processing game list DataItem", e)
+                        Log.e(TAG, "Error parsing game list from DataItem", e)
+                        serviceScope.launch {
+                            gameStorage.updateDataFetchStatus(DataFetchStatus.ERROR_PARSING)
+                        }
                     }
                 }
             } else if (event.type == DataEvent.TYPE_DELETED) {
                 if (event.dataItem.uri.path == WearSyncConstants.GAMES_LIST_PATH) {
-                    Log.i(TAG, "Game list DataItem deleted by phone. Clearing local storage.")
+                    Log.i(TAG, "Games list DataItem deleted by phone.")
                     serviceScope.launch {
-                        gameStorage.clearGamesList()
+                        gameStorage.clearGamesListFromPhone() // This sets NO_DATA_AVAILABLE
                     }
                 }
             }
         }
-        dataEvents.release() // Crucial: Release the buffer
+        dataEvents.release()
     }
 
-    // In WearDataListenerService.kt
-    override fun onCreate() {
-        super.onCreate()
-        Log.e(TAG, "WearDataListenerService CREATED") // Use a prominent tag/level
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        super.onMessageReceived(messageEvent)
+        Log.d(TAG, "Message received: ${messageEvent.path}")
+        // Handle other messages if necessary, e.g., a specific "request_games_ack"
+        // or a direct "phone_unreachable" message from your phone app if it implements that.
     }
+
+    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+        super.onCapabilityChanged(capabilityInfo)
+        Log.d(TAG, "Capability changed: ${capabilityInfo.name}, Nodes: ${capabilityInfo.nodes.size}")
+        // This is a good place to check for phone connectivity.
+        // Assuming your phone app declares a capability like "refwatch_phone_app_capability"
+        val phoneConnected = capabilityInfo.nodes.any { it.isNearby } // A simple check
+
+        // You could directly call gameStorage here, but it's often better
+        // for a ViewModel to observe this or for GameStorageWear to handle NodeClient itself.
+        // For simplicity here if you want the service to directly influence it:
+        if (capabilityInfo.name == WearSyncConstants.PHONE_APP_CAPABILITY) { // Define this constant
+            Log.i(TAG, "Phone capability changed. Connected: $phoneConnected")
+            serviceScope.launch {
+                if (!phoneConnected && gameStorage.gamesListFlow.value.isEmpty()) {
+                    // Only set to unreachable if we have no games and the phone node disappeared
+                    // Avoid overriding PARSING_ERROR or other specific errors with this.
+                    if (gameStorage.dataFetchStatusFlow.value != DataFetchStatus.ERROR_PARSING &&
+                        gameStorage.dataFetchStatusFlow.value != DataFetchStatus.ERROR_UNKNOWN) {
+                        gameStorage.updateDataFetchStatus(DataFetchStatus.ERROR_PHONE_UNREACHABLE)
+                    }
+                } else if (phoneConnected && gameStorage.dataFetchStatusFlow.value == DataFetchStatus.ERROR_PHONE_UNREACHABLE) {
+                    // Phone reconnected, set status to initial to allow a refresh or indicate it can load
+                    gameStorage.updateDataFetchStatus(DataFetchStatus.INITIAL)
+                }
+                // If phone is connected and status was SUCCESS/LOADED_FROM_CACHE, do nothing here.
+                // A new data sync will update status via onDataChanged.
+            }
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
-        serviceJob.cancel() // Cancel coroutines when service is destroyed
-        Log.d(TAG, "WearDataListenerService destroyed.")
+        serviceJob.cancel()
+        Log.d(TAG, "Service destroyed.")
     }
 }

@@ -1,6 +1,11 @@
 package com.databelay.refwatch.common
 
+import android.content.ContentResolver
+import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -8,6 +13,8 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.regex.Pattern
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 data class SimpleIcsEvent(
     val uid: String?,
@@ -32,6 +39,9 @@ object SimpleIcsParser {
         return foldedString.replace(Regex("[\r\t]"), "")
     }
 
+    /**
+     * Parses ICS content from a given string.
+     */
     fun parse(icsContent: String): List<SimpleIcsEvent> {
         val events = mutableListOf<SimpleIcsEvent>()
 
@@ -46,6 +56,47 @@ object SimpleIcsParser {
             }
         }
         return events
+    }
+
+    /**
+     * Parses ICS content from a Uri, typically obtained from a file picker.
+     *
+     * @param contentResolver The ContentResolver to open the Uri.
+     * @param fileUri The Uri of the .ics file to parse.
+     * @return A list of SimpleIcsEvent objects, or null if an error occurs during reading.
+     */
+    fun parseUri(contentResolver: ContentResolver, fileUri: Uri): List<SimpleIcsEvent>? {
+        Log.d("SimpleIcsParser", "Attempting to parse ICS from URI: $fileUri")
+        try {
+            contentResolver.openInputStream(fileUri)?.use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                    val stringBuilder = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        stringBuilder.append(line).append("\n")
+                    }
+                    val icsContent = stringBuilder.toString()
+                    if (icsContent.isBlank()) {
+                        Log.w("SimpleIcsParser", "ICS file from URI is empty or could not be read properly.")
+                        return emptyList() // Or null, depending on how you want to signal empty
+                    }
+                    Log.d("SimpleIcsParser", "Successfully read ${icsContent.length} chars from URI. Starting parse.")
+                    return parse(icsContent) // Reuse the existing string parsing logic
+                }
+            } ?: run {
+                Log.e("SimpleIcsParser", "Failed to open InputStream for URI: $fileUri")
+                return null
+            }
+        } catch (e: IOException) {
+            Log.e("SimpleIcsParser", "IOException while reading ICS from URI: $fileUri", e)
+            return null
+        } catch (e: SecurityException) {
+            Log.e("SimpleIcsParser", "SecurityException: Permission denied for URI: $fileUri", e)
+            return null
+        } catch (e: Exception) {
+            Log.e("SimpleIcsParser", "Unexpected error parsing ICS from URI: $fileUri", e)
+            return null
+        }
     }
 }
 
