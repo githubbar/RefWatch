@@ -1,20 +1,16 @@
-package com.databelay.common // Make sure this matches your actual package
+package com.databelay.refwatch.common // Make sure this matches your actual package
 
 import android.os.Parcelable
-import com.databelay.refwatch.common.GameEvent
 import com.google.firebase.firestore.Exclude
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -395,7 +391,7 @@ class SerializationTest {
                 // We expect the JSON value to be JsonNull
                 assertEquals(
                     "When explicitNulls=true, the 'description' field in JSON should be 'JsonNull'. Actual value: ${descriptionJsonValue?.toString()}. JSON: $jsonString",
-                    kotlinx.serialization.json.JsonNull, // The expected JSON null instance
+                    JsonNull, // The expected JSON null instance
                     descriptionJsonValue
                 )
             }

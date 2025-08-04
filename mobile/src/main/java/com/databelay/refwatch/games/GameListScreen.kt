@@ -27,6 +27,7 @@ import java.util.*
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.GameStatus
+import com.databelay.refwatch.common.readable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,6 +155,8 @@ fun GameListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color =  MaterialTheme.colorScheme.error)
+                Text("#${game.gameNumber}", style = MaterialTheme.typography.bodySmall,
+                    color =  MaterialTheme.colorScheme.surfaceTint)
                 game.ageGroup?.let {
                     Text("Age Group: ${it.displayName}", style = MaterialTheme.typography.bodySmall,
                         color =  MaterialTheme.colorScheme.tertiary)
@@ -165,7 +168,8 @@ fun GameListItem(
                     Text("Location: $it", style = MaterialTheme.typography.bodyMedium)
                 }
                 Text(
-                    "H: ${game.homeScore} - A: ${game.awayScore} (${game.currentPhase})",
+                    "H: ${game.homeScore} - A: ${game.awayScore}",
+                    /*(${game.currentPhase.readable()})*/
                     style = MaterialTheme.typography.bodySmall
                 )
                 // You can add more details from GameSettings here

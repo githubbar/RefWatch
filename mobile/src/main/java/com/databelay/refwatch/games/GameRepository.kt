@@ -162,6 +162,7 @@ class GameRepository(private val firestore: FirebaseFirestore) {
                 "lastUpdated" to game.lastUpdated,
                 "halfDurationMinutes" to game.halfDurationMinutes,
                 "halftimeDurationMinutes" to game.halftimeDurationMinutes,
+                "gameNumber" to game.gameNumber,
                 "homeTeamName" to game.homeTeamName,
                 "awayTeamName" to game.awayTeamName,
                 "hasExtraTime" to game.hasExtraTime, // True if extra time has been initiated

@@ -1,4 +1,4 @@
-package com.databelay.common
+package com.databelay.refwatch.common
 
 import org.junit.Test
 

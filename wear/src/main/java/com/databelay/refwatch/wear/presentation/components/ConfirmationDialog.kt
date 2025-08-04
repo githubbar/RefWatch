@@ -50,7 +50,7 @@ fun ConfirmationDialog(
                 Icon(
                     imageVector = icon,
                     contentDescription = "Confirmation Icon", // Generic description
-                    tint = MaterialTheme.colors.error, // Or adapt based on dialog type
+                    tint = MaterialTheme.colors.secondary , // Or adapt based on dialog type
                     modifier = Modifier.size(36.dp)
                 )
                 Text(

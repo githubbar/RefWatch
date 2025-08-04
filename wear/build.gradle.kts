@@ -1,3 +1,6 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -11,13 +14,19 @@ android {
     namespace = "com.databelay.refwatch"
     compileSdk = 36
 
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.databelay.refwatch"
         minSdk = 31
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
-
+        versionName = "Peppercorn" // The versions SHALL all be spherical objects of increasing size
+        val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        buildConfigField("String", "BUILD_TIME", "\"$buildTime\"") // BUILD_TIME becomes accessible in code
     }
 
     buildTypes {
@@ -37,9 +46,6 @@ android {
         jvmTarget = "11"
     }
     useLibrary("wear-sdk")
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {

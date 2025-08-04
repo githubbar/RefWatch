@@ -140,7 +140,7 @@ fun PreGameSetupScreen(
                 onClick = onCreateMatch,
                 modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp), // Made it a bit taller
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.error
+                    backgroundColor = MaterialTheme.colors.secondary
                 )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

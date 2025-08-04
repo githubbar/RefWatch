@@ -31,6 +31,7 @@ import com.databelay.refwatch.auth.AuthState
 import com.databelay.refwatch.auth.AuthViewModel
 import com.databelay.refwatch.common.Game // Your Game class
 import com.databelay.refwatch.common.SimpleIcsParser
+import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.games.GameListScreen
 import com.databelay.refwatch.games.MobileGameViewModel
 import com.databelay.refwatch.games.AddEditGameViewModel
@@ -40,7 +41,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.games.GameLogScreen
 import kotlinx.coroutines.launch
 

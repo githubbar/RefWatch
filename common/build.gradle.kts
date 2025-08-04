@@ -34,6 +34,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    android {
+        testOptions {
+            unitTests.isReturnDefaultValues = true
+        }
+    }
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -80,5 +86,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
     debugImplementation(libs.ui.test.manifest)
+    debugImplementation(libs.mockito.core) // Or the latest version
     testImplementation(kotlin("test"))
+    testImplementation(libs.mockito.core) // Or the latest version
 }

@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
-import com.databelay.refwatch.common.hasDuration
+import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.presentation.screens.pager.PenaltyShootoutScreen
@@ -35,7 +35,6 @@ fun GameScreenWithPager(
     onAddGoal: (Team) -> Unit,
     onNavigateToLogCard: (team: Team, cardType: CardType) -> Unit,
     onNavigateToGameLog: () -> Unit,
-    onKickOff: () -> Unit,
     onEndPhase: () -> Unit,
     onResetPeriodTimer: () -> Unit,
     onConfirmEndMatch: () -> Unit, // To distinguish from onFinishGame
@@ -104,7 +103,7 @@ fun GameScreenWithPager(
 
                         1 -> MainGameDisplayScreen( // The main timer/score view
                             game = activeGame,
-                            onKickOff = onKickOff
+                            onKickOff = {gameViewModel.kickOff()}
                         )
 
                         2 -> TeamActionsPage(
@@ -121,7 +120,7 @@ fun GameScreenWithPager(
                 // Show only the MainGameDisplayScreen (which typically shows timer/status)
                 MainGameDisplayScreen( // The main timer/score view
                     game = activeGame,
-                    onKickOff = onKickOff
+                    onKickOff = {gameViewModel.kickOff()}
                 )
             }
         }
@@ -162,7 +161,7 @@ fun GameScreenWithPager(
         }
 
         if (showResetConfirmDialog) {
-            if (activeGame.currentPhase.hasDuration()) {
+            if (activeGame.currentPhase.hasTimer()) {
                 ConfirmationDialog(
                     message = "Reset timer for ${activeGame.currentPhase.readable()}?",
                     onConfirm = {

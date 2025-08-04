@@ -42,16 +42,17 @@ fun NavigationRoutes() {
     val startDestination = remember(activeGame) {
         // If there's an active game in progress, start directly on the game screen.
         // Otherwise, start on the schedule/home screen.
-        if (activeGame.currentPhase != GamePhase.PRE_GAME) {
+        val nonResumablePhases = listOf(
+            GamePhase.PRE_GAME,
+            GamePhase.KICK_OFF_SELECTION_FIRST_HALF,
+            GamePhase.KICK_OFF_SELECTION_EXTRA_TIME
+        )
+        if (activeGame.currentPhase !in nonResumablePhases) {
             WearNavRoutes.GAME_IN_PROGRESS_SCREEN // Base route name for the pager screen
         } else {
             WearNavRoutes.GAME_LIST_SCREEN
         }
     }
-
-//    Log.d(TAG, "Start destination: $startDestination, Active Game Phase: ${activeGame.currentPhase}")
-
-    // FIXME: kickoff choice flicker before the first half (comes up twice?)
     // NEW: Observe currentPhase to trigger navigation to KickOffSelectionScreen
     LaunchedEffect(activeGame.currentPhase) {
         Log.d(TAG, "Current phase changed to: ${activeGame.currentPhase}")
@@ -110,7 +111,6 @@ fun NavigationRoutes() {
                     gameViewModel = gameViewModel, // Pass the ViewModel
                     onCreateMatch = {
                         gameViewModel.activeGame.value.currentPhase = GamePhase.KICK_OFF_SELECTION_FIRST_HALF
-//                        gameViewModel.activeGame.value.currentPhase = GamePhase.SECOND_HALF // TODO: TEMP for testing
                         navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
                     },
                 )
@@ -120,7 +120,7 @@ fun NavigationRoutes() {
                 KickOffSelectionScreen(
                     gameViewModel = gameViewModel,
                     onConfirm = {
-                        gameViewModel.endCurrentPhase()
+                        gameViewModel.proceedToNextPhaseManager(gameViewModel.activeGame.value.copy())
                         navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
                             popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {
                                 inclusive = false
@@ -137,8 +137,7 @@ fun NavigationRoutes() {
                     gameViewModel = gameViewModel,
                     onToggleTimer = { gameViewModel.toggleTimer() },
                     onAddGoal = { team -> gameViewModel.addGoal(team) },
-                    onKickOff = {gameViewModel.kickOff()},
-                    onEndPhase = { gameViewModel.endCurrentPhase() },
+                    onEndPhase = { gameViewModel.proceedToNextPhaseManager(gameViewModel.activeGame.value.copy()) },
                     onNavigateToLogCard = { team: Team, cardType: CardType ->
                         navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
                         // TODO: Return to main tab after logging a card

@@ -14,6 +14,7 @@ espressoCore = "3.6.1"
 firebaseBom = "33.15.0"
 googlePlayServicesWearable = "18.2.0"
 googleServices = "4.4.2"
+googleTruth = "1.4.4"
 gson = "2.11.0"
 gsonVersion = "2.10.1"
 hiltAndroid = "2.56.2"
@@ -34,6 +35,7 @@ lifecycleRuntimeKtx = "2.9.0"
 lifecycleRuntimeKtxVersion = "2.7.0"
 lifecycleViewmodelCompose = "2.7.0"
 materialIconsCore = "1.7.8"
+mockitoCore = "5.18.0"
 playServicesAuth = "21.3.0"
 playServicesWearable = "19.0.0"
 composeBom = "2024.09.00"
@@ -97,6 +99,7 @@ firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 
 google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
+google-truth = { module = "com.google.truth:truth", version.ref = "googleTruth" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 gson-v2101 = { module = "com.google.code.gson:gson", version.ref = "gsonVersion" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
@@ -112,6 +115,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-serialization-json-v160 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrainsKotlinxSerializationJson" }
 kotlinx-serialization-json-v181 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJsonVersion" }
 libs-compose-material = { module = "libs.androidx.wear.compose:compose-material", version.ref = "libsComposeMaterial" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }

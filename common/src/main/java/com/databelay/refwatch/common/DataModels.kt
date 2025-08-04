@@ -1,14 +1,21 @@
 package com.databelay.refwatch.common // Or your package
 
 import androidx.compose.ui.graphics.Color // If GameSettings is in this file
+import com.databelay.refwatch.common.Team.AWAY
+import com.databelay.refwatch.common.Team.HOME
 import java.util.Locale // For capitalizeWords if defined here
 import java.util.concurrent.TimeUnit // For formatTime
 import kotlinx.serialization.Serializable
 
 // --- Enums (Ensure these are defined in this file or imported) ---
 @Serializable
-enum class Team { HOME, AWAY }
-
+enum class Team {
+    HOME,
+    AWAY
+}
+fun Team.opposite(): Team {
+    return if (this == HOME) AWAY else HOME
+}
 @Serializable
 enum class CardType { YELLOW, RED }
 
@@ -44,10 +51,16 @@ enum class GamePhase {
     GAME_ENDED,
     // Terminal states
     ABANDONED;
-
-    // --- All properties and methods like displayName, durationMillis, hasDuration(), etc., are REMOVED from here ---
 }
 
+fun GamePhase.shouldTimerAutostart(): Boolean {
+    return when (this) {
+        GamePhase.HALF_TIME, GamePhase.EXTRA_TIME_HALF_TIME -> true // Breaks usually auto-start
+        // Add other phases that should always auto-start their timers
+        // GamePhase.FIRST_HALF -> true // If you want the first half to start immediately after KICK_OFF_SELECTION
+        else -> false
+    }
+}
 // --- Helper Extension Functions (Place here or in a utils.kt file) ---
 fun Long.formatTime(): String {
     val minutes = TimeUnit.MILLISECONDS.toMinutes(this)
@@ -73,7 +86,7 @@ fun GamePhase.readable(): String {
 }
 
 // Helper extensions for GamePhase (can also be in a utils.kt file)
-fun GamePhase.hasDuration(): Boolean {
+fun GamePhase.hasTimer(): Boolean {
     return this == GamePhase.FIRST_HALF ||
             this == GamePhase.SECOND_HALF ||
             this == GamePhase.HALF_TIME ||
@@ -86,6 +99,12 @@ fun GamePhase.hasDuration(): Boolean {
 fun GamePhase.isBreak(): Boolean {
     return this == GamePhase.HALF_TIME ||
             this == GamePhase.EXTRA_TIME_HALF_TIME
+}
+
+fun GamePhase.isKickoffSelection(): Boolean {
+    return this == GamePhase.KICK_OFF_SELECTION_FIRST_HALF ||
+            this == GamePhase.KICK_OFF_SELECTION_EXTRA_TIME ||
+            this == GamePhase.KICK_OFF_SELECTION_PENALTIES
 }
 
 fun GamePhase.isPlayablePhase(): Boolean { // Phases where goals/cards can be recorded

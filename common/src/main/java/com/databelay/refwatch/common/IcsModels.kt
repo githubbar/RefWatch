@@ -1,10 +1,11 @@
-package com.databelay.refwatch.common
+package com.databelay.refwatch.common // Make sure this matches your actual package
 
 import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.databelay.refwatch.common.AgeGroup
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -16,17 +17,39 @@ import java.util.regex.Pattern
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+
 data class SimpleIcsEvent(
-    val uid: String?,
-    val summary: String?,
-    val description: String?,
-    val location: String?,
-    val dtStart: LocalDateTime?,
-    val dtEnd: LocalDateTime?,
-    var homeTeam: String?,
-    var awayTeam: String?,
-    var ageGroup: AgeGroup?
-)
+    var uid: String? = null,
+    var summary: String? = null,
+    var description: String? = null,
+    var location: String? = null,
+    var dtStart: LocalDateTime? = null,
+    var dtEnd: LocalDateTime? = null,
+    var homeTeam: String? = null,
+    var awayTeam: String? = null,
+    var ageGroup: AgeGroup? = null,
+    var gameNumber: String? = null
+) {
+    override fun toString(): String {
+        val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        return """
+            SimpleIcsEvent(
+                UID: $uid,
+                Summary: $summary,
+                Description: $description,
+                Location: $location,
+                Start: ${dtStart?.format(dateFormat) ?: "N/A"},
+                End: ${dtEnd?.format(dateFormat) ?: "N/A"},
+                Home Team: $homeTeam,
+                Away Team: $awayTeam,
+                Age Group: ${ageGroup?.displayName ?: "N/A"},
+                Game Number: $gameNumber
+            )
+        """.trimIndent()
+    }
+}
+
+
 
 // --- Main ICS Parser Object ---
 object SimpleIcsParser {
@@ -34,9 +57,16 @@ object SimpleIcsParser {
 
     // Helper function to unfold ICS content lines
     // (Can be private if only used here, or public if needed elsewhere)
+    // Standard for iCalendar (ICS) files is defined in RFC 5545 (Internet Calendaring and
+    // Scheduling Core Object Specification - iCalendar), specifically in section 3.1. Content Lines.
     private fun unfoldIcsLines(foldedString: String): String {
-        // Remove CR LF Space, CR LF Tab, CR, and special characters and spaces
-        return foldedString.replace(Regex("[\r\t]"), "")
+        // 1. Normalize all known line endings to LF (\n)
+        val normalizedString = foldedString.replace(Regex("\\r\\n|\\r|\\n"), "\n")
+
+        // 2. Unfold lines based on the now consistent LF followed by a space or tab
+        //    A line that is folded starts with a whitespace character (space or tab)
+        //    and the preceding line break should be removed.
+        return normalizedString.replace(Regex("\n[ \t]"), "")
     }
 
     /**
@@ -111,10 +141,7 @@ object SimpleIcsEventFactory {
     private val ICS_DATETIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
     private val TEAM_BIRTH_YEAR_PATTERN: Pattern = Pattern.compile("\\b(\\d{4})(?:[/\\-]\\d{2,4})?\\b")
     private val TEAM_VS_PATTERN: Pattern = Pattern.compile(
-        "^\\s*(?:(?:Referee(?: Assignment)?:\\s*(?:Referee|Asst Referee \\d|AR\\d?|REF)?\\s*-\\s*\\d+\\s*)?)(.*?)" +
-                "(?:\\s+(?:vs?\\.?|v\\.?|-)\\s+)" +
-                "(.*?)" +
-                "(?:\\s+-\\s+(?:ISL|GLC)|\\s*\\(|\\s*$)",
+        """Referee Assignment:\s*(?:Referee|Asst Referee \d)\s*-\s*(\d+)(?:\s+(.*?))?\s*vs\.?\s*(.*?)\s*-\s*(.*)""",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -161,82 +188,97 @@ object SimpleIcsEventFactory {
         return null
     }
 
-    private fun parseTeamsAndDeriveAgeGroup(
-        summaryText: String?,
-        descriptionText: String?,
-        currentYear: Int = LocalDate.now().year
-    ): Triple<String?, String?, AgeGroup?> {
-        var home: String? = null
-        var away: String? = null
-        var ageGroup: AgeGroup? = AgeGroup.UNKNOWN
-        var birthYear: Int? = null
-
-        if (summaryText != null) {
-            val teamMatcher = TEAM_VS_PATTERN.matcher(summaryText)
-            if (teamMatcher.find()) {
-                home = teamMatcher.group(1)?.trim()?.replaceFirst(Regex("^Referee Assignment:.*?-\\s*\\d+\\s*", RegexOption.IGNORE_CASE), "")?.trim()
-                away = teamMatcher.group(2)?.trim()
-                birthYear = home?.let { extractBirthYearFromTeamName(it) } ?: away?.let { extractBirthYearFromTeamName(it) }
-            } else {
-                val teams = summaryText.split(Regex("\\s+(?:vs?\\.?|v\\.?|-)\\s+"), limit = 2)
-                if (teams.size == 2) {
-                    home = teams[0].replaceFirst(Regex("^Referee Assignment:.*?-\\s*\\d+\\s*", RegexOption.IGNORE_CASE), "").trim()
-                    away = teams[1].substringBefore(" - ISL SPRING").substringBefore(" (").trim()
-                    birthYear = home?.let { extractBirthYearFromTeamName(it) } ?: away?.let { extractBirthYearFromTeamName(it) }
-                }
-            }
-        }
-
-        if (birthYear != null) {
-            val calculatedAge = currentYear - birthYear
-            ageGroup = AgeGroup.fromCalculatedAge(calculatedAge)
-        } else {
-            ageGroup = AgeGroup.fromString(summaryText)
-            if (ageGroup == null || ageGroup == AgeGroup.UNKNOWN) {
-                ageGroup = AgeGroup.fromString(descriptionText)
-            }
-        }
-        return Triple(home, away, ageGroup ?: AgeGroup.UNKNOWN)
+    private fun populateUid(eventBlockContent: String, event: SimpleIcsEvent): Boolean {
+        event.uid = getPropertyValue(UID_PATTERN, eventBlockContent)
+        return event.uid != null
     }
 
-    fun createFromEventBlock(eventBlockContent: String): SimpleIcsEvent? {
-        val uid = UID_PATTERN.matcher(eventBlockContent).run { if (find()) group(1)?.trim() else null }
-        val summary = SUMMARY_PATTERN.matcher(eventBlockContent).run { if (find()) group(1)?.trim() else null }
-        val description = DESCRIPTION_PATTERN.matcher(eventBlockContent).run { if (find()) group(1)?.trim() else null }
-        val location = LOCATION_PATTERN.matcher(eventBlockContent).run { if (find()) group(1)?.trim() else null }
+    private fun populateBasicDetails(eventBlockContent: String, event: SimpleIcsEvent) {
+        event.summary = getPropertyValue(SUMMARY_PATTERN, eventBlockContent)
+        event.description = getPropertyValue(DESCRIPTION_PATTERN, eventBlockContent)
+        event.location = getPropertyValue(LOCATION_PATTERN, eventBlockContent)
+    }
 
-        var dtStart: LocalDateTime? = null
-        var dtEnd: LocalDateTime? = null
+    private fun populateDateTimes(eventBlockContent: String, event: SimpleIcsEvent): Boolean {
         val dateTimePropertyMatcher = DATETIME_PROPERTY_PATTERN.matcher(eventBlockContent)
+        var dtStartFound = false
         while (dateTimePropertyMatcher.find()) {
             val propertyName = dateTimePropertyMatcher.group(1)
             val tzid = dateTimePropertyMatcher.group(2)
             val dateTimeValue = dateTimePropertyMatcher.group(3)
             val isUtc = dateTimePropertyMatcher.group(4) != null
             val parsedDateTime = parseIcsDateTime(dateTimeValue, tzid, isUtc)
-            if (propertyName == "DTSTART") dtStart = parsedDateTime
-            else if (propertyName == "DTEND") dtEnd = parsedDateTime
+
+            if (propertyName == "DTSTART") {
+                event.dtStart = parsedDateTime
+                if (parsedDateTime != null) dtStartFound = true
+            } else if (propertyName == "DTEND") {
+                event.dtEnd = parsedDateTime
+            }
+        }
+        return dtStartFound // Return true if DTSTART was found and parsed
+    }
+
+    /**
+     * Parses team names, game number from summary and derives age group.
+     * Modifies the passed-in event directly.
+     */
+    private fun populateGameAndTeamDetails(eventBlockContent: String, event: SimpleIcsEvent) {
+        var gameNumber: String? = null
+        var home: String? = null
+        var away: String? = null
+        var ageGroup: AgeGroup = AgeGroup.UNKNOWN
+        var birthYear: Int? = null
+        val currentYear: Int = LocalDate.now().year
+        if (event.summary != null) {
+            val teamMatcher = TEAM_VS_PATTERN.matcher(event.summary)
+            if (teamMatcher.find()) {
+                gameNumber = teamMatcher.group(1)?.trim()
+                home = teamMatcher.group(2)?.trim()
+                away = teamMatcher.group(3)?.trim()
+                gameNumber = if (gameNumber.isNullOrEmpty()) "EMPTY" else gameNumber
+                home = if (home.isNullOrEmpty()) "EMPTY" else home
+                away = if (away.isNullOrEmpty()) "EMPTY" else away
+                birthYear = home.let { extractBirthYearFromTeamName(it) } ?: away?.let { extractBirthYearFromTeamName(it) }
+            }
+        }
+        event.gameNumber = gameNumber
+        event.homeTeam = home
+        event.awayTeam = away
+        if (birthYear != null) {
+            val calculatedAge = currentYear - birthYear
+            ageGroup = AgeGroup.fromCalculatedAge(calculatedAge)
+        } else {
+            ageGroup = AgeGroup.fromString(event.summary)
+            if (ageGroup == AgeGroup.UNKNOWN) {
+                ageGroup = AgeGroup.fromString(event.description)
+            }
+        }
+    }
+
+    fun createFromEventBlock(eventBlockContent: String): SimpleIcsEvent? {
+
+        val event = SimpleIcsEvent()
+
+        // Populate UID first, as it's a primary identifier
+        if (!populateUid(eventBlockContent, event)) {
+            Log.w("IcsFactory", "Skipping event due to missing UID. Content block: ${eventBlockContent.take(100)}...")
+            return null // UID is mandatory
         }
 
-        // If essential date is missing, maybe return null or throw
-        if (uid == null || dtStart == null) {
-            Log.w("IcsFactory", "Skipping event due to missing UID or DTSTART. UID: $uid, Summary: $summary")
-            return null
+        // Populate date-times, DTSTART is critical
+        if (!populateDateTimes(eventBlockContent, event)) {
+            Log.w("IcsFactory", "Skipping event UID: ${event.uid} due to missing or invalid DTSTART.")
+            return null // DTSTART is mandatory
         }
 
-        val (homeTeam, awayTeam, ageGroup) = parseTeamsAndDeriveAgeGroup(summary, description)
+        // Populate other details
+        populateBasicDetails(eventBlockContent, event) // Fills summary, description, location
 
-        return SimpleIcsEvent(
-            uid = uid,
-            summary = summary,
-            description = description,
-            location = location,
-            dtStart = dtStart,
-            dtEnd = dtEnd,
-            homeTeam = homeTeam,
-            awayTeam = awayTeam,
-            ageGroup = ageGroup
-        )
+        populateGameAndTeamDetails(eventBlockContent, event)
+
+        return event
+
     }
 
 }

@@ -2,6 +2,7 @@ package com.databelay.refwatch.common
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.databelay.refwatch.common.SimpleIcsEvent
 import com.databelay.refwatch.common.GameEvent
 import com.databelay.refwatch.common.theme.DefaultAwayJerseyColor
 import com.databelay.refwatch.common.theme.DefaultHomeJerseyColor
@@ -26,6 +27,7 @@ data class Game(
     var extraTimeHalftimeDurationMinutes: Int = 1, // Optional for future
 //
     // --- Match Information (can be pre-filled from a schedule) ---
+    var gameNumber: String = "XXXX", // Default, can be overridden
     var homeTeamName: String = "Home", // Default, can be overridden
     var awayTeamName: String = "Away", // Default, can be overridden
     var ageGroup: AgeGroup? = null,          // e.g., "U12 Boys", "Adult Men"
@@ -35,6 +37,7 @@ data class Game(
     var notes: String? = null,
 
     // Live State Fields (updated by watch, synced via phone to Firebase)
+    val inAddedTime: Boolean = false, // Is the current playable period in added time?
     var hasExtraTime: Boolean = false, // True if extra time has been initiated
     var hasPenalties: Boolean = false, // True if extra time has been initiated
     var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
@@ -90,6 +93,7 @@ data class Game(
     // Constructor to initialize from SimpleIcsEvent
     constructor(icsEvent: SimpleIcsEvent) : this(
         id = icsEvent.uid ?: UUID.randomUUID().toString(), // Assign if uid is not null, otherwise generate
+        gameNumber = icsEvent.gameNumber ?: "XXXX",
         homeTeamName = icsEvent.homeTeam ?: "Home",
         awayTeamName = icsEvent.awayTeam ?: "Away",
         venue = icsEvent.location,
@@ -107,7 +111,27 @@ data class Game(
         // other fields with defaults
     )
     // --- Computed Properties for UI ---
-
+    // Example: If GameSettings was embedded or properties are direct
+    // For this to work, ensure halfDurationMinutes, extraTimeHalfDurationMinutes are properties of Game
+    fun regulationPeriodDurationMillis(phase: GamePhase = this.currentPhase): Long {
+        return when (phase) {
+            GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> halfDurationMinutes * 60 * 1000L
+            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> extraTimeHalfDurationMinutes * 60 * 1000L
+            GamePhase.HALF_TIME -> halftimeDurationMinutes * 60 * 1000L
+            GamePhase.EXTRA_TIME_HALF_TIME -> extraTimeHalftimeDurationMinutes * 60 * 1000L
+            else -> 0L // Other phases don't have a "playable" regulation duration
+        }
+    }
+    val addedTimePlayedMillis: Long
+        @JvmName("getAddedTimePlayedMillisInternal") // Optional: For Java interop if needed
+        get() {
+            val regulationDuration = this.regulationPeriodDurationMillis() // Access the property
+            return if (actualTimeElapsedInPeriodMillis > regulationDuration) {
+                actualTimeElapsedInPeriodMillis - regulationDuration
+            } else {
+                0L
+            }
+        }
     val isTied: Boolean
         get() = homeScore == awayScore
 
@@ -123,11 +147,6 @@ data class Game(
     val halftimeDurationMillis: Long
         get() = halftimeDurationMinutes * 60 * 1000L
 
-    val extraTimeHalfDurationMillis: Long
-        get() = extraTimeHalfDurationMinutes * 60 * 1000L
-
-    val extraTimeHalftimeDurationMillis: Long
-        get() = extraTimeHalftimeDurationMinutes * 60 * 1000L
 
     // Optional: Formatted date/time string for display
     val formattedGameDateTime: String?
@@ -137,50 +156,22 @@ data class Game(
             // sdf.timeZone = java.util.TimeZone.getDefault() // Example
             sdf.format(Date(it))
         }
-
     val summary: String
         get() {
+            // ... (your existing summary logic)
             val parts = mutableListOf<String>()
-
-            // Team names
             val teamsPart = if (homeTeamName.isNotBlank() && homeTeamName != "Home" || awayTeamName.isNotBlank() && awayTeamName != "Away") {
                 "${homeTeamName.trim()} vs ${awayTeamName.trim()}"
             } else {
-                "Game" // Fallback if team names are default/empty
+                "Game"
             }
             parts.add(teamsPart)
-
-            // Age Group
-            ageGroup?.displayName?.let {
-                if (it.isNotBlank() && it.lowercase() != "unknown") {
-                    parts.add("($it)")
-                }
+            ageGroup?.displayName?.let { if (it.isNotBlank() && it.lowercase() != "unknown") parts.add("($it)") }
+            competition?.let { if (it.isNotBlank() && it.lowercase() != ageGroup?.displayName?.lowercase()) parts.add("- $it") }
+            var summaryText = parts.joinToString(" ")
+            if (summaryText == "Game") {
+                formattedGameDateTime?.let { summaryText = "Game on $it" } ?: run { summaryText = "Game ID: ${id.substring(0, 8)}" }
             }
-
-            // Competition (if available and different from age group)
-            competition?.let {
-                if (it.isNotBlank() && it.lowercase() != ageGroup?.displayName?.lowercase()) {
-                    parts.add("- $it")
-                }
-            }
-
-            // Date/Time (optional, can make the summary long)
-            // formattedGameDateTime?.let { parts.add("on $it") }
-
-            // Venue (optional)
-            // venue?.let { if (it.isNotBlank()) parts.add("@ $it") }
-
-
-            var summary = parts.joinToString(" ")
-
-            // If the summary is just "Game", try to use date or ID as a fallback
-            if (summary == "Game") {
-                formattedGameDateTime?.let {
-                    summary = "Game on $it"
-                } ?: run {
-                    summary = "Game ID: ${id.substring(0, 8)}" // Shortened ID
-                }
-            }
-            return summary
+            return summaryText
         }
 }

@@ -111,7 +111,7 @@ fun PenaltyShootoutScreen(
                     .padding(horizontal = 8.dp)
                     .height(ButtonDefaults.LargeButtonSize), // Use standard Wear button size
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.error
+                    backgroundColor = MaterialTheme.colors.secondary
                 )
             ) {
                 Text("No", style = MaterialTheme.typography.button)

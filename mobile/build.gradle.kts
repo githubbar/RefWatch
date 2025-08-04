@@ -70,14 +70,14 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.gson) // Or latest version
     implementation(libs.kotlinx.serialization.json)
-
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-
-    // hilt
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    testImplementation(libs.junit)
+    testImplementation(libs.google.truth) // Or a newer version
+    // For Android Instrumented tests (like yours in androidTest)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.google.truth) // Or
     ksp(libs.hilt.compiler) // Or kapt
 }

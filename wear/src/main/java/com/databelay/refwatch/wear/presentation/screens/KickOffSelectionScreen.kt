@@ -86,7 +86,7 @@ fun KickOffSelectionScreen(
                 },
                 modifier = Modifier.fillMaxWidth(0.8f), // Button takes 80% of width
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = MaterialTheme.colors.error
+                    backgroundColor = MaterialTheme.colors.secondary
                 )
             ) {
                 Text("Select")

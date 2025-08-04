@@ -16,6 +16,7 @@ import javax.inject.Inject
 
 // Data class to hold the UI state of the form
 data class AddEditGameUiState(
+    val gameNumber: String = "XXXX",
     val homeTeamName: String = "Home",
     val awayTeamName: String = "Away",
     val venue: String = "",
@@ -101,6 +102,7 @@ class AddEditGameViewModel @Inject constructor(
         // Construct the final Game object from the form's state
         val game = Game(
             id = editingGameId ?: UUID.randomUUID().toString(),
+            gameNumber = currentState.gameNumber,
             homeTeamName = currentState.homeTeamName,
             awayTeamName = currentState.awayTeamName,
             venue = currentState.venue.takeIf { it.isNotBlank() },
