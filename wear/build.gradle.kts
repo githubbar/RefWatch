@@ -62,7 +62,8 @@ dependencies {
     implementation(libs.core.splashscreen)
     implementation(libs.core.ktx)
     implementation(libs.play.services.wearable)
-    implementation(libs.compose.navigation)
+    implementation(libs.androidx.compose.navigation) // If you're using Wear Navigation
+    implementation(libs.androidx.navigation.runtime.android)
     implementation(libs.kotlinx.coroutines.android) // You likely have this or core
     implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -70,7 +71,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.compose.navigation) // If you're using Wear Navigation
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.foundation)
@@ -78,7 +78,7 @@ dependencies {
     implementation(libs.play.services.auth) // Check for latest
     implementation(libs.hilt.android) // Use the same version as the plugin
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.androidx.navigation.runtime.android)
+
     implementation(libs.kotlinx.serialization.json) // For deserialization
     implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModels
     implementation(libs.play.services.wearable)

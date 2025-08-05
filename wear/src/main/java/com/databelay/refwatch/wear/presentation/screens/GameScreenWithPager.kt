@@ -1,5 +1,6 @@
 package com.databelay.refwatch.wear.presentation.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -16,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
@@ -24,6 +26,7 @@ import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.presentation.screens.pager.PenaltyShootoutScreen
 import com.databelay.refwatch.wear.WearGameViewModel
+import com.databelay.refwatch.wear.navigation.TAG
 import com.databelay.refwatch.wear.presentation.components.ConfirmationDialog
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -197,3 +200,4 @@ fun GameScreenWithPager(
             )
     }
 }
+

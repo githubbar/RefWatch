@@ -32,7 +32,6 @@ fun KickOffSelectionScreen(
     onConfirm: () -> Unit // Callback to navigate away (e.g., back or to next step)
 ) {
     val activeGame by gameViewModel.activeGame.collectAsState()
-    val selectedTeam = activeGame.kickOffTeam // Get current selection from ViewModel
     // Use ScalingLazyColumn for standard Wear OS screen structure
     ScalingLazyColumn(
         modifier = Modifier

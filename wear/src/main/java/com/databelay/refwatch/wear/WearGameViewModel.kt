@@ -78,7 +78,6 @@ class WearGameViewModel @Inject constructor(
     private val dataClient: DataClient, // For syncing game updates
     private val vibrator: Vibrator?
 ) : AndroidViewModel(application),  IWearGameViewModel {
-    // FIXME: store ad-hoc game in a local cache (show in completed even if not connected to phone,sync on connection)
     private val TAG = "WearGameViewModel"
 
     // --- Scheduled Games List and Sync Status (from GameStorageWear) ---
@@ -104,7 +103,7 @@ class WearGameViewModel @Inject constructor(
             gameTimerService?.timerStateFlow // THIS IS THE CORRECT FLOW TO OBSERVE
                 ?.onEach { serviceState -> // serviceState is the TimerState object emitted by the service
                     // --- Logic to START vibration ---
-                    // FIXME: first half was kind of lame and stops after a few periods  of vibrations
+                    // FIXME: timer stops vibrate when I look and look away again (only on watch that is not plugged in)
                     if (!activeGame.value.inAddedTime && serviceState.inAddedTime) {
                         // inAddedTime just became true
                         Log.i(TAG, "Added time is now ACTIVE via TimerService. Starting reminder vibration.")

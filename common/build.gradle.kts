@@ -59,7 +59,7 @@ dependencies {
     implementation(libs.core.splashscreen)
     implementation(libs.core.ktx)
     implementation(libs.play.services.wearable)
-    implementation(libs.compose.navigation)
+    implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

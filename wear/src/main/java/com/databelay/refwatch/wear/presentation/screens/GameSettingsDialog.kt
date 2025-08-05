@@ -44,6 +44,7 @@ import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.readable
 
+// TODO: move build version text to common gradle, move text to main game list and in phone app too.
 // Function to get the application's version name
 fun getAppVersionName(context: Context): String {
     return try {

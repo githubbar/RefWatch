@@ -88,6 +88,7 @@ fun MainGameDisplayScreen(
         }
     }
 
+    // TODO: add little clock on top
     Column(
         modifier = modifier // Apply passed modifier first
             .fillMaxSize()    // Then ensure it fills the available space
@@ -104,8 +105,6 @@ fun MainGameDisplayScreen(
         ) {
             val homeHasKickOff = game.kickOffTeam == Team.HOME &&
                     game.currentPhase.isPlayablePhase()
-            // FIXME: back swipe from home team exits the app (disable)
-            // FIXME: at fulltime disable back navigation
             ColorIndicator(
                 color = game.homeTeamColor,
                 hasKickOffBorder = homeHasKickOff,

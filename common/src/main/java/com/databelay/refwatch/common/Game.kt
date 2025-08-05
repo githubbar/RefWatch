@@ -46,7 +46,7 @@ data class Game(
     var penaltiesTakenHome: Int = 0, // Number of penalties scored by home team
     var penaltiesTakenAway: Int = 0, // Number of penalties scored by away team
     var status: GameStatus = GameStatus.SCHEDULED,
-    var currentPhase: GamePhase = GamePhase.PRE_GAME,
+    var currentPhase: GamePhase = GamePhase.NOT_STARTED,
     var homeScore: Int = 0,
     var awayScore: Int = 0,
     var displayedTimeMillis: Long = 45,

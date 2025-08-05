@@ -29,21 +29,19 @@ enum class GameStatus {
 
 @Serializable
 enum class GamePhase {
+    NOT_STARTED,
     PRE_GAME,
-
     // For first half
     KICK_OFF_SELECTION_FIRST_HALF,
     FIRST_HALF,
     HALF_TIME,
     // For second half
     SECOND_HALF,
-
     // For Extra Time
     KICK_OFF_SELECTION_EXTRA_TIME,
     EXTRA_TIME_FIRST_HALF,
     EXTRA_TIME_HALF_TIME,
     EXTRA_TIME_SECOND_HALF,
-
 
     // For Penalties
     KICK_OFF_SELECTION_PENALTIES,
@@ -81,7 +79,15 @@ fun GamePhase.readable(): String {
         GamePhase.SECOND_HALF -> "2nd Half"
         GamePhase.GAME_ENDED -> "Full Time"
         GamePhase.PRE_GAME -> "Pre Game"
-        else -> this.name.replace("_", " ").capitalizeWords()
+        GamePhase.KICK_OFF_SELECTION_FIRST_HALF -> "Kick-off Selection"
+        GamePhase.KICK_OFF_SELECTION_EXTRA_TIME -> "Kick-off Selection"
+        GamePhase.KICK_OFF_SELECTION_PENALTIES -> "Kick-off Selection"
+        GamePhase.EXTRA_TIME_FIRST_HALF -> "1st Half (ET)"
+        GamePhase.EXTRA_TIME_HALF_TIME -> "Halftime (ET)"
+        GamePhase.EXTRA_TIME_SECOND_HALF -> "2nd Half (ET)"
+        GamePhase.PENALTIES -> "Penalties"
+        GamePhase.NOT_STARTED -> "Not Started"
+        GamePhase.ABANDONED -> "Abandoned"
     }
 }
 

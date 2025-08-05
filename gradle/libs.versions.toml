@@ -6,8 +6,7 @@ androidxComposeMaterial = "1.4.1"
 androidxJunit = "1.1.5"
 composeFoundationVersion = "1.3.0"
 composeMaterialVersion = "1.3.0"
-composeNavigation = "1.4.1"
-composeNavigationVersion = "1.3.0"
+composeNavigationVersion = "1.4.1"
 coreKtx = "1.16.0"
 coreKtxVersion = "1.12.0"
 espressoCore = "3.6.1"
@@ -91,7 +90,6 @@ androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview
 androidx-wear-ongoing = { module = "androidx.wear:wear-ongoing", version.ref = "wearOngoing" }
 compose-foundation-v130 = { module = "androidx.wear.compose:compose-foundation", version.ref = "composeFoundationVersion" }
 compose-material-v130 = { module = "androidx.wear.compose:compose-material", version.ref = "composeMaterialVersion" }
-compose-navigation = { module = "androidx.wear.compose:compose-navigation", version.ref = "composeNavigation" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }

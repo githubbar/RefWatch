@@ -1,19 +1,34 @@
 package com.databelay.refwatch.wear.navigation
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.isEmpty
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Scaffold
+//import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
@@ -28,6 +43,9 @@ import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupScreen
 import kotlinx.coroutines.delay
+import androidx.navigation.plusAssign
+import com.databelay.refwatch.common.GameStatus
+import com.databelay.refwatch.wear.presentation.screens.SimpleTestScreenWithNextButton
 
 const val TAG = "NavigationRoutes"
 
@@ -39,50 +57,39 @@ fun NavigationRoutes() {
     val allGames by gameViewModel.allGamesMap.collectAsState()
 
     // Determine start destination based on whether a game is resumable
-    val startDestination = remember(activeGame) {
-        // If there's an active game in progress, start directly on the game screen.
-        // Otherwise, start on the schedule/home screen.
-        val nonResumablePhases = listOf(
-            GamePhase.PRE_GAME,
-            GamePhase.KICK_OFF_SELECTION_FIRST_HALF,
-            GamePhase.KICK_OFF_SELECTION_EXTRA_TIME
-        )
-        if (activeGame.currentPhase !in nonResumablePhases) {
-            WearNavRoutes.GAME_IN_PROGRESS_SCREEN // Base route name for the pager screen
-        } else {
+
+    val startDestination = remember(activeGame.id) {
+        Log.d("${TAG}:startDestination", "Current start route: ${navController.currentDestination?.route}")
+        if (activeGame.status != GameStatus.IN_PROGRESS)
             WearNavRoutes.GAME_LIST_SCREEN
-        }
-    }
-    // NEW: Observe currentPhase to trigger navigation to KickOffSelectionScreen
-    LaunchedEffect(activeGame.currentPhase) {
-        Log.d(TAG, "Current phase changed to: ${activeGame.currentPhase}")
-        when (activeGame.currentPhase) {
-            GamePhase.KICK_OFF_SELECTION_FIRST_HALF,
-            GamePhase.KICK_OFF_SELECTION_EXTRA_TIME,
-            GamePhase.KICK_OFF_SELECTION_PENALTIES -> {
-                // Check if current route is not already kick off selection to avoid loop
-                if (navController.currentBackStackEntry?.destination?.route != WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
-                    Log.d(TAG, "Navigating to KICK_OFF_SELECTION_SCREEN for phase: ${activeGame.currentPhase}")
-                    navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
-                        // Decide on popUpTo logic. Maybe popUpTo GameScreen so back goes to game?
-                        // Or a more specific popUpTo behavior.
-                        // For now, let's assume it should appear on top.
-                    }
-                }
-            }
-            else -> {
-                // Not a kick-off selection phase
-            }
-        }
+        else mapGamePhaseToRoute(activeGame.currentPhase)
     }
 
+/*    // Add the destination changed listener (for debugging)
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { controller, destination, arguments ->
+            // Construct a message indicating the change
+            val contextMsg = "Destination Changed to: ${destination.route ?: "Unknown"}, Args: ${arguments?.let { bundle ->
+                bundle.keySet().map { key -> "$key=${bundle.get(key)}" }.joinToString()
+            } ?: "None"}"
+            logBackStack(controller, contextMsg)
+        }
+        navController.addOnDestinationChangedListener(listener)
+
+        // When the effect leaves the Composition, remove the listener
+        onDispose {
+            navController.removeOnDestinationChangedListener(listener)
+        }
+    }*/
+
     Scaffold(
-        modifier = Modifier.background(MaterialTheme.colors.background), // Use Wear MaterialTheme
+        modifier = Modifier.background(MaterialTheme.colorScheme.background), // Use Wear MaterialTheme
         // timeText = { TimeText() } // Optional: standard time display
     ) {
         SwipeDismissableNavHost(
             navController = navController,
-            startDestination = startDestination // Dynamic start destination
+            startDestination = startDestination, // Dynamic start destination
+            modifier = Modifier.padding(it)
         ) {
             composable(WearNavRoutes.GAME_LIST_SCREEN) {
                 GameListScreen(
@@ -97,7 +104,8 @@ fun NavigationRoutes() {
                     },
                     onNavigateToGameScreen = { // <<<<  Implement the resume navigation
                         // The game is already active in the ViewModel, just navigate
-                        navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN)
+                        val route = mapGamePhaseToRoute(activeGame.currentPhase)
+                        navController.navigate(route)
                     },
                     onNavigateToNewGame = {
                         gameViewModel.createNewDefaultGame() // Prepare a new default game
@@ -111,7 +119,10 @@ fun NavigationRoutes() {
                     gameViewModel = gameViewModel, // Pass the ViewModel
                     onCreateMatch = {
                         gameViewModel.activeGame.value.currentPhase = GamePhase.KICK_OFF_SELECTION_FIRST_HALF
-                        navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN)
+                        navController.navigate(WearNavRoutes.KICK_OFF_SELECTION_SCREEN) {
+                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {inclusive = false}
+                            launchSingleTop = true
+                        }
                     },
                 )
             }
@@ -122,12 +133,9 @@ fun NavigationRoutes() {
                     onConfirm = {
                         gameViewModel.proceedToNextPhaseManager(gameViewModel.activeGame.value.copy())
                         navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
-                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {
-                                inclusive = false
-                            } // Go back to home, then to game
+                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {inclusive = false}
                             launchSingleTop = true
                         }
-//                        navController.popBackStack() // Go back to PreGameSetup
                     }
                 )
             }
@@ -139,8 +147,8 @@ fun NavigationRoutes() {
                     onAddGoal = { team -> gameViewModel.addGoal(team) },
                     onEndPhase = { gameViewModel.proceedToNextPhaseManager(gameViewModel.activeGame.value.copy()) },
                     onNavigateToLogCard = { team: Team, cardType: CardType ->
+
                         navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
-                        // TODO: Return to main tab after logging a card
                     },
                     onNavigateToGameLog = { navController.navigate(WearNavRoutes.gameLogRoute(activeGame.id)) },
                     // This lambda defines what happens when the user finishes the game
@@ -154,7 +162,7 @@ fun NavigationRoutes() {
                             Log.d(TAG, "Sync complete. Navigating to Home.")
                             // Navigate back home and clear the history
                             navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
-                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
+                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = false }
                                 launchSingleTop = true
                             }
                         }
@@ -188,11 +196,17 @@ fun NavigationRoutes() {
                         onLogCard = { loggedTeam, playerNum, loggedCardType ->
                             // Handle the logged card (e.g., call ViewModel)
                             gameViewModel.addCard(team, playerNum, cardType)
-                            navController.popBackStack()
+                            navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
+                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {inclusive = false}
+                                launchSingleTop = true
+                            }
                         },
                         onCancel = {
-                            navController.popBackStack()
-                        }
+                            navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
+                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) {inclusive = false}
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 } else {
                     // Handle error: team or cardType not found, perhaps popBackStack or show error
@@ -225,5 +239,66 @@ fun NavigationRoutes() {
                 )
             }
         }
+    }
+}
+
+/*@SuppressLint("RestrictedApi")
+fun logBackStack(navController: NavController, contextMessage: String = "") {
+    val routes = navController
+        .currentBackStack.value
+        .map { it.destination.route }
+        .joinToString(", ")
+
+    Log.d("BackStackLog", "BackStack: $routes")
+}*/
+
+@SuppressLint("RestrictedApi")
+fun logBackStack(navController: NavController, contextMessage: String = "") {
+    val stack = navController.currentBackStack.value // Get the current list
+
+    // Get the current destination directly from the NavController
+    val currentNavControllerDestination = navController.currentDestination
+    val currentNavControllerRoute = currentNavControllerDestination?.route
+    val currentNavControllerId = currentNavControllerDestination?.id
+    val currentNavControllerClass =
+        currentNavControllerDestination?.displayName // or ::class.simpleName
+
+    Log.d("${TAG}:stack", "---- NavController Back Stack ($contextMessage) ----")
+    Log.d(
+        "${TAG}:stack",
+        "NavController Current Destination: Route='${currentNavControllerRoute ?: "null"}', ID='${currentNavControllerId ?: "null"}', Class='${currentNavControllerClass ?: "null"}'"
+    )
+
+    if (stack.isEmpty()) {
+        Log.d("${TAG}:stack", "Back stack is empty.")
+    } else {
+        // Remember: currentBackStack.value lists entries from newest (top) to oldest (bottom)
+        // So, stack[0] should ideally correspond to navController.currentDestination
+        stack.forEachIndexed { index, navBackStackEntry ->
+            val entryDestination = navBackStackEntry.destination
+            val route = entryDestination.route
+            val arguments = navBackStackEntry.arguments?.let { bundle ->
+                bundle.keySet().joinToString(", ") { key -> "$key=${bundle.get(key)}" }
+            } ?: "null"
+            // Using displayName for a more user-friendly class name if available
+            val destDisplayName = entryDestination.displayName
+
+            Log.d(
+                "${TAG}:stack",
+                "$index: Route='${route ?: "null"}', Args=[$arguments], ID='${navBackStackEntry.id}', NavDestId='${entryDestination.id}', NavDestClass='${destDisplayName ?: entryDestination::class.simpleName}'"
+            )
+        }
+    }
+    Log.d("${TAG}:stack", "------------------------------------------")
+}
+
+fun mapGamePhaseToRoute(phase:GamePhase) : String {
+    return when (phase) {
+        GamePhase.GAME_ENDED, GamePhase.ABANDONED, GamePhase.NOT_STARTED -> WearNavRoutes.GAME_LIST_SCREEN
+        GamePhase.PRE_GAME -> WearNavRoutes.PRE_GAME_SETUP_SCREEN
+        GamePhase.KICK_OFF_SELECTION_FIRST_HALF,
+        GamePhase.KICK_OFF_SELECTION_EXTRA_TIME,
+        GamePhase.KICK_OFF_SELECTION_PENALTIES -> WearNavRoutes.KICK_OFF_SELECTION_SCREEN
+        else -> WearNavRoutes.GAME_IN_PROGRESS_SCREEN
     }
 }
