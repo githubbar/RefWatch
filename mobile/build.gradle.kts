@@ -10,6 +10,7 @@ plugins {
     id("com.google.gms.google-services") // If your mobile app uses Firebase directly
     id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
     id("com.google.dagger.hilt.android")
+    alias(libs.plugins.secrets)
 }
 
 android {

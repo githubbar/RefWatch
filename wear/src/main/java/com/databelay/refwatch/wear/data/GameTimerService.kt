@@ -36,6 +36,7 @@ import com.databelay.refwatch.common.HeartRateSample
 import com.databelay.refwatch.common.LocationSample
 import com.databelay.refwatch.common.StepSample
 import com.databelay.refwatch.common.Team
+import com.databelay.refwatch.common.canHaveAddedTime
 import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.common.status
@@ -275,11 +276,7 @@ class GameTimerService : Service() {
         currentInternalGame = game.copy() // Keep a local copy
 
         // 1. Determine regulation duration for current phase
-        val currentRegulationDuration = when (game.currentPhase) {
-            GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> game.halfDurationMinutes * 60 * 1000L
-            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> game.extraTimeHalfDurationMinutes * 60 * 1000L
-            else -> 0L
-        }
+        val currentRegulationDuration = game.regulationPeriodDurationMillis()
 
         // 2. Initialize timer state
         val initialElapsed = game.actualTimeElapsedInPeriodMillis
@@ -332,11 +329,7 @@ class GameTimerService : Service() {
         acquireWakeLock()
         
         // Regulation duration for the current phase
-        val currentRegulationDuration = when (game.currentPhase) {
-            GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> game.halfDurationMinutes * 60 * 1000L
-            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> game.extraTimeHalfDurationMinutes * 60 * 1000L
-            else -> 0L
-        }
+        val currentRegulationDuration = game.regulationPeriodDurationMillis()
 
         serviceScope.launch {
             initialMillisForCurrentTicker = if (isInAddedTimeInitially) {
@@ -403,7 +396,7 @@ class GameTimerService : Service() {
                 override fun onFinish() {
                     Log.d(TAG, "CountdownTimer finished (Regulation end or Ticker end)")
                     val finalState = _timerStateFlow.value
-                    if (!finalState.inAddedTime && finalState.currentPhase.hasTimer()) {
+                    if (!finalState.inAddedTime && finalState.currentPhase.canHaveAddedTime()) {
                          // End of regulation
                          _timerStateFlow.update { 
                             it.copy(
@@ -414,9 +407,9 @@ class GameTimerService : Service() {
                          }
                          // Restart ticker for added time
                          startGameTimer(game, currentRegulationDuration, true)
-                    } else if (finalState.inAddedTime) {
-                         // Truly finished added time (e.g. max duration reached) - should usually be stopped by user
-                         pauseGameTimerInternally("Max Added Time Reached")
+                    } else if (finalState.inAddedTime || finalState.currentPhase.hasTimer()) {
+                         // Truly finished added time (e.g. max duration reached) OR finished a break (no added time)
+                         pauseGameTimerInternally("Period End")
                     }
                 }
             }.start()
@@ -456,14 +449,10 @@ class GameTimerService : Service() {
         Log.d(TAG, "resumeGameTimer called. Phase: ${game.currentPhase}")
         currentInternalGame = game.copy()
         
-        val currentRegulationDuration = when (game.currentPhase) {
-            GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> game.halfDurationMinutes * 60 * 1000L
-            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> game.extraTimeHalfDurationMinutes * 60 * 1000L
-            else -> 0L
-        }
+        val currentRegulationDuration = game.regulationPeriodDurationMillis()
 
         val elapsed = game.actualTimeElapsedInPeriodMillis
-        val inAddedTime = game.inAddedTime || (game.currentPhase.hasTimer() && elapsed >= currentRegulationDuration)
+        val inAddedTime = game.inAddedTime || (game.currentPhase.canHaveAddedTime() && elapsed >= currentRegulationDuration)
 
         _timerStateFlow.update {
             it.copy(
@@ -478,17 +467,8 @@ class GameTimerService : Service() {
     }
 
     fun stopGameTimerAndSession() {
-        Log.d(TAG, "stopGameTimerAndSession called.")
-        gameCountDownTimer?.cancel()
-        gameCountDownTimer = null
-        sensorManager.unregisterListener(stepSensorListener)
-        lastSensorSteps = -1L
-        _timerStateFlow.update { TimerState() } // Reset state
-        serviceScope.launch {
-            healthServicesManager.stopExercise()
-        }
-        releaseWakeLock()
-        stopForegroundSafely("Game Ended")
+        Log.d(TAG, "stopGameTimerAndSession called. Redirecting to cleanup.")
+        commandStopGameSessionAndCleanup { }
     }
 
     fun commandStopGameSessionAndCleanup(onComplete: () -> Unit) {
@@ -523,6 +503,7 @@ class GameTimerService : Service() {
         }
         isServiceForeground = false
         notificationManager.cancel(ONGOING_NOTIFICATION_ID_SERVICE)
+        stopSelf()
     }
 
     private fun createServiceNotification(content: String): Notification {
@@ -600,13 +581,9 @@ class GameTimerService : Service() {
         Log.d(TAG, "commandStartGameSessionAndTimer: Phase: ${game.currentPhase}, Elapsed: $elapsedMillis")
         currentInternalGame = game.copy()
         
-        val currentRegulationDuration = when (game.currentPhase) {
-            GamePhase.FIRST_HALF, GamePhase.SECOND_HALF -> game.halfDurationMinutes * 60 * 1000L
-            GamePhase.EXTRA_TIME_FIRST_HALF, GamePhase.EXTRA_TIME_SECOND_HALF -> game.extraTimeHalfDurationMinutes * 60 * 1000L
-            else -> 0L
-        }
+        val currentRegulationDuration = game.regulationPeriodDurationMillis()
 
-        val inAddedTime = game.inAddedTime || (game.currentPhase.hasTimer() && elapsedMillis >= currentRegulationDuration)
+        val inAddedTime = game.inAddedTime || (game.currentPhase.canHaveAddedTime() && elapsedMillis >= currentRegulationDuration)
 
         _timerStateFlow.update {
             it.copy(

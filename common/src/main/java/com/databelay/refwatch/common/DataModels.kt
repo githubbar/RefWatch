@@ -133,6 +133,13 @@ fun GamePhase.hasTimer(): Boolean {
             this == GamePhase.EXTRA_TIME_HALF_TIME
 }
 
+fun GamePhase.canHaveAddedTime(): Boolean {
+    return this == GamePhase.FIRST_HALF ||
+            this == GamePhase.SECOND_HALF ||
+            this == GamePhase.EXTRA_TIME_FIRST_HALF ||
+            this == GamePhase.EXTRA_TIME_SECOND_HALF
+}
+
 fun GamePhase.status(): GameStatus {
     return when (this) {
         GamePhase.NOT_STARTED -> GameStatus.SCHEDULED

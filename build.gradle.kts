@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.hilt.android) apply false
+    alias(libs.plugins.secrets) apply false
 
 //    id("com.google.devtools.ksp") version "2.1.21-2.0.1" apply false // Add this for KSP (if using Room with KSP, etc.)
     id("com.google.devtools.ksp") version "2.3.2" apply false // Add this for KSP (if using Room with KSP, etc.)

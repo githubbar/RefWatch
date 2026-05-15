@@ -31,6 +31,7 @@ import com.databelay.refwatch.common.GoalScoredEvent
 import com.databelay.refwatch.common.IWearGameViewModel
 import com.databelay.refwatch.common.PenaltyEvent
 import com.databelay.refwatch.common.Team
+import com.databelay.refwatch.common.canHaveAddedTime
 import com.databelay.refwatch.common.formatTime
 import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.isBreak
@@ -145,7 +146,7 @@ class WearGameViewModel @Inject constructor(
                 ?.onEach { serviceState ->
                     val currentActiveGame = _activeGame.value
 
-                    if (serviceState.inAddedTime && (currentActiveGame?.status == GameStatus.IN_PROGRESS || currentActiveGame?.currentPhase?.hasTimer() == true)) {
+                    if (serviceState.inAddedTime && currentActiveGame?.currentPhase?.canHaveAddedTime() == true) {
                         if (!isAddedTimeReminderVibrating) {
                             startAddedTimeReminderVibration()
                         }
@@ -502,14 +503,6 @@ class WearGameViewModel @Inject constructor(
                 return@launch
             }
 
-            if (isServiceBound && gameTimerService != null && (gameToFinish.status == GameStatus.IN_PROGRESS || gameToFinish.isTimerRunning)) {
-                Log.d(
-                    tag,
-                    "finishAndSyncActiveGame: Game ${gameToFinish.id} was in progress or timer running. Telling service to stop timer and session."
-                )
-                gameTimerService?.stopGameTimerAndSession()
-            }
-
             val finishedGame = gameToFinish.copy(
                 isTimerRunning = false,
                 displayedTimeMillis = 0L, 
@@ -639,41 +632,31 @@ class WearGameViewModel @Inject constructor(
         val updatedGame = gameAtPeriodEnd.copy(
             currentPhase = nextPhase,
             actualTimeElapsedInPeriodMillis = 0L,
+            inAddedTime = false,
             displayedTimeMillis = gameAtPeriodEnd.regulationPeriodDurationMillis(nextPhase),
             kickOffTeam = newKickOffTeam,
             lastUpdated = System.currentTimeMillis()
         )
 
         _activeGame.value = updatedGame
-        if (nextPhase.isKickOffSelectionPhase()) {
-            // ...
+
+        if (updatedGame.currentPhase == GamePhase.GAME_ENDED) {
+            Log.i(tag, "Game Ended phase reached. Stopping timer.")
+            cancelTimer()
         } else {
             if (updatedGame.currentPhase.isBreak()) {
                 startForegroundService()
             }
             gameTimerService?.configureTimerForGame(
-                game = updatedGame, // Use the DEFINITIVE updatedGame
-                startImmediately = updatedGame.currentPhase.isBreak()
-            )
-        }
-        Log.i(
-            tag,
-            "Phase ${gameAtPeriodEnd.currentPhase} ended. New phase: ${updatedGame.currentPhase}. Kick-off: ${updatedGame.kickOffTeam}"
-        )
-
-        if (updatedGame.currentPhase == GamePhase.GAME_ENDED) {
-            gameTimerService?.commandStopGameSessionAndCleanup {
-                stopAddedTimeReminderVibration() 
-            }
-            isCurrentGameSessionActive = false
-        } else if (updatedGame.currentPhase.needsKickOffSelection()) {
-            gameTimerService?.configureTimerForGame(game = updatedGame, startImmediately = false)
-        } else {
-            gameTimerService?.configureTimerForGame(
                 game = updatedGame,
                 startImmediately = updatedGame.currentPhase.isBreak()
             )
         }
+
+        Log.i(
+            tag,
+            "Phase ${gameAtPeriodEnd.currentPhase} ended. New phase: ${updatedGame.currentPhase}. Kick-off: ${updatedGame.kickOffTeam}"
+        )
     }
 
 
