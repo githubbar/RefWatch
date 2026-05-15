@@ -35,6 +35,16 @@ fun test_Parsing(icsFileName: String = "test_calendar.ics"): List<SimpleIcsEvent
 class IcsModelsTest {
     private var logMock: MockedStatic<Log>? = null
 
+    @Before
+    fun setUp() {
+        logMock = org.mockito.Mockito.mockStatic(Log::class.java)
+    }
+
+    @After
+    fun tearDown() {
+        logMock?.close()
+    }
+
     @Test
     fun parsing_isCorrect() {
         val icsEvents: List<SimpleIcsEvent>? = test_Parsing()
@@ -42,20 +52,22 @@ class IcsModelsTest {
             for (e: SimpleIcsEvent in icsEvents)
                 println(e.toString())
         }
+    }
 
-/*
-        if (icsEvents != null) {
-            if (icsEvents.isNotEmpty()) {
-                println("\n--- Parsed Events ---")
-                icsEvents.forEach { event -> println(event) }
-            } else {
-                println("No events were parsed from the ICS data.")
-            }
-        } else {
-            println("Failed to parse ICS data (icsEvents list is null).")
+    @Test
+    fun test2026GamesFromDownloads() {
+        val path = "C:/Users/oleyk/Downloads/referee_assignments(1).ics"
+        val file = java.io.File(path)
+        if (!file.exists()) {
+            println("File not found at $path")
+            return
         }
-*/
-
-//        assertEquals(test_Parsing(), "")
+        val content = file.readText()
+        val events = SimpleIcsParser.parse(content)
+        println("\n--- 2026 Games Age Group Detection ---")
+        events.filter { it.dtStart?.year == 2026 }
+              .forEach { event ->
+            println("Date: ${event.dtStart?.toLocalDate()} | Game ${event.gameNumber}: ${event.homeTeam} vs ${event.awayTeam} -> Age Group: ${event.ageGroup?.displayName}")
+        }
     }
 }

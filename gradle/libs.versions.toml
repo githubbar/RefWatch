@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.0"
+agp = "9.2.1"
 composeWearNavigationVersion = "1.5.3"
 composeNavigationVersion = "2.9.5"
 espressoCore = "3.6.1"
@@ -44,9 +44,14 @@ uiToolingVersion = "1.9.2"
 horologistVersion = "0.7.15"
 composeMaterial3 = "1.4.0"
 wearComposeMaterial3 = "1.5.0"
+healthServices = "1.1.0-rc02"
+mapsCompose = "8.3.0"
+mapsComposeUtils = "8.3.0"
+androidMapsUtils = "4.3.0"
+playServicesMaps = "20.0.0"
 media3CommonKtx = "1.8.0"
 foundationLayout = "1.9.0"
-screenshotVersion = "0.0.1-alpha11"
+screenshotVersion = "0.0.1-alpha14"
 foundation = "1.9.2"
 composeUiTooling = "1.5.2"
 
@@ -108,6 +113,11 @@ horologist-compose-layout = { group = "com.google.android.horologist", name = "h
 horologist-compose-material = { group = "com.google.android.horologist", name = "horologist-compose-material", version.ref = "horologistVersion"}
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
 androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wearComposeMaterial3" }
+androidx-health-services = { group = "androidx.health", name = "health-services-client", version.ref = "healthServices" }
+maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
+maps-compose-utils = { group = "com.google.maps.android", name = "maps-compose-utils", version.ref = "mapsComposeUtils" }
+google-maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "androidMapsUtils" }
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 screenshot-validation-api = { group = "com.android.tools.screenshot", name = "screenshot-validation-api", version.ref = "screenshotVersion" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
@@ -116,7 +126,7 @@ androidx-compose-ui-tooling = { group = "androidx.wear.compose", name = "compose
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version = "2.2.0" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hiltAndroid" }

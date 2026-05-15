@@ -46,12 +46,14 @@ enum class AgeGroup(
                         it.name == upperValue
             }?.let { return it }
 
-            // Handle ranges or single 'U' values explicitly for better matching
-            // Example: "U12" should match U11_U12, "14U" should match U13_U14
+            // Handle single 'U' values explicitly for better matching
+            // Example: "U12" or "12U"
             val ageNumberMatch = Regex("(\\d+)U|U(\\d+)").find(upperValue)
             if (ageNumberMatch != null) {
                 val age = (ageNumberMatch.groupValues[1].toIntOrNull() ?: ageNumberMatch.groupValues[2].toIntOrNull())
                 if (age != null) {
+                    // Try to match the enum name directly first (e.g., age 12 -> U12)
+                    entries.find { it.name == "U$age" }?.let { return it }
                     return fromCalculatedAge(age)
                 }
             }
@@ -68,26 +70,22 @@ enum class AgeGroup(
          */
         fun fromCalculatedAge(age: Int): AgeGroup {
             return when (age) {
-                // Assuming age is actual age, and U-group is age+1
-                // So, if age is 7, they play U8.
-                // If age is 8, they play U9.
-                // etc.
-                in 0..7  -> U8    // Ages 0-7 typically play U8 (or younger if you have U6, U7 etc.)
-                // If U8 is the lowest, ages 7 and under might fall here.
-                8  -> U10    // 8 year olds play U10
-                9  -> U10   // 9 year olds play U10
-                10 -> U11   // 10 year olds play U11
-                11 -> U12   // 11 year olds play U12
-                12 -> U13   // 12 year olds play U13
-                13 -> U14   // 13 year olds play U14
-                14 -> U15   // 14 year olds play U15
-                15 -> U16   // 15 year olds play U16
-                16 -> U17   // 16 year olds play U17
-                17 -> U18   // 17 year olds play U18
-                18 -> U19   // 18 year olds play U19 (often the highest youth bracket)
+                // Mapping age (typically SeasonEndYear - BirthYear) to the U-group.
+                // For example, a 12-year-old (soccer age) plays in U12.
+                in 0..8  -> U8
+                9, 10    -> U10
+                11       -> U11
+                12       -> U12
+                13       -> U13
+                14       -> U14
+                15       -> U15
+                16       -> U16
+                17       -> U17
+                18       -> U18
+                19       -> U19
 
-                // For ages older than what's typical for U19
-                else -> if (age > 18) GENERIC_ADULT else UNKNOWN
+                // For ages older than what's typical for youth soccer
+                else -> if (age > 19) GENERIC_ADULT else UNKNOWN
             }
         }
 

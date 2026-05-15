@@ -1,7 +1,7 @@
 plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("kotlin-parcelize")
     kotlin("plugin.serialization") version "2.1.21"
 }
@@ -31,10 +31,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    android {
-        testOptions {
-            unitTests.isReturnDefaultValues = true
-        }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -51,7 +49,6 @@ dependencies {
     implementation(libs.wear.tooling.preview)
     implementation(libs.core.splashscreen)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.play.services.wearable)
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)

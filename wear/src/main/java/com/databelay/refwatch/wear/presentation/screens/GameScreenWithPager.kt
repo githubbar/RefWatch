@@ -151,6 +151,8 @@ sealed class ConfirmationDialogInfo(
 @Composable
 fun GameScreenWithPager(
     game: Game,
+    collectPositionInfo: Boolean,
+    onToggleCollectPositionInfo: (Boolean) -> Unit,
     horizontalPagerState: PagerState,
     verticalPagerState: PagerState,
     onKickOff: () -> Unit,
@@ -161,6 +163,7 @@ fun GameScreenWithPager(
     onAddGoal: (Team) -> Unit,
     onNavigateToLogCard: (team: Team, cardType: CardType) -> Unit,
     onNavigateToGameLog: () -> Unit,
+    onNavigateToAnalytics: () -> Unit,
     onEndPhase: () -> Unit,
     onResetPeriodTimer: () -> Unit, // For current period's timer
     onConfirmEndMatch: () -> Unit, // For finishing the game
@@ -239,6 +242,8 @@ fun GameScreenWithPager(
                     1 -> {
                         GameSettingsScreen(
                             game = game,
+                            collectPositionInfo = collectPositionInfo,
+                            onToggleCollectPositionInfo = onToggleCollectPositionInfo,
                             onAttemptFinishGame = {
                                 activeDialogInfo = ConfirmationDialogInfo.FinishGame(
                                     onConfirm = onConfirmEndMatch,
@@ -264,6 +269,7 @@ fun GameScreenWithPager(
                                 )
                             },
                             onViewLog = onNavigateToGameLog,
+                            onViewAnalytics = onNavigateToAnalytics,
                             onToggleTimer = onToggleTimer,
                             onAttemptEndPhase = {
                                 if (game.currentPhase == GamePhase.SECOND_HALF && game.isTied) {
@@ -317,6 +323,8 @@ fun GameScreenWithPagerPreviewSmallRegulationTime() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
+            collectPositionInfo = true,
+            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -327,6 +335,7 @@ fun GameScreenWithPagerPreviewSmallRegulationTime() {
             onAddGoal = {},
             onNavigateToLogCard = { _: Team, _: CardType -> },
             onNavigateToGameLog = {},
+            onNavigateToAnalytics = {},
             onEndPhase = {},
             onResetPeriodTimer = {},
             onConfirmEndMatch = {},
@@ -346,6 +355,8 @@ fun GameScreenWithPagerPreviewSettingsOpen() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
+            collectPositionInfo = true,
+            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -356,6 +367,7 @@ fun GameScreenWithPagerPreviewSettingsOpen() {
             onAddGoal = {},
             onNavigateToLogCard = { _: Team, _: CardType -> },
             onNavigateToGameLog = {},
+            onNavigateToAnalytics = {},
             onEndPhase = {},
             onResetPeriodTimer = {},
             onConfirmEndMatch = {},
@@ -377,6 +389,8 @@ fun Preview_MainGameDisplay_Penalties() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
+            collectPositionInfo = true,
+            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -387,6 +401,7 @@ fun Preview_MainGameDisplay_Penalties() {
             onAddGoal = {},
             onNavigateToLogCard = { _: Team, _: CardType -> },
             onNavigateToGameLog = {},
+            onNavigateToAnalytics = {},
             onEndPhase = {},
             onResetPeriodTimer = {},
             onConfirmEndMatch = {},

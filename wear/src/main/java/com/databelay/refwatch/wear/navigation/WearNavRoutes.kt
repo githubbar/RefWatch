@@ -24,6 +24,7 @@ object WearNavRoutes {
     const val GAME_IN_PROGRESS_SCREEN = "game_in_progress"
     const val GAME_LOG_SCREEN = "game_log"
     const val LOG_CARD_SCREEN = "log_card"
+    const val GAME_ANALYTICS_SCREEN = "game_analytics"
     // --- Route Helper Functions ---
 
     /**

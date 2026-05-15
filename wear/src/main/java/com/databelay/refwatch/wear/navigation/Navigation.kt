@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -47,9 +49,12 @@ import com.databelay.refwatch.common.CardIssuedEvent
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
+import com.databelay.refwatch.common.GameStatus
 import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.isPlayablePhase
+import com.databelay.refwatch.common.status
 import com.databelay.refwatch.wear.WearGameViewModel
+import com.databelay.refwatch.wear.presentation.screens.GameAnalyticsScreen
 import com.databelay.refwatch.wear.presentation.screens.GameListScreen
 import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
@@ -67,51 +72,72 @@ fun NavigationRoutes() {
     val activeGame by gameViewModel.activeGame.collectAsStateWithLifecycle()
     val allGames by gameViewModel.gamesList.collectAsStateWithLifecycle() // Assuming gamesList is the correct source
     val isOnline by gameViewModel.isOnline.collectAsStateWithLifecycle()
+    val collectPositionInfo by gameViewModel.collectPositionInfo.collectAsStateWithLifecycle()
     val context = LocalContext.current // Get the context
+
+    // Keep the screen on during an active match to ensure the app stays "on top"
+    LaunchedEffect(activeGame?.currentPhase) {
+        val window = (context as? android.app.Activity)?.window
+        val isGameInProgress = activeGame?.currentPhase?.status() == GameStatus.IN_PROGRESS
+        
+        if (isGameInProgress) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            Log.d(TAG, "Keeping screen on for active game phase: ${activeGame?.currentPhase}")
+        } else {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            Log.d(TAG, "Clearing FLAG_KEEP_SCREEN_ON")
+        }
+    }
+
     // State to track if the permission has been explicitly denied by the user.
     var showPermissionDeniedDialog by remember { mutableStateOf(false) }
+
+    val permissionsToRequest = remember {
+        val list = mutableListOf(
+            Manifest.permission.BODY_SENSORS,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACTIVITY_RECOGNITION
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            list.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        list.toTypedArray()
+    }
+
     // SET UP THE PERMISSION LAUNCHER
-    // This launcher will receive the result (true/false) from the user's choice.
+    // This launcher will receive the result map from the user's choices.
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                Log.i(TAG, "Notification permission GRANTED by user.")
-                showPermissionDeniedDialog = false // Ensure dialog is hidden if they grant it later
-                // You can now be confident that the GameTimerService can post notifications.
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            val allGranted = permissions.values.all { it }
+            if (allGranted) {
+                Log.i(TAG, "All permissions GRANTED by user.")
+                showPermissionDeniedDialog = false
             } else {
-                Log.w(TAG, "Notification permission DENIED by user.")
+                Log.w(TAG, "Some permissions DENIED by user: $permissions")
                 showPermissionDeniedDialog = true
-                // The user denied the permission. Your app should handle this gracefully.
-                // The service's `canPostNotifications()` check will now correctly return false.
             }
         }
     )
     // TRIGGER THE CHECK ONCE WHEN THE APP LAUNCHES
     LaunchedEffect(key1 = true) {
         val activity = context as? android.app.Activity ?: return@LaunchedEffect
+        val missingPermissions = permissionsToRequest.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
 
-        when {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED -> {
+        if (missingPermissions.isNotEmpty()) {
+            val shouldShowRationale = missingPermissions.any {
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, it)
             }
-                ActivityCompat.shouldShowRequestPermissionRationale(
-                    activity, Manifest.permission.POST_NOTIFICATIONS) -> {
-                    // In an educational UI, explain to the user why your app requires this
-                    // permission for a specific feature to behave as expected, and what
-                    // features are disabled if it's declined. In this UI, include a
-                    // "cancel" or "no thanks" button that lets the user continue
-                    // using your app without granting the permission.
-                    showPermissionDeniedDialog = true
-                }
-                else -> {
-                    Log.d(TAG, "Notification permission is not granted. Requesting it now.")
-                    // Launch the system dialog to ask the user for permission.
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
+            if (shouldShowRationale) {
+                showPermissionDeniedDialog = true
+            } else {
+                Log.d(TAG, "Permissions missing: $missingPermissions. Requesting now.")
+                permissionLauncher.launch(missingPermissions.toTypedArray())
             }
+        }
     }
 
     // Intent to open app settings
@@ -139,7 +165,7 @@ fun NavigationRoutes() {
             },
             text = {
                 Text(
-                    "Notifications are needed for the timer to run reliably in the background. Please enable them in settings.",
+                    "This app requires Body Sensors, Location, and Notifications to track your game activity and keep the timer running reliably. Please enable them in settings.",
                     style = MaterialTheme.typography.bodySmall
                 )
             },
@@ -250,6 +276,8 @@ fun NavigationRoutes() {
                     GameScreenWithPager(
                         modifier = Modifier.fillMaxSize(),
                         game = activeGame!!,
+                        collectPositionInfo = collectPositionInfo,
+                        onToggleCollectPositionInfo = { gameViewModel.setCollectPositionInfo(it) },
                         horizontalPagerState = horizontalPagerState,
                         verticalPagerState = verticalPagerState,
                         onKickOff = { gameViewModel.kickOff() },
@@ -265,6 +293,9 @@ fun NavigationRoutes() {
                             activeGame?.let { game ->
                                 navController.navigate(WearNavRoutes.gameLogRoute(game.id))
                             } ?: Log.w(TAG, "Cannot navigate to game log, active game is null")
+                        },
+                        onNavigateToAnalytics = {
+                            navController.navigate(WearNavRoutes.GAME_ANALYTICS_SCREEN)
                         },
                         onEndPhase = {
                             gameViewModel.activeGame.value?.let { game ->
@@ -435,6 +466,15 @@ fun NavigationRoutes() {
                         onRemoveEvent = { event ->
                             gameViewModel.removeEvent(event, gameIdString)
                         },
+                    )
+                }
+            }
+            composable(WearNavRoutes.GAME_ANALYTICS_SCREEN) {
+                activeGame?.let { game ->
+                    GameAnalyticsScreen(
+                        game = game,
+                        collectPositionInfo = collectPositionInfo,
+                        onDismiss = { navController.popBackStack() }
                     )
                 }
             }

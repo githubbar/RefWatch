@@ -53,19 +53,26 @@ import com.databelay.refwatch.common.theme.RefWatchMobileTheme
 // import com.databelay.refwatch.auth.AuthViewModel
 // import androidx.hilt.navigation.compose.hiltViewModel
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Switch
+import com.databelay.refwatch.data.SettingsViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    // Inject your AuthViewModel or a specific ViewModel responsible for account deletion
-    // authViewModel: AuthViewModel = hiltViewModel() // Example
-    onDeleteAccountConfirmed: () -> Unit // Callback when deletion is confirmed
+    onDeleteAccountConfirmed: () -> Unit,
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
-    var appVersionName by remember { mutableStateOf("Loading...") } // State for version name
-    var appVersionNumber by remember { mutableLongStateOf(0L) } // State for version name
+    var appVersionName by remember { mutableStateOf("Loading...") }
+    var appVersionNumber by remember { mutableLongStateOf(0L) }
     val buildDateString = BuildConfig.BUILD_TIME
+
+    val collectPositionInfo by settingsViewModel.collectPositionInfo.collectAsStateWithLifecycle()
 
     // LaunchedEffect to get version name (it's a synchronous call but good practice
     // if it were asynchronous, and keeps UI responsive during initial composition)
@@ -153,6 +160,38 @@ fun SettingsScreen(
                         }
                     }
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "Preferences",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Collect Position Info",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Enable GPS tracking during games to see movement maps and analytics.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = collectPositionInfo,
+                    onCheckedChange = { settingsViewModel.setCollectPositionInfo(it) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp)) // More space before other settings
 

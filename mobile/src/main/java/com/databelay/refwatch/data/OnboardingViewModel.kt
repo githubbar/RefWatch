@@ -2,7 +2,6 @@ package com.databelay.refwatch.data
 
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,8 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.databelay.refwatch.common.Game
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,8 +58,8 @@ class OnboardingViewModel @Inject constructor( // <-- ADD @Inject
             val currentIndex = _uiState.value.currentStepIndex
             val totalSteps = _uiState.value.steps.size
 
-            if (currentIndex == totalSteps - 1) {
-                prefs.edit().putBoolean("onboarding_completed", true).apply()
+            if (currentIndex == (totalSteps - 1)) {
+                prefs.edit { putBoolean("onboarding_completed", true) }
             }
 
             if (currentIndex < totalSteps) {
@@ -71,7 +70,7 @@ class OnboardingViewModel @Inject constructor( // <-- ADD @Inject
 
     fun dismissTour() {
         viewModelScope.launch {
-            prefs.edit().putBoolean("onboarding_completed", true).apply()
+            prefs.edit { putBoolean("onboarding_completed", true) }
             _uiState.update { it.copy(currentStepIndex = it.steps.size) }
         }
     }
@@ -186,49 +185,4 @@ fun ExplanationArea(
     }
 }
 
-/**
- * A custom composable for the content inside the tooltip.
- */
-@Composable
-fun OnboardingTooltipContent(
-    title: String,
-    message: String,
-    onNext: () -> Unit,
-    onDismiss: () -> Unit,
-    nextButtonLabel: String
-) {
-    Surface(
-        modifier = Modifier.widthIn(max = 250.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 4.dp
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text("Dismiss")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onNext) {
-                    Text(nextButtonLabel)
-                }
-            }
-        }
-    }
-}
+

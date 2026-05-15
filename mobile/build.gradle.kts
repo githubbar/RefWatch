@@ -91,6 +91,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.maps.compose)
+    implementation(libs.maps.compose.utils)
+    implementation(libs.google.maps.utils)
+    implementation(libs.play.services.maps)
 
 
     debugImplementation(libs.mockito.core)

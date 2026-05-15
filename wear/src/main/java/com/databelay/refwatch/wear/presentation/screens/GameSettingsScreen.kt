@@ -32,10 +32,13 @@ import com.databelay.refwatch.common.theme.RefWatchWearTheme
 @Composable
 fun GameSettingsScreen(
     game: Game,
+    collectPositionInfo: Boolean,
+    onToggleCollectPositionInfo: (Boolean) -> Unit,
     onAttemptFinishGame: () -> Unit,
     onAttemptResetPeriodTimer: () -> Unit,
     onAttemptResetFullGame: () -> Unit,
     onViewLog: () -> Unit,
+    onViewAnalytics: () -> Unit,
     onToggleTimer: () -> Unit,
     onAttemptEndPhase: () -> Unit,
     modifier: Modifier = Modifier
@@ -140,6 +143,29 @@ fun GameSettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            }
+
+            item {
+                Button(
+                    onClick = onViewAnalytics,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "View Analytics",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            item {
+                CheckboxButton(
+                    checked = collectPositionInfo,
+                    onCheckedChange = onToggleCollectPositionInfo,
+                    label = { Text("Collect Position") },
+                    secondaryLabel = { Text("GPS Tracking") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             item {
@@ -279,10 +305,13 @@ fun SettingsPageContentPreview() {
     RefWatchWearTheme {
         GameSettingsScreen(
             game = Game.defaults().copy(currentPhase = GamePhase.FIRST_HALF, isTimerRunning = true),
+            collectPositionInfo = true,
+            onToggleCollectPositionInfo = {},
             onAttemptFinishGame = {},
             onAttemptResetPeriodTimer = {},
             onAttemptResetFullGame = {},
             onViewLog = {},
+            onViewAnalytics = {},
             onToggleTimer = {},
             onAttemptEndPhase = {},
             modifier = Modifier.fillMaxSize()

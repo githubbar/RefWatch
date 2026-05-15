@@ -294,7 +294,12 @@ object SimpleIcsEventFactory {
         var refereeAssignment: String? = null
         var birthYear: Int? = null
         var fieldNumber: String? = null
-        val currentYear: Int = LocalDate.now().year
+        
+        // Soccer age groups are determined by birth year relative to the season's end year.
+        // The season usually runs from August to July.
+        val today = LocalDate.now()
+        val seasonEndYear = if (today.monthValue >= 8) today.year + 1 else today.year
+
         if (event.summary != null) {
             val summaryText = event.summary!! // Safe due to null check
             val assignmentMatcher = ASSIGNMENT_ROLE_PATTERN.matcher(summaryText)
@@ -324,8 +329,8 @@ object SimpleIcsEventFactory {
         event.refereeAssignment = refereeAssignment
 
         if (birthYear != null) {
-            val calculatedAge = currentYear - birthYear
-            event.ageGroup = AgeGroup.fromCalculatedAge(calculatedAge)
+            val soccerAge = seasonEndYear - birthYear
+            event.ageGroup = AgeGroup.fromCalculatedAge(soccerAge)
         } else {
             event.ageGroup = AgeGroup.fromString(event.summary)
             if (event.ageGroup == AgeGroup.UNKNOWN) {

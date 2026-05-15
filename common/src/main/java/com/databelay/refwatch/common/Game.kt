@@ -54,6 +54,9 @@ data class Game(
     var displayedTimeMillis: Long = 45,
     var actualTimeElapsedInPeriodMillis: Long = 0L,
     var isTimerRunning: Boolean = false,
+    val locationHistory: List<LocationSample> = emptyList(),
+    val heartRateHistory: List<HeartRateSample> = emptyList(),
+    val stepHistory: List<StepSample> = emptyList(),
     @get:Exclude
     val needsSyncWithPhone: Boolean = false, // Store locally on watch, needs sync with phone
     @get:Exclude
@@ -102,6 +105,9 @@ data class Game(
         displayedTimeMillis = 45L * 60 * 1000, // Default to half duration in millis
         actualTimeElapsedInPeriodMillis = 0L,
         isTimerRunning = false,
+        locationHistory = emptyList(),
+        heartRateHistory = emptyList(),
+        stepHistory = emptyList(),
         needsSyncWithPhone = false,
         events = emptyList()
     )
@@ -140,6 +146,9 @@ data class Game(
                 displayedTimeMillis = 45L * 60 * 1000, // default half duration in millis
                 actualTimeElapsedInPeriodMillis = 0L,
                 isTimerRunning = false,
+                locationHistory = emptyList(),
+                heartRateHistory = emptyList(),
+                stepHistory = emptyList(),
                 needsSyncWithPhone = false, // Not typically set in defaults directly
                 events = emptyList()
             )
@@ -264,7 +273,10 @@ data class GameSnapshotForStorage(
     val halftimeDurationMinutes: Int,
     val penaltiesTakenHome: Int,
     val penaltiesTakenAway: Int,
-    val refereeAssignment: String? // Added field
+    val refereeAssignment: String?,
+    val locationHistoryCount: Int,
+    val heartRateHistoryCount: Int,
+    val stepHistoryCount: Int
 )
 
 fun Game.toSnapshotForStorage(): GameSnapshotForStorage {
@@ -281,7 +293,10 @@ fun Game.toSnapshotForStorage(): GameSnapshotForStorage {
         halftimeDurationMinutes = this.halftimeDurationMinutes,
         penaltiesTakenHome = this.penaltiesTakenHome,
         penaltiesTakenAway = this.penaltiesTakenAway,
-        refereeAssignment = this.refereeAssignment // Added field
+        refereeAssignment = this.refereeAssignment,
+        locationHistoryCount = this.locationHistory.size,
+        heartRateHistoryCount = this.heartRateHistory.size,
+        stepHistoryCount = this.stepHistory.size
     )
 }
 
@@ -318,7 +333,10 @@ fun Game.toFirestoreMap(): Map<String, Any?> {
         "awayScore" to this.awayScore,
         "displayedTimeMillis" to this.displayedTimeMillis,
         "actualTimeElapsedInPeriodMillis" to this.actualTimeElapsedInPeriodMillis,
-        "isTimerRunning" to this.isTimerRunning
+        "isTimerRunning" to this.isTimerRunning,
+        "locationHistory" to this.locationHistory,
+        "heartRateHistory" to this.heartRateHistory,
+        "stepHistory" to this.stepHistory
     )
 
     val eventsForFirestore = this.events.mapNotNull { event ->

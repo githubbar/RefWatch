@@ -14,7 +14,8 @@ interface IMobileGameViewModel {
 interface IWearGameViewModel {
     val gamesList: StateFlow<List<Game>>
     val isOnline: StateFlow<Boolean>
-    val activeGame: StateFlow<Game?> // <<<< CHANGE TO NULLABLE HERE
+    val activeGame: StateFlow<Game?>
+    val collectPositionInfo: StateFlow<Boolean>
 }
 
 object PreviewTools {

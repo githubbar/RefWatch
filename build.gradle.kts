@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.hilt.android) apply false
 
 //    id("com.google.devtools.ksp") version "2.1.21-2.0.1" apply false // Add this for KSP (if using Room with KSP, etc.)
-    id("com.google.devtools.ksp") version "2.2.20-2.0.3" apply false // Add this for KSP (if using Room with KSP, etc.)
+    id("com.google.devtools.ksp") version "2.3.2" apply false // Add this for KSP (if using Room with KSP, etc.)
     id("com.google.gms.google-services") version "4.4.3" apply false
 }
 //kotlin = 2.0.21

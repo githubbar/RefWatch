@@ -18,14 +18,6 @@ android {
     compileSdk = 36
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
-    sourceSets {
-        // Add this block for the main source set
-        getByName("main") {
-            java.srcDirs("src/main/java")
-            kotlin.srcDirs("src/main/kotlin", "src/screeshotTest/kotlin")
-        }
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -63,30 +55,6 @@ android {
         jvmTarget = "11"
     }
     useLibrary("wear-sdk")
-
-/*    android {
-        testOptions {
-            screenshotTests {
-                imageDifferenceThreshold = 0.0001f // 0.01%
-            }
-        }
-    }*/
-
-/*    tasks.withType<Test>().configureEach {
-        // This checks if the task is a test running on a JVM (like a screenshot test)
-        if (this is org.gradle.api.tasks.testing.Test) {
-            // Creates a JAR file containing the classpath to avoid issues with
-            // long command lines on Windows, which is what causes your error.
-            print("Creating classpath jar for ${name}")
-            // vvv FIX IS HERE vvv
-            val classpathJar = tasks.register<Jar>("${name}ClasspathJar") {
-                archiveClassifier.set("classpath")
-                from(classpath.map { if (it.isDirectory) it else zipTree(it) })
-            }
-            // When using .register(), you must use .get() to access the task provider's value
-            classpath = files(classpathJar)
-        }
-    }*/
 }
 
 dependencies {
@@ -133,6 +101,7 @@ dependencies {
     implementation(libs.wear.tooling.preview)
     implementation(libs.androidx.wear.ongoing)
     implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.health.services)
     implementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.material3)
     

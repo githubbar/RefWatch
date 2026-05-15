@@ -7,10 +7,31 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.navigation.NavController
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 
 object LegalLinks { // Using an object to group them
     const val PRIVACY_POLICY_URL = "https://doc-hosting.flycricket.io/refwatch-privacy-policy/3571da7e-481d-4199-adfb-921382bad8be/privacy"
     const val TERMS_OF_USE_URL = "https://doc-hosting.flycricket.io/refwatch-terms-of-use/34d1063e-7d93-40d5-8016-5ede5ab4c1c1/terms"
+}
+
+/**
+ * Checks if Google Play Services are available and if the Google Maps API key is configured.
+ */
+fun isGoogleMapsAvailable(context: Context): Boolean {
+    val availability = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
+    if (availability != ConnectionResult.SUCCESS) return false
+
+    // Check if API key is present in manifest
+    return try {
+        val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+        val bundle = ai.metaData
+        val apiKey = bundle.getString("com.google.android.geo.API_KEY")
+        // Basic check: not null, not empty, and not the placeholder
+        !apiKey.isNullOrEmpty() && apiKey != "YOUR_API_KEY"
+    } catch (e: Exception) {
+        false
+    }
 }
 
 // Function to get the application's version name
@@ -79,5 +100,3 @@ fun logBackStack(navController: NavController, contextMessage: String = "") {
     }
     Log.d("${TAG}:stack", "------------------------------------------")
 }
-
-
