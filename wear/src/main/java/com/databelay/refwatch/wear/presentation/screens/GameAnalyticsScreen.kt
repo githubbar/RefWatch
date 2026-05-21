@@ -44,7 +44,9 @@ fun GameAnalyticsScreen(
                 }
             }
             
-            if (collectPositionInfo) {
+            val showDistance = collectPositionInfo && !game.isAssistantReferee
+            
+            if (showDistance) {
                 item {
                     AnalyticsCard(
                         label = "Distance",

@@ -258,6 +258,13 @@ data class Game(
             val sdf = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             sdf.format(Date(it))
         }
+
+    val isAssistantReferee: Boolean
+        get() = refereeAssignment?.let {
+            it.contains("Assistant", ignoreCase = true) ||
+            it.contains("AR", ignoreCase = true) ||
+            it.contains("Linesman", ignoreCase = true)
+        } ?: false
 }
 
 data class GameSnapshotForStorage(

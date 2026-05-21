@@ -62,3 +62,64 @@ fun List<HeartRateSample>.calculateAverageHeartRate(): Double {
 fun List<StepSample>.calculateTotalSteps(): Int {
     return sumOf { it.delta }
 }
+
+/**
+ * Filters movement data to only include periods where the game was active,
+ * and removes spatial outliers (e.g. toilet trips).
+ */
+fun List<LocationSample>.filterGameMovement(
+    gameEvents: List<GameEvent>
+): List<LocationSample> {
+    if (this.size < 10) return this
+
+    // 1. Filter by game phase (ignore pre-game, halftime, post-game)
+    val playablePhases = setOf(
+        GamePhase.FIRST_HALF,
+        GamePhase.SECOND_HALF,
+        GamePhase.EXTRA_TIME_FIRST_HALF,
+        GamePhase.EXTRA_TIME_SECOND_HALF,
+        GamePhase.PENALTIES
+    )
+
+    val activeIntervals = mutableListOf<Pair<Double, Double>>()
+    var currentStart: Double? = null
+
+    val phaseEvents = gameEvents.filterIsInstance<PhaseChangedEvent>().sortedBy { it.timestamp }
+    for (event in phaseEvents) {
+        if (event.newPhase in playablePhases) {
+            if (currentStart == null) currentStart = event.timestamp
+        } else {
+            if (currentStart != null) {
+                activeIntervals.add(currentStart to event.timestamp)
+                currentStart = null
+            }
+        }
+    }
+    if (currentStart != null) activeIntervals.add(currentStart to Double.MAX_VALUE)
+
+    val timeFiltered = if (activeIntervals.isEmpty()) {
+        this
+    } else {
+        this.filter { sample ->
+            activeIntervals.any { (start, end) -> sample.timestamp.toDouble() in start..end }
+        }
+    }
+
+    if (timeFiltered.size < 10) return timeFiltered
+
+    // 2. Filter outliers (remove 1% total)
+    // Use 0.5th and 99.5th percentile to focus on the field and ignore "toilet trips"
+    val sortedLat = timeFiltered.map { it.latitude }.sorted()
+    val sortedLon = timeFiltered.map { it.longitude }.sorted()
+    val lowIdx = (timeFiltered.size * 0.005).toInt()
+    val highIdx = (timeFiltered.size * 0.995).toInt().coerceAtMost(timeFiltered.size - 1)
+
+    val latMin = sortedLat[lowIdx]
+    val latMax = sortedLat[highIdx]
+    val lonMin = sortedLon[lowIdx]
+    val lonMax = sortedLon[highIdx]
+
+    return timeFiltered.filter {
+        it.latitude in latMin..latMax && it.longitude in lonMin..lonMax
+    }
+}

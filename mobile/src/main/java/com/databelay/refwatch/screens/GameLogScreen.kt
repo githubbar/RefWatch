@@ -36,11 +36,14 @@ import androidx.compose.material3.Card
 import com.databelay.refwatch.common.calculateAverageHeartRate
 import com.databelay.refwatch.common.calculateTotalDistanceMeters
 import com.databelay.refwatch.common.calculateTotalSteps
+import com.databelay.refwatch.common.filterGameMovement
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.TileOverlay
 import com.google.android.gms.maps.model.TileOverlayOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.TileOverlay as TileOverlayComposable
@@ -86,6 +89,10 @@ fun GameLogScreen(
         val totalSteps = game.stepHistory.calculateTotalSteps()
         val avgHR = game.heartRateHistory.calculateAverageHeartRate()
 
+        val filteredLocationHistory = remember(game.locationHistory, game.events) {
+            game.locationHistory.filterGameMovement(game.events)
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,7 +126,7 @@ fun GameLogScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
                 ) {
-                    if (mapsAvailable) {
+                    if (mapsAvailable && !game.isAssistantReferee) {
                         StatCard(Modifier.weight(1f), "Miles", "%.2f".format(totalMiles))
                     }
                     StatCard(Modifier.weight(1f), "Steps", "$totalSteps")
@@ -128,38 +135,42 @@ fun GameLogScreen(
             }
 
             // Map Section
-            if (mapsAvailable && game.locationHistory.isNotEmpty()) {
-                item {
-                    Text(
-                        "Movement Map",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                    val firstLocation = game.locationHistory.first()
-                    val cameraPositionState = rememberCameraPositionState {
-                        position = CameraPosition.fromLatLngZoom(
-                            LatLng(firstLocation.latitude, firstLocation.longitude),
-                            16f
+            if (filteredLocationHistory.isNotEmpty() && !game.isAssistantReferee) {
+                if (mapsAvailable) {
+                    item {
+                        Text(
+                            "Movement Map",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
-                    }
-                    Box(modifier = Modifier.fillMaxWidth().height(250.dp).padding(bottom = 16.dp)) {
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = cameraPositionState
-                        ) {
-                            val heatmapProvider = remember(game.locationHistory) {
-                                HeatmapTileProvider.Builder()
-                                    .weightedData(game.locationHistory.map { WeightedLatLng(LatLng(it.latitude, it.longitude)) })
-                                    .radius(20)
-                                    .build()
-                            }
-                            TileOverlayComposable(tileProvider = heatmapProvider)
-                            
-                            Polyline(
-                                points = game.locationHistory.map { LatLng(it.latitude, it.longitude) },
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                width = 2f
+                        val firstLocation = filteredLocationHistory.first()
+                        val cameraPositionState = rememberCameraPositionState {
+                            position = CameraPosition.fromLatLngZoom(
+                                LatLng(firstLocation.latitude, firstLocation.longitude),
+                                16f
                             )
+                        }
+                        Box(modifier = Modifier.fillMaxWidth().height(250.dp).padding(bottom = 16.dp)) {
+                            val mapProperties = remember { MapProperties(mapType = MapType.SATELLITE) }
+                            GoogleMap(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraPositionState = cameraPositionState,
+                                properties = mapProperties
+                            ) {
+                                val heatmapProvider = remember(filteredLocationHistory) {
+                                    HeatmapTileProvider.Builder()
+                                        .weightedData(filteredLocationHistory.map { WeightedLatLng(LatLng(it.latitude, it.longitude)) })
+                                        .radius(20)
+                                        .build()
+                                }
+                                TileOverlayComposable(tileProvider = heatmapProvider)
+                                
+                                Polyline(
+                                    points = filteredLocationHistory.map { LatLng(it.latitude, it.longitude) },
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                    width = 2f
+                                )
+                            }
                         }
                     }
                 }
@@ -172,7 +183,9 @@ fun GameLogScreen(
                     )
                     SoccerFieldHeatmap(
                         locationHistory = game.locationHistory,
-                        isAssistantReferee = game.refereeAssignment?.contains("Assistant", ignoreCase = true) == true
+                        ageGroup = game.ageGroup,
+                        gameEvents = game.events,
+                        isAssistantReferee = false // No longer used for AR
                     )
                 }
             }

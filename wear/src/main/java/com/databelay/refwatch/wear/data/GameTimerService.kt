@@ -275,6 +275,14 @@ class GameTimerService : Service() {
         Log.d(TAG, "configureTimerForGame called. Game ID: ${game.id}, Phase: ${game.currentPhase}, startImmediately: $startImmediately")
         currentInternalGame = game.copy() // Keep a local copy
 
+        // Always cancel existing timer before reconfiguring, in case we're switching phases
+        // while a timer (like a break timer) is still running.
+        if (gameCountDownTimer != null) {
+            Log.d(TAG, "Cancelling existing timer during configuration.")
+            gameCountDownTimer?.cancel()
+            gameCountDownTimer = null
+        }
+
         // 1. Determine regulation duration for current phase
         val currentRegulationDuration = game.regulationPeriodDurationMillis()
 
@@ -317,7 +325,18 @@ class GameTimerService : Service() {
         if (gameCountDownTimer != null) {
             Log.w(TAG, "Timer already running, stopping existing timer before starting new one.")
             gameCountDownTimer?.cancel()
+            gameCountDownTimer = null
         }
+
+        // Regulation duration for the current phase
+        val currentRegulationDuration = game.regulationPeriodDurationMillis()
+
+        // Explicitly update the phase and duration in the state flow as we start
+        _timerStateFlow.update { it.copy(
+            currentPhase = game.currentPhase,
+            regulationPeriodDurationMillis = currentRegulationDuration,
+            inAddedTime = isInAddedTimeInitially
+        ) }
 
         // Register step sensor listener
         sensorManager.unregisterListener(stepSensorListener)
@@ -328,9 +347,6 @@ class GameTimerService : Service() {
 
         acquireWakeLock()
         
-        // Regulation duration for the current phase
-        val currentRegulationDuration = game.regulationPeriodDurationMillis()
-
         serviceScope.launch {
             initialMillisForCurrentTicker = if (isInAddedTimeInitially) {
                 MAX_ADDED_TIME_COUNTUP_DURATION // In added time, ticker just runs a long time
@@ -354,7 +370,7 @@ class GameTimerService : Service() {
                 return@launch
             }
 
-            healthServicesManager.startExercise() // Start HS tracking
+            healthServicesManager.startExercise(game.isAssistantReferee) // Start HS tracking
 
             Log.d(TAG, "Starting CountdownTimer. For Phase: ${game.currentPhase}, Initial Ticker ms: $initialMillisForCurrentTicker, ElapsedAtActivation: $elapsedMillisAtActivation, IsInAddedTime: $isInAddedTimeInitially, RegDuration: $currentRegulationDuration")
 

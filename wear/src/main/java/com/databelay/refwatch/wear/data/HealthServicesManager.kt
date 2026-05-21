@@ -54,8 +54,8 @@ class HealthServicesManager @Inject constructor(
     private val _stepUpdates = MutableStateFlow<StepSample?>(null)
     val stepUpdates: StateFlow<StepSample?> = _stepUpdates.asStateFlow()
 
-    suspend fun startExercise() {
-        Log.d(TAG, "Starting exercise")
+    suspend fun startExercise(isAssistantReferee: Boolean = false) {
+        Log.d(TAG, "Starting exercise (isAR: $isAssistantReferee)")
 
         val requiredPermissions = mutableListOf(
             android.Manifest.permission.BODY_SENSORS,
@@ -73,7 +73,8 @@ class HealthServicesManager @Inject constructor(
             return
         }
 
-        val collectPositionInfo = prefs.getBoolean("collect_position_info", true)
+        // Disable GPS tracking for Assistant Referees
+        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean("collect_position_info", true)
 
         val capabilities = exerciseClient.getCapabilitiesWithException()
         val exerciseCapabilities = capabilities.getExerciseTypeCapabilities(ExerciseType.SOCCER)

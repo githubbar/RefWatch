@@ -30,6 +30,7 @@ import com.databelay.refwatch.common.GenericLogEvent
 import com.databelay.refwatch.common.GoalScoredEvent
 import com.databelay.refwatch.common.IWearGameViewModel
 import com.databelay.refwatch.common.PenaltyEvent
+import com.databelay.refwatch.common.PhaseChangedEvent
 import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.canHaveAddedTime
 import com.databelay.refwatch.common.formatTime
@@ -146,6 +147,14 @@ class WearGameViewModel @Inject constructor(
                 ?.onEach { serviceState ->
                     val currentActiveGame = _activeGame.value
 
+                    // Only update if phases match to avoid race conditions during transitions where
+                    // service might still be reporting the end-state of a previous phase (like 5min halftime)
+                    // while the VM has already moved to the next phase (like 2nd half).
+                    if (currentActiveGame != null && serviceState.currentPhase != currentActiveGame.currentPhase) {
+                        Log.d(tag, "Ignoring service update due to phase mismatch: Service=${serviceState.currentPhase}, VM=${currentActiveGame.currentPhase}")
+                        return@onEach
+                    }
+
                     if (serviceState.inAddedTime && currentActiveGame?.currentPhase?.canHaveAddedTime() == true) {
                         if (!isAddedTimeReminderVibrating) {
                             startAddedTimeReminderVibration()
@@ -159,16 +168,24 @@ class WearGameViewModel @Inject constructor(
                     _activeGame.update { currentGame ->
                         if (currentGame == null) return@update null
                         
-                        // Buffer or frequency check could be added here
-                        // For now, let's append if they are new (different timestamp)
-                        val newLocations = if (serviceState.latestLocation != null && currentGame.locationHistory.lastOrNull()?.timestamp != serviceState.latestLocation.timestamp) {
-                            currentGame.locationHistory + serviceState.latestLocation
+                        // --- DOWNSAMPLING LOGIC to prevent 1MB Firestore limit ---
+                        // Only append if it's been at least 5 seconds since the last sample
+                        
+                        val newLocations = if (serviceState.latestLocation != null) {
+                            val lastLoc = currentGame.locationHistory.lastOrNull()
+                            if (lastLoc == null || (serviceState.latestLocation.timestamp - lastLoc.timestamp) >= 5000) {
+                                currentGame.locationHistory + serviceState.latestLocation
+                            } else currentGame.locationHistory
                         } else currentGame.locationHistory
 
-                        val newHR = if (serviceState.latestHeartRate != null && currentGame.heartRateHistory.lastOrNull()?.timestamp != serviceState.latestHeartRate.timestamp) {
-                            currentGame.heartRateHistory + serviceState.latestHeartRate
+                        val newHR = if (serviceState.latestHeartRate != null) {
+                            val lastHR = currentGame.heartRateHistory.lastOrNull()
+                            if (lastHR == null || (serviceState.latestHeartRate.timestamp - lastHR.timestamp) >= 5000) {
+                                currentGame.heartRateHistory + serviceState.latestHeartRate
+                            } else currentGame.heartRateHistory
                         } else currentGame.heartRateHistory
 
+                        // Steps are deltas, we should always append if the timestamp is new to not lose steps
                         val newSteps = if (serviceState.latestSteps != null && currentGame.stepHistory.lastOrNull()?.timestamp != serviceState.latestSteps.timestamp) {
                             currentGame.stepHistory + serviceState.latestSteps
                         } else currentGame.stepHistory
@@ -638,7 +655,21 @@ class WearGameViewModel @Inject constructor(
             lastUpdated = System.currentTimeMillis()
         )
 
-        _activeGame.value = updatedGame
+        // Add PhaseChangedEvent for better analytics filtering
+        val phaseEvent = PhaseChangedEvent(
+            newPhase = nextPhase,
+            timestamp = System.currentTimeMillis().toDouble(),
+            gameTimeMillis = gameAtPeriodEnd.actualTimeElapsedInPeriodMillis.toDouble()
+        )
+        _activeGame.update { it?.copy(
+            currentPhase = nextPhase,
+            actualTimeElapsedInPeriodMillis = 0L,
+            inAddedTime = false,
+            displayedTimeMillis = updatedGame.displayedTimeMillis,
+            kickOffTeam = newKickOffTeam,
+            lastUpdated = System.currentTimeMillis(),
+            events = it.events + phaseEvent
+        ) }
 
         if (updatedGame.currentPhase == GamePhase.GAME_ENDED) {
             Log.i(tag, "Game Ended phase reached. Stopping timer.")
