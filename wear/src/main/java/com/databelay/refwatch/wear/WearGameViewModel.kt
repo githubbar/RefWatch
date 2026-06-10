@@ -49,6 +49,7 @@ import com.databelay.refwatch.wear.data.GameTimerService
 import com.databelay.refwatch.wear.util.ConnectivityObserver // For network status
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -86,7 +87,7 @@ class WearGameViewModel @Inject constructor(
 ) : AndroidViewModel(applicationContext as Application), IWearGameViewModel {
     private val tag = "WearGameViewModel"
 
-    private val _collectPositionInfo = MutableStateFlow(prefs.getBoolean("collect_position_info", true))
+    private val _collectPositionInfo = MutableStateFlow(prefs.getBoolean("collect_position_info", false))
     override val collectPositionInfo: StateFlow<Boolean> = _collectPositionInfo.asStateFlow()
 
     fun setCollectPositionInfo(enabled: Boolean) {
@@ -171,7 +172,7 @@ class WearGameViewModel @Inject constructor(
                         // --- DOWNSAMPLING LOGIC to prevent 1MB Firestore limit ---
                         // Only append if it's been at least 5 seconds since the last sample
                         
-                        val newLocations = if (serviceState.latestLocation != null) {
+                        val newLocations = if (serviceState.latestLocation != null && currentGame.isAssistantReferee == false) {
                             val lastLoc = currentGame.locationHistory.lastOrNull()
                             if (lastLoc == null || (serviceState.latestLocation.timestamp - lastLoc.timestamp) >= 5000) {
                                 currentGame.locationHistory + serviceState.latestLocation
@@ -254,24 +255,15 @@ class WearGameViewModel @Inject constructor(
             }.launchIn(viewModelScope)
 
         _activeGame.filterNotNull()
-            .map { game -> game.toSnapshotForStorage() } 
-            .distinctUntilChanged()
             .debounce(750L) 
-            .onEach { snapshot ->
-                val latestGameToSave = _activeGame.value
-                if (latestGameToSave != null && latestGameToSave.id == snapshot.id && latestGameToSave.status != GameStatus.COMPLETED) {
-                    viewModelScope.launch {
-                        Log.i(
-                            tag,
-                            "Significant change for game ${snapshot.id}. Persisting to gameStorage."
-                        )
+            .onEach { latestGameToSave ->
+                // Move heavy snapshot and saving logic to Dispatchers.Default
+                viewModelScope.launch(Dispatchers.Default) {
+                    val snapshot = latestGameToSave.toSnapshotForStorage()
+                    if (latestGameToSave.status != GameStatus.COMPLETED) {
+                        Log.i(tag, "Significant change for game ${snapshot.id}. Persisting to gameStorage.")
                         gameStorage.addOrUpdateGame(latestGameToSave)
                     }
-                } else if (latestGameToSave == null || latestGameToSave.id != snapshot.id) {
-                    Log.w(
-                        tag,
-                        "Snapshot changed for ${snapshot.id}, but current active game is now different (${latestGameToSave?.id}) or null. Skipping save to gameStorage."
-                    )
                 }
             }.launchIn(viewModelScope)
 
@@ -368,18 +360,28 @@ class WearGameViewModel @Inject constructor(
     }
 
     private fun loadInitialActiveGameInternal(currentGames: List<Game>): Game {
+        val activeGameId: String? = savedStateHandle["activeGameId"]
+        activeGameId?.let { id ->
+            val gameFromList = currentGames.find { it.id == id }
+            if (gameFromList != null) {
+                Log.d(tag, "Loaded active game from list using ID from SavedStateHandle: $id")
+                return gameFromList
+            }
+        }
+
+        // Fallback: check for the old activeGameJson just in case of an update during a game
         val savedGameJson: String? = savedStateHandle["activeGameJson"]
         savedGameJson?.let { json ->
             try {
                 val gameFromState = AppJsonConfiguration.decodeFromString<Game>(json)
-                Log.d(tag, "Loaded active game from SavedStateHandle: ${gameFromState.id}")
+                Log.d(tag, "Loaded active game from SavedStateHandle (legacy JSON): ${gameFromState.id}")
                 return gameFromState
             } catch (e: Exception) {
                 Log.e(tag, "Error decoding game from SavedStateHandle", e)
             }
         }
 
-        Log.d(tag, "No active game in SavedStateHandle, trying from provided scheduled games.")
+        Log.d(tag, "No active game found in SavedStateHandle, trying from provided scheduled games.")
         val firstScheduledGame = currentGames.firstOrNull { it.status == GameStatus.SCHEDULED }
 
         return firstScheduledGame?.copy(
@@ -395,12 +397,7 @@ class WearGameViewModel @Inject constructor(
 
     private fun saveActiveGameStateToHandle() {
         _activeGame.value?.let { game ->
-            try {
-                val activeGameJson = AppJsonConfiguration.encodeToString(game)
-                savedStateHandle["activeGameJson"] = activeGameJson
-            } catch (e: Exception) {
-                Log.e(tag, "Error saving active game state to JSON for SavedStateHandle", e)
-            }
+            savedStateHandle["activeGameId"] = game.id
         }
     }
 

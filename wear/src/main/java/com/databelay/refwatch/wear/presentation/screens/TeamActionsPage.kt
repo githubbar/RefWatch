@@ -1,13 +1,9 @@
 // In TeamActionsPage.kt
 package com.databelay.refwatch.wear.presentation.screens
 
-// Remove ScalingLazyColumn related imports
-// import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-// import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
-// import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -31,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
 import androidx.wear.tooling.preview.devices.WearDevices
@@ -40,58 +34,40 @@ import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.isDark
-import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.shortName
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 
 @Composable
 fun TeamActionsPage(
     team: Team,
-    game: Game,
+    teamName: String,
+    teamColor: Color,
+    isPlayablePhase: Boolean,
     onAddGoal: (Team) -> Unit,
     onNavigateToLogCard: (team: Team, cardType: CardType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val teamColor = if (team == Team.HOME) game.homeTeamColor else game.awayTeamColor
-    val teamName =
-        if (team == Team.HOME) shortName(game.homeTeamName) else shortName(game.awayTeamName)
-//    val score = if (team == Team.HOME) game.homeScore else game.awayScore
-    ScreenScaffold() {
-        Spacer(modifier = Modifier.height(1.dp))
-
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-            modifier = modifier // Use the passed modifier
+            modifier = Modifier
                 .fillMaxSize(),
-            // Add your own general horizontal padding for the content
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            // Text: Team Name and Score
+            // Text: Team Name
             Text(
                 text = teamName,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (teamColor.isDark()) Color.White else teamColor.let {
-                    Color(
-                        it.red,
-                        it.green,
-                        it.blue,
-                        it.alpha
-                    )
-                },
-                textAlign = TextAlign.Center, // Center text if it wraps
-//                    modifier = Modifier.fillMaxWidth()/*.transformedHeight( (0, transformationSpec))*/,
-//                        transformation = SurfaceTransformation(transformationSpec)
+                color = if (teamColor.isDark()) Color.White else teamColor,
+                textAlign = TextAlign.Center,
             )
 
             // Goal Button
-            if (game.currentPhase.isPlayablePhase()) {
+            if (isPlayablePhase) {
                 Button(
                     onClick = { onAddGoal(team) },
                     shape = CircleShape,
-                    modifier = Modifier
-                        .size(72.dp)
-//                        .wrapContentWidth()
-//                        .padding(horizontal = 32.dp),
+                    modifier = Modifier.size(72.dp),
                 ) {
                     Text(
                         "+1",
@@ -101,17 +77,14 @@ fun TeamActionsPage(
                     )
                 }
             } else {
-                // Optional: Show a placeholder or disabled button if not in a playable phase
-                // Or simply omit it, and the space will be taken up by other elements
-                // For example, a Spacer to maintain height:
-                Spacer(modifier = Modifier.height(ButtonDefaults.LargeIconSize)) // Standard Wear Button height
+                Spacer(modifier = Modifier.height(ButtonDefaults.LargeIconSize))
             }
 
             // Card Buttons in a Row
             Row(
                 modifier = Modifier.fillMaxWidth(.5f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically // Align card buttons vertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Yellow Card Button
                 CardShapedButton(
@@ -119,7 +92,7 @@ fun TeamActionsPage(
                     text = "Yellow",
                     backgroundColor = Color.Yellow,
                     contentColor = Color.Black,
-                    modifier = Modifier.weight(1f) // Distribute space equally
+                    modifier = Modifier.weight(1f)
                 )
 
                 // Red Card Button
@@ -128,16 +101,14 @@ fun TeamActionsPage(
                     text = "Red",
                     backgroundColor = Color.Red,
                     contentColor = Color.White,
-                    modifier = Modifier.weight(1f) // Distribute space equally
+                    modifier = Modifier.weight(1f)
                 )
             }
             Spacer(modifier = Modifier.height(1.dp))
-
         }
     }
 }
 
-// CardShapedButton Composable remains the same
 @Composable
 fun CardShapedButton(
     onClick: () -> Unit,
@@ -148,12 +119,7 @@ fun CardShapedButton(
 ) {
     Button(
         onClick = onClick,
-        shape = RoundedCornerShape(
-            topStart = 8.dp,
-            topEnd = 8.dp,
-            bottomStart = 8.dp,
-            bottomEnd = 8.dp
-        ),
+        shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
             contentColor = contentColor
@@ -163,15 +129,9 @@ fun CardShapedButton(
             .border(
                 1.dp,
                 contentColor.copy(alpha = 0.5f),
-                RoundedCornerShape(
-                    topStart = 8.dp,
-                    topEnd = 8.dp,
-                    bottomStart = 8.dp,
-                    bottomEnd = 8.dp
-                )
+                RoundedCornerShape(8.dp)
             )
     ) {
-
         Text(
             text,
             style = MaterialTheme.typography.bodyExtraSmall,
@@ -180,27 +140,18 @@ fun CardShapedButton(
     }
 }
 
-
-// -------------------------------- Previews -----------------------------------------------
-// -----------------------------------------------------------------------------------------
 @Preview(device = WearDevices.LARGE_ROUND, showBackground = true)
 @Preview(device =  WearDevices.SMALL_ROUND, showBackground = true)
 @Preview(device =  WearDevices.SQUARE, showBackground = true)
 @WearPreviewFontScales
-
 @Composable
 fun TeamActionsPagePreview() {
-    RefWatchWearTheme { // Wrap in MaterialTheme for previews
+    RefWatchWearTheme {
         TeamActionsPage(
             team = Team.HOME,
-            game = Game.defaults().copy( // Use your Game.defaults() or a sample game
-                id = "previewGame",
-                currentPhase = GamePhase.FIRST_HALF,
-                homeTeamName = "Red Team",
-                homeTeamColorArgb = android.graphics.Color.BLACK,
-                awayTeamColorArgb = android.graphics.Color.YELLOW,
-                homeScore = 2
-            ),
+            teamName = "Red Team",
+            teamColor = Color.Black,
+            isPlayablePhase = true,
             onAddGoal = {},
             onNavigateToLogCard = { _, _ -> }
         )

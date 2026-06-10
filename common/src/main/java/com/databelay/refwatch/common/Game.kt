@@ -22,38 +22,38 @@ data class Game(
     // --- Core Game Mechanics Settings ---
     val id: String = UUID.randomUUID().toString(), // Unique ID for these game settings instance
     val userId: String = "", // User who created this game (for cache and syncing
-    var lastUpdated: Long = System.currentTimeMillis(), // Timestamp for when this was last updated by user
-    var halfDurationMinutes: Int = 45,
-    var halftimeDurationMinutes: Int = 15,
-    var extraTimeHalfDurationMinutes: Int = 15, // Optional for future
-    var extraTimeHalftimeDurationMinutes: Int = 1, // Optional for future
+    val lastUpdated: Long = System.currentTimeMillis(), // Timestamp for when this was last updated by user
+    val halfDurationMinutes: Int = 45,
+    val halftimeDurationMinutes: Int = 15,
+    val extraTimeHalfDurationMinutes: Int = 15, // Optional for future
+    val extraTimeHalftimeDurationMinutes: Int = 1, // Optional for future
 //
     // --- Match Information (can be pre-filled from a schedule) ---
-    var gameNumber: String = "XXXX", // Default, can be overridden
-    var fieldNumber: String? = null, // Default, can be overridden
-    var homeTeamName: String = "Home", // Default, can be overridden
-    var awayTeamName: String = "Away", // Default, can be overridden
-    var ageGroup: AgeGroup? = null,          // e.g., "U12 Boys", "Adult Men"
-    var competition: String? = null,       // e.g., "League Match", "Cup Final"
-    var refereeAssignment: String? = null, // e.g. Assistant Referee
-    var venue: String? = null,             // e.g., "Field 3, West Park"
-    var gameDateTimeEpochMillis: Long? = null, // Start date & time of the match, UTC epoch ms
-    var notes: String? = null,
+    val gameNumber: String = "XXXX", // Default, can be overridden
+    val fieldNumber: String? = null, // Default, can be overridden
+    val homeTeamName: String = "Home", // Default, can be overridden
+    val awayTeamName: String = "Away", // Default, can be overridden
+    val ageGroup: AgeGroup? = null,          // e.g., "U12 Boys", "Adult Men"
+    val competition: String? = null,       // e.g., "League Match", "Cup Final"
+    val refereeAssignment: String? = null, // e.g. Assistant Referee
+    val venue: String? = null,             // e.g., "Field 3, West Park"
+    val gameDateTimeEpochMillis: Long? = null, // Start date & time of the match, UTC epoch ms
+    val notes: String? = null,
     // Live State Fields (updated by watch, synced via phone to Firebase)
     val inAddedTime: Boolean = false, // Is the current playable period in added time?
-    var hasExtraTime: Boolean = false, // True if extra time has been initiated
-    var hasPenalties: Boolean = false, // True if extra time has been initiated
-    var homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
-    var awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
-    var kickOffTeam: Team = Team.HOME, // Actual team kicking off current period (managed by ViewModel)
-    var penaltiesTakenHome: Int = 0, // Number of penalties scored by home team
-    var penaltiesTakenAway: Int = 0, // Number of penalties scored by away team
-    var currentPhase: GamePhase = GamePhase.NOT_STARTED,
-    var homeScore: Int = 0,
-    var awayScore: Int = 0,
-    var displayedTimeMillis: Long = 45,
-    var actualTimeElapsedInPeriodMillis: Long = 0L,
-    var isTimerRunning: Boolean = false,
+    val hasExtraTime: Boolean = false, // True if extra time has been initiated
+    val hasPenalties: Boolean = false, // True if extra time has been initiated
+    val homeTeamColorArgb: Int = DefaultHomeJerseyColor.toArgb(),
+    val awayTeamColorArgb: Int = DefaultAwayJerseyColor.toArgb(),
+    val kickOffTeam: Team = Team.HOME, // Actual team kicking off current period (managed by ViewModel)
+    val penaltiesTakenHome: Int = 0, // Number of penalties scored by home team
+    val penaltiesTakenAway: Int = 0, // Number of penalties scored by away team
+    val currentPhase: GamePhase = GamePhase.NOT_STARTED,
+    val homeScore: Int = 0,
+    val awayScore: Int = 0,
+    val displayedTimeMillis: Long = 45,
+    val actualTimeElapsedInPeriodMillis: Long = 0L,
+    val isTimerRunning: Boolean = false,
     val locationHistory: List<LocationSample> = emptyList(),
     val heartRateHistory: List<HeartRateSample> = emptyList(),
     val stepHistory: List<StepSample> = emptyList(),
@@ -326,7 +326,6 @@ fun Game.toFirestoreMap(): Map<String, Any?> {
         "venue" to this.venue,
         "gameDateTimeEpochMillis" to this.gameDateTimeEpochMillis, 
         "notes" to this.notes,
-        "refereeAssignment" to this.refereeAssignment, // Added field
         "inAddedTime" to this.inAddedTime,
         "hasExtraTime" to this.hasExtraTime,
         "hasPenalties" to this.hasPenalties,
@@ -348,6 +347,8 @@ fun Game.toFirestoreMap(): Map<String, Any?> {
 
     val eventsForFirestore = this.events.mapNotNull { event ->
         try {
+            // OPTIMIZATION: Only encode if necessary, but Firestore requires Maps.
+            // Using a simple check or caching might help, but let's at least keep it off main thread.
             val eventJsonString = AppJsonConfiguration.encodeToString(event)
             val jsonObject = AppJsonConfiguration.parseToJsonElement(eventJsonString).jsonObject
             jsonObjectToMap(jsonObject) 
@@ -357,5 +358,5 @@ fun Game.toFirestoreMap(): Map<String, Any?> {
     }
     gameData["events"] = eventsForFirestore
 
-    return gameData.filterValues { it != null } // Remove nulls before sending to Firestore
+    return gameData.filterValues { it != null }
 }

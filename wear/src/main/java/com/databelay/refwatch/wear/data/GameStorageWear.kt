@@ -152,66 +152,35 @@ class GameStorageWear @Inject constructor(
 
         val gamesCollection = firestore.collection("users").document(userId).collection("games")
         firestoreListenerRegistration = gamesCollection.addSnapshotListener { snapshots, e ->
-            // Check if snapshots is null before accessing its properties**
             if (snapshots == null) {
                 Log.w(tag, "Firestore snapshots were null for user $userId. Not updating game list.")
-                // It's often better not to clear the list here if it might have been loaded from cache,
-                // unless you specifically want to indicate no data from Firestore means absolutely no data.
-                // _gamesListFlow.value = emptyList() // Optional: depends on desired behavior
-                // storageScope.launch { saveGamesToCache(emptyList(), userId) } // Optional
-                _dataFetchStatusFlow.value = DataFetchStatus.NO_DATA_AVAILABLE // Or ERROR_FIREBASE_OPERATION
+                _dataFetchStatusFlow.value = DataFetchStatus.NO_DATA_AVAILABLE 
                 return@addSnapshotListener
             }
 
-            Log.d(tag, "Firestore listener (Wear) received ${snapshots?.size()} documents for user $userId.")
+            Log.d(tag, "Firestore listener (Wear) received ${snapshots.size()} documents for user $userId.")
 
-            val gamesFromFirestore = snapshots.documents.mapNotNull { doc ->
-                try {
-                    val gameId = doc.id
-                    Log.d(tag, "Listener (Wear) processing doc ID: $gameId. Raw data from Firestore: ${doc.data}")
-
-                    // 1. Convert to Game object for basic fields.
-                    //    If Game.events has @Exclude in its definition for Firestore's toObject,
-                    //    this 'gameBase' will have an empty events list or default.
-                    //    Or, you can map basic fields manually if toObject is problematic.
-                    val gameBase = doc.toObject(Game::class.java) // For non-event fields
-                    if (gameBase == null) {
-                        Log.w(tag, "Listener (Wear): Failed to convert document ${doc.id} to Game base object. Skipping.")
-                        return@mapNotNull null
+            storageScope.launch {
+                val gamesFromFirestore = snapshots.documents.mapNotNull { doc ->
+                    try {
+                        val gameBase = doc.toObject(Game::class.java) 
+                        if (gameBase == null) return@mapNotNull null
+                        
+                        val parsedEvents = parseGameEventsFromDocument(doc)
+                        gameBase.copy(id = doc.id, events = parsedEvents)
+                    } catch (docEx: Exception) {
+                        Log.e(tag, "Listener (Wear): Error processing document ${doc.id}", docEx)
+                        null
                     }
-                    Log.d(tag, "Listener (Wear): Game base for ${doc.id}: Status=${gameBase.status}, Score=${gameBase.homeScore}-${gameBase.awayScore}")
-
-
-                    // 2. Manually parse the events from the document data, similar to Mobile
-                    val parsedEvents = parseGameEventsFromDocument(doc) // New helper function
-                    Log.v(tag, "Listener (Wear): Parsed ${parsedEvents.size} events for game ${doc.id}")
-
-
-                    // 3. Return a new Game object with the manually parsed events
-                    //    and ensure the Firestore document ID is used.
-                    val finalGame = gameBase.copy(
-                        id = doc.id, // Ensure Firestore document ID is used as the game's ID
-                        events = parsedEvents
-                    )
-                    Log.i(tag, "Listener (Wear): Successfully processed game ${finalGame.id}, Status: ${finalGame.status}, Score: ${finalGame.homeScore}-${finalGame.awayScore}, Events PARSED: ${finalGame.events.size}")
-                    finalGame
-
-                } catch (docEx: Exception) {
-                    Log.e(tag, "Listener (Wear): Error processing document ${doc.id}", docEx)
-                    null // Skip this document on error
                 }
-            }
 
-            // Update the flow with the newly processed list of games
-            if (_gamesListFlow.value != gamesFromFirestore) {
-                Log.d(tag, "Firestore listener (Wear): Updating _gamesListFlow. New list size: ${gamesFromFirestore.size}. First game events: ${gamesFromFirestore.firstOrNull()?.events?.size}")
-                _gamesListFlow.value = gamesFromFirestore
-                storageScope.launch { saveGamesToCache(gamesFromFirestore, userId) }
-            } else {
-                Log.d(tag, "Firestore listener (Wear): gamesFromFirestore is same as current _gamesListFlow.value. No update emitted.")
+                if (_gamesListFlow.value != gamesFromFirestore) {
+                    _gamesListFlow.value = gamesFromFirestore
+                    saveGamesToCache(gamesFromFirestore, userId)
+                }
+                
+                _dataFetchStatusFlow.value = if (gamesFromFirestore.isEmpty()) DataFetchStatus.NO_DATA_AVAILABLE else DataFetchStatus.SUCCESS
             }
-
-            _dataFetchStatusFlow.value = if (gamesFromFirestore.isEmpty()) DataFetchStatus.NO_DATA_AVAILABLE else DataFetchStatus.SUCCESS
         }
         Log.i(tag, "Firestore listener attached (Wear) for user: $userId")
     }
@@ -265,13 +234,13 @@ class GameStorageWear @Inject constructor(
         }
     }
 
-    suspend fun addOrUpdateGame(game: Game): Result<Unit> {
+    suspend fun addOrUpdateGame(game: Game): Result<Unit> = withContext(Dispatchers.IO) {
         val userId = currentUserId
         Log.d(tag, "addOrUpdateGame (Wear): User: $userId, Game ID: ${game.id}, Events in Game object: ${game.events.size}")
         if (userId.isNullOrBlank()) {
             Log.w(tag, "No authenticated user. Cannot save/update game.")
             _dataFetchStatusFlow.value = DataFetchStatus.NO_USER_AUTHENTICATED
-            return Result.failure(IllegalArgumentException("Game ID cannot be blank for addOrUpdateGame"))
+            return@withContext Result.failure(IllegalArgumentException("User ID is null or blank"))
         }
 
         val gameWithTimestamp = game.copy(lastUpdated = System.currentTimeMillis()) // Use 'lastUpdated'
@@ -280,15 +249,14 @@ class GameStorageWear @Inject constructor(
             Log.w(tag, "Network unavailable. Saving game ${gameWithTimestamp.id} as pending sync for user $userId.")
             saveGameToPendingSync(gameWithTimestamp, userId)
             _dataFetchStatusFlow.value = DataFetchStatus.ERROR_NETWORK // Reflect that data is local due to network
-            return Result.failure(IllegalArgumentException("Game ID cannot be blank for addOrUpdateGame"))
+            return@withContext Result.failure(IllegalStateException("Network unavailable"))
         }
 
         if (game.id.isBlank()) {
             Log.e(tag, "addOrUpdateGame (Wear): game.id is blank for user $userId.")
-            // return Result.failure(IllegalArgumentException("Game ID cannot be blank")) // Adapt error handling
-            return Result.failure(IllegalArgumentException("Game ID cannot be blank for addOrUpdateGame"))
+            return@withContext Result.failure(IllegalArgumentException("Game ID cannot be blank for addOrUpdateGame"))
         }
-        return try {
+        try {
             val gameDocumentRef = firestore.collection("users")
                 .document(userId!!) // userId is checked not to be blank above
                 .collection("games")

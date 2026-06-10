@@ -4,15 +4,14 @@ package com.databelay.refwatch.wear.presentation.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
@@ -41,19 +40,21 @@ fun PenaltyShootoutScreen(
     onPenaltyAttemptRecorded: (scored: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ScreenScaffold(
-    ) {
+    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val currentTime = remember(game.actualTimeElapsedInPeriodMillis / 1000) {
+        timeFormatter.format(Date())
+    }
+
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp), // Added some padding for the dedicated screen
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround // Center content for this dedicated screen
+            verticalArrangement = Arrangement.SpaceAround
         ) {
-//            Spacer(modifier = Modifier.height(1.dp))
-            // Time display if TimeText isn't sufficient or for specific styling
-            androidx.wear.compose.material3.Text(
-                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()),
+            Text(
+                text = currentTime,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
@@ -65,14 +66,13 @@ fun PenaltyShootoutScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // ... content of score row (ColorIndicator, Score Text) ...
                 val homeHasKickOff =
                     game.kickOffTeam == Team.HOME && game.currentPhase.isPlayablePhase()
                 ColorIndicator(
                     color = game.homeTeamColor,
                     hasKickOffBorder = homeHasKickOff,
                 )
-                androidx.wear.compose.material3.Text(
+                Text(
                     "${game.homeScore} - ${game.awayScore}",
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -86,7 +86,7 @@ fun PenaltyShootoutScreen(
                 )
             }
             // Current Phase
-            androidx.wear.compose.material3.Text(
+            Text(
                 text = "${game.currentPhase.readable()}: ${game.penaltiesTakenHome} - ${game.penaltiesTakenAway}",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.secondary,
@@ -95,10 +95,6 @@ fun PenaltyShootoutScreen(
                     .fillMaxWidth()
             )
 
-
-            val takerName =
-                if (game.kickOffTeam == Team.HOME) game.homeTeamName else game.awayTeamName
-            val takerAbbreviation = takerName.take(3).uppercase()
             Spacer(modifier = Modifier.padding(1.dp))
             Row(
                 modifier = Modifier
@@ -134,7 +130,7 @@ fun PenaltyShootoutScreen(
                     onClick = { onPenaltyAttemptRecorded(false) },
                     modifier = Modifier
                         .weight(1f)
-                        .height(ButtonDefaults.LargeIconSize), // Use standard Wear button size
+                        .height(ButtonDefaults.LargeIconSize),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -151,7 +147,7 @@ fun PenaltyShootoutScreen(
             // Display current penalty count (taken by each team)
             Text(
                 text = "Taken: ${game.penaltiesTakenHome} | ${game.penaltiesTakenAway}",
-                style = MaterialTheme.typography.bodySmall, // Slightly larger than caption
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )

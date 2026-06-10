@@ -74,7 +74,7 @@ class HealthServicesManager @Inject constructor(
         }
 
         // Disable GPS tracking for Assistant Referees
-        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean("collect_position_info", true)
+        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean("collect_position_info", false)
 
         val capabilities = exerciseClient.getCapabilitiesWithException()
         val exerciseCapabilities = capabilities.getExerciseTypeCapabilities(ExerciseType.SOCCER)

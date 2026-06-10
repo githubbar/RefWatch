@@ -273,58 +273,73 @@ fun NavigationRoutes() {
                     rememberPagerState(initialPage = 0, pageCount = { 2 }) // 0: Game, 1: Settings
 
                 if (activeGame != null) {
+                    val onKickOff = remember { { gameViewModel.kickOff() } }
+                    val onResetGame = remember { { gameViewModel.resetGame() } }
+                    val onToggleCollectPositionInfo = remember { { enabled: Boolean -> gameViewModel.setCollectPositionInfo(enabled) } }
+                    val onSetToHaveExtraTime = remember { { gameViewModel.setToHaveExtraTime() } }
+                    val onSetToHavePenalties = remember { { gameViewModel.setToHavePenalties() } }
+                    val onToggleTimer = remember { { gameViewModel.toggleTimer() } }
+                    val onAddGoal = remember { { team: Team -> gameViewModel.addGoal(team) } }
+                    val onResetPeriodTimer = remember { { gameViewModel.resetTimer() } }
+                    val onPenaltyAttemptRecorded = remember { { scored: Boolean -> gameViewModel.recordPenaltyAttempt(scored) } }
+                    
+                    val onNavigateToLogCard = remember(navController) { { team: Team, cardType: CardType ->
+                        navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
+                    } }
+                    
+                    val onNavigateToGameLog = remember(navController) { {
+                        gameViewModel.activeGame.value?.let { game ->
+                            navController.navigate(WearNavRoutes.gameLogRoute(game.id))
+                        } ?: Log.w(TAG, "Cannot navigate to game log, active game is null")
+                        Unit
+                    } }
+                    
+                    val onNavigateToAnalytics = remember(navController) { {
+                        navController.navigate(WearNavRoutes.GAME_ANALYTICS_SCREEN)
+                    } }
+                    
+                    val onEndPhase = remember { {
+                        gameViewModel.activeGame.value?.let { game ->
+                            gameViewModel.proceedToNextPhaseManager(game.copy())
+                        } ?: Log.w(TAG, "GameScreenWithPager onEndPhase: Cannot proceed, active game is null.")
+                        Unit
+                    } }
+                    
+                    val onConfirmEndMatch = remember(navController) { {
+                        val gameToEnd = gameViewModel.activeGame.value
+                        if (gameToEnd != null) {
+                            gameViewModel.finishAndSyncActiveGame(gameToEnd.id)
+                            navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
+                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            Log.w(TAG, "onConfirmEndMatch: Cannot finish game, activeGame is null.")
+                            navController.popBackStack(WearNavRoutes.GAME_LIST_SCREEN, false)
+                        }
+                        Unit
+                    } }
+
                     GameScreenWithPager(
                         modifier = Modifier.fillMaxSize(),
                         game = activeGame!!,
                         collectPositionInfo = collectPositionInfo,
-                        onToggleCollectPositionInfo = { gameViewModel.setCollectPositionInfo(it) },
+                        onToggleCollectPositionInfo = onToggleCollectPositionInfo,
                         horizontalPagerState = horizontalPagerState,
                         verticalPagerState = verticalPagerState,
-                        onKickOff = { gameViewModel.kickOff() },
-                        onResetGame = { gameViewModel.resetGame() },
-                        onSetToHaveExtraTime = { gameViewModel.setToHaveExtraTime() },
-                        onSetToHavePenalties = { gameViewModel.setToHavePenalties() },
-                        onToggleTimer = { gameViewModel.toggleTimer() },
-                        onAddGoal = { team -> gameViewModel.addGoal(team) },
-                        onNavigateToLogCard = { team, cardType ->
-                            navController.navigate(WearNavRoutes.logCardRoute(team, cardType))
-                        },
-                        onNavigateToGameLog = {
-                            activeGame?.let { game ->
-                                navController.navigate(WearNavRoutes.gameLogRoute(game.id))
-                            } ?: Log.w(TAG, "Cannot navigate to game log, active game is null")
-                        },
-                        onNavigateToAnalytics = {
-                            navController.navigate(WearNavRoutes.GAME_ANALYTICS_SCREEN)
-                        },
-                        onEndPhase = {
-                            gameViewModel.activeGame.value?.let { game ->
-                                gameViewModel.proceedToNextPhaseManager(game.copy())
-                            } ?: Log.w(
-                                TAG,
-                                "GameScreenWithPager onEndPhase: Cannot proceed, active game is null."
-                            )
-                        },
-                        onResetPeriodTimer = { gameViewModel.resetTimer() },
-                        onConfirmEndMatch = {
-                            val gameToEnd = activeGame
-                            if (gameToEnd != null) {
-                                gameViewModel.finishAndSyncActiveGame(gameToEnd.id)
-                                navController.navigate(WearNavRoutes.GAME_LIST_SCREEN) {
-                                    popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = true }
-                                    launchSingleTop = true
-                                }
-                            } else {
-                                Log.w(
-                                    TAG,
-                                    "onConfirmEndMatch: Cannot finish game, activeGame is null."
-                                )
-                                navController.popBackStack(WearNavRoutes.GAME_LIST_SCREEN, false)
-                            }
-                        },
-                        onPenaltyAttemptRecorded = { scored ->
-                            gameViewModel.recordPenaltyAttempt(scored)
-                        }
+                        onKickOff = onKickOff,
+                        onResetGame = onResetGame,
+                        onSetToHaveExtraTime = onSetToHaveExtraTime,
+                        onSetToHavePenalties = onSetToHavePenalties,
+                        onToggleTimer = onToggleTimer,
+                        onAddGoal = onAddGoal,
+                        onNavigateToLogCard = onNavigateToLogCard,
+                        onNavigateToGameLog = onNavigateToGameLog,
+                        onNavigateToAnalytics = onNavigateToAnalytics,
+                        onEndPhase = onEndPhase,
+                        onResetPeriodTimer = onResetPeriodTimer,
+                        onConfirmEndMatch = onConfirmEndMatch,
+                        onPenaltyAttemptRecorded = onPenaltyAttemptRecorded
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

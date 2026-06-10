@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.ParagraphStyle
@@ -70,60 +71,70 @@ fun MainGameDisplayScreen(
     val extraTimerStyle = MaterialTheme.typography.bodyLarge.toSpanStyle().copy(
         color = ComposeColor.Red,
     )
-    val displayTimerText = buildAnnotatedString {
-        withStyle(parStyle) {
-            if (game.currentPhase.isPlayablePhase()) {
-                if (isPlayablePhaseAndInAddedTime) {
-                    withStyle(mainTimerStyle) {
-                        append(regulationDuration.formatTime())
+    val displayTimerText = remember(
+        game.currentPhase,
+        game.actualTimeElapsedInPeriodMillis,
+        game.inAddedTime
+    ) {
+        buildAnnotatedString {
+            withStyle(parStyle) {
+                if (game.currentPhase.isPlayablePhase()) {
+                    if (isPlayablePhaseAndInAddedTime) {
+                        withStyle(mainTimerStyle) {
+                            append(regulationDuration.formatTime())
+                        }
+                        append(" \n")
+                        withStyle(extraTimerStyle) {
+                            append("+ ${addedTime.formatTime()}")
+                        }
+                    } else {
+                        // In regulation
+                        val timeRemaining = regulationDuration - game.actualTimeElapsedInPeriodMillis
+                        withStyle(mainTimerStyle) {
+                            append(timeRemaining.formatTime())
+                        }
                     }
-                    append(" \n")
-                    withStyle(extraTimerStyle) {
-                        append("+ ${addedTime.formatTime()}")
+                } else if (game.currentPhase.isBreak()) {
+                    // For breaks, display time remaining in the break
+                    val breakDuration = game.regulationPeriodDurationMillis() // Use your VM function
+                    val timeRemainingInBreak = breakDuration - game.actualTimeElapsedInPeriodMillis
+                    if (timeRemainingInBreak > 0)
+                        withStyle(halfTimerStyle) {
+                            append(timeRemainingInBreak.formatTime())
+                        }
+                    else {
+                        withStyle(extraTimerStyle) {
+                            append(game.regulationPeriodDurationMillis().formatTime())
+                            append("\nis over")
+                        }
                     }
                 } else {
-                    // In regulation
-                    val timeRemaining = regulationDuration - game.actualTimeElapsedInPeriodMillis
-                    withStyle(mainTimerStyle) {
-                        append(timeRemaining.formatTime())
-                    }
+                    // Pre-game, ended, etc.
+                    append("") // Or "--:--"
                 }
-            } else if (game.currentPhase.isBreak()) {
-                // For breaks, display time remaining in the break
-                val breakDuration = game.regulationPeriodDurationMillis() // Use your VM function
-                val timeRemainingInBreak = breakDuration - game.actualTimeElapsedInPeriodMillis
-                if (timeRemainingInBreak > 0)
-                    withStyle(halfTimerStyle) {
-                        append(timeRemainingInBreak.formatTime())
-                    }
-                else {
-                    withStyle(extraTimerStyle) {
-                        append(game.regulationPeriodDurationMillis().formatTime())
-                        append("\nis over")
-                    }
-                }
-            } else {
-                // Pre-game, ended, etc.
-                append("") // Or "--:--"
             }
         }
     }
-    ScreenScaffold() {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+        val currentTime = remember(game.actualTimeElapsedInPeriodMillis / 1000) { // Update once per second
+            timeFormatter.format(java.util.Date())
+        }
+
         Column(
-            modifier = modifier // Use the passed modifier
+            modifier = Modifier
                 .fillMaxSize(),
-            // Add your own general horizontal padding for the content
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            Spacer(modifier = Modifier.height(1.dp))
-            // Time display if TimeText isn't sufficient or for specific styling
-            Text(
-                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(java.util.Date()),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-            )
+        Spacer(modifier = Modifier.height(1.dp))
+        // Time display if TimeText isn't sufficient or for specific styling
+        Text(
+            text = currentTime,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+        )
             // Score and Team Colors
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -169,13 +180,6 @@ fun MainGameDisplayScreen(
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                // --- DEBUG LOGGING ---
-                Log.d(tag, "KickOff Button Condition Check: " +
-                        "Phase: ${game.currentPhase}, " +
-                        "isPlayable: ${game.currentPhase.isPlayablePhase()}, " +
-                        "ElapsedMillis: ${game.actualTimeElapsedInPeriodMillis}, " +
-                        "isTimerRunning: ${game.isTimerRunning}")
-                // --- END DEBUG LOGGING ---
                 if (game.actualTimeElapsedInPeriodMillis == 0L && !game.isTimerRunning && game.currentPhase.isPlayablePhase()) {
                     Button(
                         onClick = onKickOff,

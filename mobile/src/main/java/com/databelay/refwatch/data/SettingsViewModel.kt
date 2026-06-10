@@ -14,7 +14,7 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _collectPositionInfo = MutableStateFlow(
-        prefs.getBoolean(PREF_COLLECT_POSITION_INFO, true)
+        prefs.getBoolean(PREF_COLLECT_POSITION_INFO, false)
     )
     val collectPositionInfo: StateFlow<Boolean> = _collectPositionInfo.asStateFlow()
 

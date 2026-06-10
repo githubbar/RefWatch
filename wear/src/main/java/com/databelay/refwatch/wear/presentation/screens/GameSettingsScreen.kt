@@ -44,20 +44,13 @@ fun GameSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberScalingLazyListState()
-    ScreenScaffold(
-        scrollIndicator = {
-            ScrollIndicator(
-                modifier = Modifier.align(Alignment.CenterStart),
-                state = listState
-            )
-        },
+    Box(
         modifier = modifier
             .fillMaxSize(),
-        contentPadding = PaddingValues(2.dp),
-    ) { contentPadding ->
+    ) {
         ScalingLazyColumn(
             state = listState,
-            modifier = modifier
+            modifier = Modifier
                 .padding(horizontal = 8.dp, vertical = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
@@ -187,6 +180,10 @@ fun GameSettingsScreen(
                 }
             }
         }
+        ScrollIndicator(
+            modifier = Modifier.align(Alignment.CenterStart),
+            state = listState
+        )
     }
 }
 
@@ -200,10 +197,8 @@ private fun PreviewableAlertDialog(
     onDismiss: () -> Unit
 ) {
     RefWatchWearTheme { // Ensure the dialog is themed
-        ConfirmationDialogInfo.FinishGame(
-            onConfirm = { },
-            onDialogClose = { }
-        )
+        // Note: ConfirmationDialogInfo is a sealed class, cannot be instantiated directly
+        // but it's used as a data holder. This preview is a bit broken in the original file too.
     }
 }
 

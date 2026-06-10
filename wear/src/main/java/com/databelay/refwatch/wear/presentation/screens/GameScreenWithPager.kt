@@ -174,18 +174,19 @@ fun GameScreenWithPager(
     val context = LocalContext.current
 
     var activeDialogInfo: ConfirmationDialogInfo? by remember { mutableStateOf(null) }
-    // transitions blink white borders after the confirmation dialog
-    //        animatescrolltopage flashing white borders (commented out for now)
-    val animateToMainPage: () -> Unit = {
-//        coroutineScope.launch { verticalPagerState.animateScrollToPage(0) }
-        coroutineScope.launch { verticalPagerState.scrollToPage(0) }
+
+    val animateToMainPage = remember(verticalPagerState, coroutineScope) {
+        {
+            coroutineScope.launch { verticalPagerState.scrollToPage(0) }
+        }
     }
 
-    // Common logic for closing any dialog and animating back to the main page (if applicable)
-    val createDialogCloseHandler: (Boolean) -> () -> Unit = { shouldAnimate ->
-        { 
-            activeDialogInfo = null 
-            if (shouldAnimate) animateToMainPage() 
+    val createDialogCloseHandler = remember(animateToMainPage) {
+        { shouldAnimate: Boolean ->
+            {
+                activeDialogInfo = null
+                if (shouldAnimate) animateToMainPage()
+            }
         }
     }
 
@@ -196,42 +197,23 @@ fun GameScreenWithPager(
         }
     }*/
 
-    val pageIndicatorState: PageIndicatorState = remember(
-        horizontalPagerState.currentPage,
-        horizontalPagerState.pageCount,
-        horizontalPagerState.currentPageOffsetFraction
-    ) {
-        object : PageIndicatorState {
-            override val pageOffset: Float
-                get() = horizontalPagerState.currentPageOffsetFraction
-            override val selectedPage: Int
-                get() = horizontalPagerState.currentPage
-            override val pageCount: Int
-                get() = horizontalPagerState.pageCount
-        }
-    }
-    ScreenScaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(2.dp)
-    ) { _ ->
-        VerticalPagerScaffold(
-            pagerState = verticalPagerState,
-            pageIndicator = { VerticalPageIndicator(pagerState = verticalPagerState) },
-        )
-        {
-            VerticalPager(
-                flingBehavior =
-                PagerScaffoldDefaults.snapWithSpringFlingBehavior(state = verticalPagerState),
-                state = verticalPagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
+    VerticalPagerScaffold(
+        pagerState = verticalPagerState,
+        pageIndicator = { VerticalPageIndicator(pagerState = verticalPagerState) },
+        modifier = modifier.fillMaxSize()
+    )
+    {
+        VerticalPager(
+            flingBehavior =
+            PagerScaffoldDefaults.snapWithSpringFlingBehavior(state = verticalPagerState),
+            state = verticalPagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
                 when (page) {
                     0 -> {
                         GamePagerContent(
                             game = game,
                             pagerState = horizontalPagerState,
-                            pageIndicatorState = pageIndicatorState,
                             onKickOff = onKickOff,
                             onAddGoal = onAddGoal,
                             onNavigateToLogCard = onNavigateToLogCard,
@@ -298,13 +280,12 @@ fun GameScreenWithPager(
                 }
             }
         }
-    }
 
-    // Unified Confirmation Dialog
-    activeDialogInfo?.let { dialogInfo ->
-        UnifiedConfirmationDialog(dialogInfo = dialogInfo)
+        // Unified Confirmation Dialog
+        activeDialogInfo?.let { dialogInfo ->
+            UnifiedConfirmationDialog(dialogInfo = dialogInfo)
+        }
     }
-}
 
 // -------------------------------- Previews -----------------------------------------------
 @PreviewTest
