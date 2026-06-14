@@ -55,7 +55,9 @@ sealed class ConfirmationDialogInfo(
     val confirmButtonText: String = "Confirm",
     val dismissButtonText: String = "Dismiss",
     val onConfirmAction: () -> Unit, // Action for confirm button
-    val onDismissDialogAction: () -> Unit // Action for dismiss button AND onDismissRequest
+    val onDismissDialogAction: () -> Unit, // Action for dismiss button AND onDismissRequest
+    val neutralButtonText: String? = null,
+    val onNeutralAction: (() -> Unit)? = null
 ) {
     class EndPhase(
         gamePhaseReadable: String,
@@ -114,14 +116,20 @@ sealed class ConfirmationDialogInfo(
 
     class EndOfMainTime(
         onSetExtraTimeAndPenalties: () -> Unit, // Specific action for confirm
+        onSetPenaltiesOnly: () -> Unit,        // Specific action for neutral
         onEndPhaseWithoutExtraTime: () -> Unit,   // Specific action for dismiss
         onDialogClose: () -> Unit // Common action for closing dialog
     ) : ConfirmationDialogInfo(
         title = "Extra Time?",
-        confirmButtonText = "Yes",
-        dismissButtonText = "No",
+        confirmButtonText = "Extra Time",
+        dismissButtonText = "Full Time",
+        neutralButtonText = "Penalties",
         onConfirmAction = {
             onSetExtraTimeAndPenalties()
+            onDialogClose()
+        },
+        onNeutralAction = {
+            onSetPenaltiesOnly()
             onDialogClose()
         },
         onDismissDialogAction = {
@@ -260,6 +268,10 @@ fun GameScreenWithPager(
                                             onSetToHaveExtraTime()
                                             onSetToHavePenalties()
                                             onEndPhase() 
+                                        },
+                                        onSetPenaltiesOnly = {
+                                            onSetToHavePenalties()
+                                            onEndPhase()
                                         },
                                         onEndPhaseWithoutExtraTime = {
                                             onEndPhase() 

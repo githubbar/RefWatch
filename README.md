@@ -157,6 +157,10 @@ Please make sure to update tests as appropriate.
 
 This project is licensed under the [Your Chosen License, e.g., MIT License or Apache 2.0] - see the [LICENSE.md](LICENSE.md) file for details.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a history of changes.
+
 ---
 
 **Fill in the Blanks:**

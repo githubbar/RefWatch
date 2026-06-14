@@ -50,9 +50,10 @@ fun TeamActionsPage(
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround
+            verticalArrangement = Arrangement.Center
         ) {
             // Text: Team Name
             Text(
@@ -61,6 +62,7 @@ fun TeamActionsPage(
                 color = if (teamColor.isDark()) Color.White else teamColor,
                 textAlign = TextAlign.Center,
             )
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Goal Button
             if (isPlayablePhase) {
@@ -79,10 +81,11 @@ fun TeamActionsPage(
             } else {
                 Spacer(modifier = Modifier.height(ButtonDefaults.LargeIconSize))
             }
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Card Buttons in a Row
             Row(
-                modifier = Modifier.fillMaxWidth(.5f),
+                modifier = Modifier.fillMaxWidth(.7f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -104,7 +107,6 @@ fun TeamActionsPage(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(1.dp))
         }
     }
 }

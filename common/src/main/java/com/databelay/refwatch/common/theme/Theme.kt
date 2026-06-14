@@ -138,7 +138,7 @@ fun RefWatchWearTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    MaterialTheme( // androidx.wear.compose.material.MaterialTheme
+    MaterialTheme( // androidx.wear.compose.material3.MaterialTheme
         colorScheme = WearAppDarkColorScheme,
 //            else -> {WearAppLightColorScheme}
 //        }, // Your WearAppColorPalette

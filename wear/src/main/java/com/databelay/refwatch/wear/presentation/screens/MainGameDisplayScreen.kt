@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -39,8 +43,6 @@ import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.wear.presentation.components.ColorIndicator
-import java.text.SimpleDateFormat
-import java.util.Locale
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 
@@ -58,9 +60,11 @@ fun MainGameDisplayScreen(
             regulationDuration > 0 // Ensure regulation duration is positive to avoid division by zero or weird states
 
     val addedTime = game.actualTimeElapsedInPeriodMillis - regulationDuration
+    // Use a relative line height (em) to ensure it scales gracefully with font size
+    // and avoids cutting off content at large scales while maintaining readability.
     val parStyle = ParagraphStyle(
         lineBreak = LineBreak.Simple,
-        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+        lineHeight = 1.1.em,
         textAlign = TextAlign.Center
     )
     val mainTimerStyle = MaterialTheme.typography.displayLarge.toSpanStyle().copy(
@@ -115,30 +119,24 @@ fun MainGameDisplayScreen(
             }
         }
     }
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-        val currentTime = remember(game.actualTimeElapsedInPeriodMillis / 1000) { // Update once per second
-            timeFormatter.format(java.util.Date())
-        }
-
+    val scrollState = rememberScrollState()
+    ScreenScaffold(
+        modifier = modifier.fillMaxSize(),
+        scrollState = scrollState
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(innerPadding)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround
+            verticalArrangement = Arrangement.Center
         ) {
-        Spacer(modifier = Modifier.height(1.dp))
-        // Time display if TimeText isn't sufficient or for specific styling
-        Text(
-            text = currentTime,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center,
-        )
             // Score and Team Colors
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 // ... content of score row (ColorIndicator, Score Text) ...
@@ -148,12 +146,14 @@ fun MainGameDisplayScreen(
                     color = game.homeTeamColor,
                     hasKickOffBorder = homeHasKickOff,
                 )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "${game.homeScore} - ${game.awayScore}",
-                    style = MaterialTheme.typography.displayLarge,
+                    style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(8.dp))
                 val awayHasKickOff =
                     game.kickOffTeam == Team.AWAY && game.currentPhase.isPlayablePhase()
                 ColorIndicator(
@@ -161,6 +161,7 @@ fun MainGameDisplayScreen(
                     hasKickOffBorder = awayHasKickOff
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp)) // Increased spacing for better visual separation
             // Current Phase
             Text(
                 game.currentPhase.readable(),
@@ -170,7 +171,7 @@ fun MainGameDisplayScreen(
                 modifier = Modifier
                     .fillMaxWidth()
             )
-            Spacer(modifier = Modifier.padding(1.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Conditionally show Timer or Kickoff Button
             // Using a Box to center its content if the content itself doesn't fill width
@@ -211,7 +212,6 @@ fun MainGameDisplayScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.padding(8.dp))
         }
     }
 }

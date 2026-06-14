@@ -627,7 +627,15 @@ class WearGameViewModel @Inject constructor(
             GamePhase.KICK_OFF_SELECTION_FIRST_HALF -> GamePhase.FIRST_HALF
             GamePhase.FIRST_HALF -> GamePhase.HALF_TIME
             GamePhase.HALF_TIME -> GamePhase.SECOND_HALF
-            GamePhase.SECOND_HALF -> if (gameAtPeriodEnd.hasExtraTime) GamePhase.KICK_OFF_SELECTION_EXTRA_TIME else GamePhase.GAME_ENDED
+            GamePhase.SECOND_HALF -> {
+                if (gameAtPeriodEnd.hasExtraTime) {
+                    GamePhase.KICK_OFF_SELECTION_EXTRA_TIME
+                } else if (gameAtPeriodEnd.hasPenalties && gameAtPeriodEnd.isTied) {
+                    GamePhase.KICK_OFF_SELECTION_PENALTIES
+                } else {
+                    GamePhase.GAME_ENDED
+                }
+            }
             GamePhase.KICK_OFF_SELECTION_EXTRA_TIME -> GamePhase.EXTRA_TIME_FIRST_HALF
             GamePhase.EXTRA_TIME_FIRST_HALF -> GamePhase.EXTRA_TIME_HALF_TIME
             GamePhase.EXTRA_TIME_HALF_TIME -> GamePhase.EXTRA_TIME_SECOND_HALF

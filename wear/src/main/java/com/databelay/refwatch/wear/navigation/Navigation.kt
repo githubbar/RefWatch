@@ -42,6 +42,7 @@ import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
@@ -197,7 +198,7 @@ fun NavigationRoutes() {
     }
 
     AppScaffold(
-        timeText = { },
+        timeText = { TimeText() },
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
     ) {
         SwipeDismissableNavHost(

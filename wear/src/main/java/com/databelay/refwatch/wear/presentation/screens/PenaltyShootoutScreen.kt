@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -30,9 +31,6 @@ import com.databelay.refwatch.common.isPlayablePhase
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.wear.presentation.components.ColorIndicator
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun PenaltyShootoutScreen(
@@ -40,30 +38,18 @@ fun PenaltyShootoutScreen(
     onPenaltyAttemptRecorded: (scored: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val currentTime = remember(game.actualTimeElapsedInPeriodMillis / 1000) {
-        timeFormatter.format(Date())
-    }
-
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceAround
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = currentTime,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-            )
-
             // Score and Team Colors
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val homeHasKickOff =
@@ -72,12 +58,14 @@ fun PenaltyShootoutScreen(
                     color = game.homeTeamColor,
                     hasKickOffBorder = homeHasKickOff,
                 )
+                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                 Text(
                     "${game.homeScore} - ${game.awayScore}",
-                    style = MaterialTheme.typography.displayLarge,
+                    style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                 val awayHasKickOff =
                     game.kickOffTeam == Team.AWAY && game.currentPhase.isPlayablePhase()
                 ColorIndicator(
@@ -85,6 +73,7 @@ fun PenaltyShootoutScreen(
                     hasKickOffBorder = awayHasKickOff
                 )
             }
+            Spacer(modifier = Modifier.height(4.dp))
             // Current Phase
             Text(
                 text = "${game.currentPhase.readable()}: ${game.penaltiesTakenHome} - ${game.penaltiesTakenAway}",
@@ -95,20 +84,18 @@ fun PenaltyShootoutScreen(
                     .fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.padding(1.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = { onPenaltyAttemptRecorded(true) },
                     modifier = Modifier
-                        .weight(1f)
-                        .height(ButtonDefaults.LargeIconSize),
-
+                        .size(ButtonDefaults.LargeIconSize),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -116,21 +103,19 @@ fun PenaltyShootoutScreen(
                     Text(
                         "Y",
                         style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                     )
                 }
                 Text(
                     text = "Scored?",
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Button(
                     onClick = { onPenaltyAttemptRecorded(false) },
                     modifier = Modifier
-                        .weight(1f)
-                        .height(ButtonDefaults.LargeIconSize),
+                        .size(ButtonDefaults.LargeIconSize),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -138,12 +123,11 @@ fun PenaltyShootoutScreen(
                     Text(
                         "N",
                         style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                     )
                 }
             }
-            Spacer(modifier = Modifier.padding(1.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             // Display current penalty count (taken by each team)
             Text(
                 text = "Taken: ${game.penaltiesTakenHome} | ${game.penaltiesTakenAway}",

@@ -10,7 +10,6 @@ import com.databelay.refwatch.common.theme.RefWatchWearTheme
 import com.databelay.refwatch.wear.navigation.NavigationRoutes
 import dagger.hilt.android.AndroidEntryPoint
 
-// FIXME: clock at the top asleep during kick off
 // TODO:  Make all work on watch without login
 @AndroidEntryPoint // This annotation enables Hilt injection for the Activity
 class MainActivity : ComponentActivity() {
