@@ -134,8 +134,15 @@ class MobileGameViewModel @Inject constructor(
 
     init {
         Log.d(TAG, "MobileGameViewModel initializing...")
-        dataClient.addListener(dataChangedListener)
-        Log.d("MobileVM", "DataChangedListener added for watch updates.")
+        try {
+            dataClient.addListener(dataChangedListener)
+            Log.d("MobileVM", "DataChangedListener added for watch updates.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to add DataClient listener. Wearable API might be unavailable.", e)
+            if (e is com.google.android.gms.common.api.ApiException && e.statusCode == 17) {
+                _watchConnectedState.value = false
+            }
+        }
 
         viewModelScope.launch {
             // Collect the injected userIdFlow to update the internal _currentUserId
@@ -270,14 +277,15 @@ class MobileGameViewModel @Inject constructor(
         // If userIdForSync is not null, send the games (even if empty for that user).
 
         viewModelScope.launch(Dispatchers.IO) {
-            // In phone's MobileGameViewModel, before sending
-            val nodes = Wearable.getNodeClient(getApplication<Application>()).connectedNodes.await()
-            if (nodes.isEmpty()) {
-                Log.e(TAG, "PHONE: No connected Wear OS nodes found. Data will be queued by DataClient but may not send immediately.")
-            } else {
-                Log.i(TAG, "PHONE: Connected nodes: ${nodes.joinToString { it.displayName }}")
-            }
             try {
+                // In phone's MobileGameViewModel, before sending
+                val nodes = Wearable.getNodeClient(getApplication<Application>()).connectedNodes.await()
+                if (nodes.isEmpty()) {
+                    Log.e(TAG, "PHONE: No connected Wear OS nodes found. Data will be queued by DataClient but may not send immediately.")
+                } else {
+                    Log.i(TAG, "PHONE: Connected nodes: ${nodes.joinToString { it.displayName }}")
+                }
+
                 val jsonString = AppJsonConfiguration.encodeToString(games)
                 Log.d(TAG, "syncGamesToWatch: Sending to watch. Path: ${WearSyncConstants.PATH_GAMES_LIST}, User: $userIdForSync, Games: ${games.size}")
                 // ... (rest of PutDataMapRequest logic) ...
@@ -292,6 +300,11 @@ class MobileGameViewModel @Inject constructor(
                 Log.i(TAG, "syncGamesToWatch: Games list for user $userIdForSync (${games.size}) sent successfully.")
             } catch (e: Exception) {
                 Log.e(TAG, "syncGamesToWatch: Failed for user $userIdForSync.", e)
+                // If Wearable API is not available on this device (ApiException 17), 
+                // mark watch as disconnected to prevent further attempts.
+                if (e is com.google.android.gms.common.api.ApiException && e.statusCode == 17) {
+                    _watchConnectedState.value = false
+                }
             }
         }
     }
@@ -377,87 +390,58 @@ class MobileGameViewModel @Inject constructor(
             )
             return
         }
-        dataClient.addListener { dataEvents ->
-            viewModelScope.launch(Dispatchers.IO) {
-                dataEvents.forEach { event ->
-                    if (event.type == DataEvent.TYPE_CHANGED) {
-                        val dataItem = event.dataItem
-                        val itemUri: Uri = dataItem.uri // dataItem.uri IS an android.net.Uri
-                        val path = itemUri.path // path is a String?
-                        if (path?.startsWith(WearSyncConstants.PATH_GAME_UPDATE) == true) {
-                            val gameId = itemUri.lastPathSegment
-                            if (gameId != null) {
-                                val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
-                                val gameUpdateJson =
-                                    dataMap.getString(WearSyncConstants.KEY_GAME_UPDATE)
-                                if (gameUpdateJson != null) {
-                                    try {
-                                        // Watch could send the full Game object or just GameEvents
-                                        // Option A: Watch sends the full updated Game object
-                                        val updatedGameFromWatch =
-                                            AppJsonConfiguration.decodeFromString<Game>(gameUpdateJson)
-                                        // val updatedGameFromWatch = gson.fromJson(gameUpdateJson, Game::class.java)
+        try {
+            dataClient.addListener { dataEvents ->
+                viewModelScope.launch(Dispatchers.IO) {
+                    dataEvents.forEach { event ->
+                        if (event.type == DataEvent.TYPE_CHANGED) {
+                            val dataItem = event.dataItem
+                            val itemUri: Uri = dataItem.uri // dataItem.uri IS an android.net.Uri
+                            val path = itemUri.path // path is a String?
+                            if (path?.startsWith(WearSyncConstants.PATH_GAME_UPDATE) == true) {
+                                val gameId = itemUri.lastPathSegment
+                                if (gameId != null) {
+                                    val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+                                    val gameUpdateJson =
+                                        dataMap.getString(WearSyncConstants.KEY_GAME_UPDATE)
+                                    if (gameUpdateJson != null) {
+                                        try {
+                                            // Watch could send the full Game object or just GameEvents
+                                            // Option A: Watch sends the full updated Game object
+                                            val updatedGameFromWatch =
+                                                AppJsonConfiguration.decodeFromString<Game>(gameUpdateJson)
+                                            // val updatedGameFromWatch = gson.fromJson(gameUpdateJson, Game::class.java)
 
-                                        Log.d(
-                                            TAG,
-                                            "Received full game update for $gameId from watch."
-                                        )
-                                        // Merge intelligently if needed, or overwrite if watch state is master for those fields
-                                        gameRepository.addOrUpdateGame(
-                                            userId,
-                                            updatedGameFromWatch.copy(lastUpdated = System.currentTimeMillis())
-                                        )
-                                            .onSuccess {
-                                                Log.i(
-                                                    TAG,
-                                                    "FS Updated game $gameId from watch."
-                                                )
-                                            }
-                                            .onFailure { e ->
-                                                Log.e(
-                                                    TAG,
-                                                    "FS FAILED update game $gameId from watch.",
-                                                    e
-                                                )
-                                            }
-
-                                        // Option B: Watch sends a new GameEventLog
-                                        /*
-                                        val newEventFromWatch = json.decodeFromString<GameEvent>(gameUpdateJson) // Assuming GameEvent is serializable
-                                        Log.d(TAG, "Received event for game $gameId from watch: ${newEventFromWatch.displayString}")
-                                        (authViewModel.authState.value as? AuthState.Authenticated)?.user?.uid?.let { userId ->
-                                            val currentGame = gameRepository.getGameById(userId, gameId) // Fetch current game
-                                            if (currentGame != null) {
-                                                val updatedEvents = currentGame.events.toMutableList().apply { add(newEventFromWatch) }
-                                                // Update score based on event if it's a goal
-                                                var updatedHomeScore = currentGame.homeScore
-                                                var updatedAwayScore = currentGame.awayScore
-                                                if (newEventFromWatch is GameEvent.GoalScoredEvent) {
-                                                    updatedHomeScore = newEventFromWatch.homeScoreAtTime
-                                                    updatedAwayScore = newEventFromWatch.awayScoreAtTime
+                                            Log.d(
+                                                TAG,
+                                                "Received full game update for $gameId from watch."
+                                            )
+                                            // Merge intelligently if needed, or overwrite if watch state is master for those fields
+                                            gameRepository.addOrUpdateGame(
+                                                userId,
+                                                updatedGameFromWatch.copy(lastUpdated = System.currentTimeMillis())
+                                            )
+                                                .onSuccess {
+                                                    Log.i(
+                                                        TAG,
+                                                        "FS Updated game $gameId from watch."
+                                                    )
                                                 }
-                                                val gameToSave = currentGame.copy(
-                                                    events = updatedEvents,
-                                                    homeScore = updatedHomeScore,
-                                                    awayScore = updatedAwayScore,
-                                                    lastUpdated = System.currentTimeMillis()
-                                                    // Potentially update currentPhase, displayedTimeMillis, etc. from the event or a richer payload
-                                                )
-                                                gameRepository.addOrUpdateGame(userId, gameToSave)
-                                                    .onSuccess { Log.i(TAG, "FS Added event to game $gameId from watch.") }
-                                                    .onFailure { e -> Log.e(TAG, "FS FAILED to add event to game $gameId from watch.", e) }
-                                            } else {
-                                                Log.w(TAG, "Game $gameId not found in Firestore to add event from watch.")
-                                            }
-                                        }
-                                        */
+                                                .onFailure { e ->
+                                                    Log.e(
+                                                        TAG,
+                                                        "FS FAILED update game $gameId from watch.",
+                                                        e
+                                                    )
+                                                }
 
-                                    } catch (e: Exception) {
-                                        Log.e(
-                                            TAG,
-                                            "Error deserializing game update from watch for game $gameId",
-                                            e
-                                        )
+                                        } catch (e: Exception) {
+                                            Log.e(
+                                                TAG,
+                                                "Error deserializing game update from watch for game $gameId",
+                                                e
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -465,8 +449,10 @@ class MobileGameViewModel @Inject constructor(
                     }
                 }
             }
+            Log.d(TAG, "Registered DataClient listener for updates from watch.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register DataClient listener in listenForUpdatesFromWatch.", e)
         }
-        Log.d(TAG, "Registered DataClient listener for updates from watch.")
     }
 
     // Add this convenience function
@@ -518,8 +504,12 @@ class MobileGameViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        dataClient.removeListener(dataChangedListener)
-        Log.d("MobileVM", "DataChangedListener removed.")
+        try {
+            dataClient.removeListener(dataChangedListener)
+            Log.d("MobileVM", "DataChangedListener removed.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to remove DataClient listener.", e)
+        }
     }
 
 }

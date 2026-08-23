@@ -204,7 +204,7 @@ fun NavigationRoutes() {
         SwipeDismissableNavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(WearNavRoutes.GAME_LIST_SCREEN) {
                 GameListScreen(

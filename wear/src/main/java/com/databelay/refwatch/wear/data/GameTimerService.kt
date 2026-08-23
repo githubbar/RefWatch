@@ -45,7 +45,9 @@ import com.databelay.refwatch.wear.MainActivity
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,6 +91,7 @@ class GameTimerService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     private var gameCountDownTimer: CountDownTimer? = null
+    private var timerStartJob: Job? = null
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob) // Use Dispatchers.Main for CountDownTimer
 
@@ -149,7 +152,7 @@ class GameTimerService : Service() {
 
                 var stepsDeltaToRecord: Int? = null
 
-                // Only use Health Services steps if direct SensorManager is not available
+                // Step detection logic - prioritizing physical sensor
                 if (stepSensor == null) {
                     // 1. Try cumulative steps (STEPS_TOTAL) - Often more reliable on Wear OS
                     val totalStepsPoint = update.latestMetrics.getData(DataType.STEPS_TOTAL)
@@ -168,43 +171,43 @@ class GameTimerService : Service() {
                             stepsDeltaToRecord = stepsDeltaList.sumOf { it.value.toInt() }
                         }
                     }
-                }
 
-                // 3. Fallback to distance estimation (DISTANCE_TOTAL or DISTANCE)
-                if (stepsDeltaToRecord == null || stepsDeltaToRecord == 0) {
-                    val totalDistancePoint = update.latestMetrics.getData(DataType.DISTANCE_TOTAL)
-                    if (totalDistancePoint != null) {
-                        val currentDistTotal = totalDistancePoint.total
-                        if (lastCumulativeDistance != -1.0 && currentDistTotal > lastCumulativeDistance) {
-                            val distDelta = currentDistTotal - lastCumulativeDistance
-                            stepsDeltaToRecord = (distDelta * 1.31).toInt()
-                        }
-                        lastCumulativeDistance = currentDistTotal
-                    } else {
-                        val distanceList = update.latestMetrics.getData(DataType.DISTANCE)
-                        if (distanceList.isNotEmpty()) {
-                            val distanceDelta = distanceList.sumOf { it.value }
-                            if (distanceDelta > 0.1) {
-                                stepsDeltaToRecord = (distanceDelta * 1.31).toInt()
+                    // 3. Fallback to distance estimation (DISTANCE_TOTAL or DISTANCE)
+                    if (stepsDeltaToRecord == null || stepsDeltaToRecord == 0) {
+                        val totalDistancePoint = update.latestMetrics.getData(DataType.DISTANCE_TOTAL)
+                        if (totalDistancePoint != null) {
+                            val currentDistTotal = totalDistancePoint.total
+                            if (lastCumulativeDistance != -1.0 && currentDistTotal > lastCumulativeDistance) {
+                                val distDelta = currentDistTotal - lastCumulativeDistance
+                                stepsDeltaToRecord = (distDelta * 1.31).toInt()
+                            }
+                            lastCumulativeDistance = currentDistTotal
+                        } else {
+                            val distanceList = update.latestMetrics.getData(DataType.DISTANCE)
+                            if (distanceList.isNotEmpty()) {
+                                val distanceDelta = distanceList.sumOf { it.value }
+                                if (distanceDelta > 0.1) {
+                                    stepsDeltaToRecord = (distanceDelta * 1.31).toInt()
+                                }
                             }
                         }
                     }
-                }
 
-                // 4. Fallback to GPS distance estimation (if LOCATION is present but DISTANCE is not)
-                if ((stepsDeltaToRecord == null || stepsDeltaToRecord == 0) && location != null) {
-                    val currentLoc = android.location.Location("fused").apply {
-                        latitude = location.value.latitude
-                        longitude = location.value.longitude
-                    }
-                    lastLocationForStepEstimation?.let { last ->
-                        val distanceDelta = last.distanceTo(currentLoc).toDouble()
-                        if (distanceDelta > 1.0) { // Only count if moved more than 1 meter
-                             stepsDeltaToRecord = (distanceDelta * 1.31).toInt()
-                             Log.d(TAG, "Steps estimated from GPS delta: $stepsDeltaToRecord (dist: $distanceDelta)")
+                    // 4. Fallback to GPS distance estimation (if LOCATION is present but DISTANCE is not)
+                    if ((stepsDeltaToRecord == null || stepsDeltaToRecord == 0) && location != null) {
+                        val currentLoc = android.location.Location("fused").apply {
+                            latitude = location.value.latitude
+                            longitude = location.value.longitude
                         }
+                        lastLocationForStepEstimation?.let { last ->
+                            val distanceDelta = last.distanceTo(currentLoc).toDouble()
+                            if (distanceDelta > 1.0) { // Only count if moved more than 1 meter
+                                 stepsDeltaToRecord = (distanceDelta * 1.31).toInt()
+                                 Log.d(TAG, "Steps estimated from GPS delta: $stepsDeltaToRecord (dist: $distanceDelta)")
+                            }
+                        }
+                        lastLocationForStepEstimation = currentLoc
                     }
-                    lastLocationForStepEstimation = currentLoc
                 }
 
                 _timerStateFlow.update { state ->
@@ -322,6 +325,9 @@ class GameTimerService : Service() {
     fun startGameTimer(game: Game, elapsedMillisAtActivation: Long, isInAddedTimeInitially: Boolean) {
         Log.d(TAG, "startGameTimer called. Phase: ${game.currentPhase}, ElapsedAtActivation: $elapsedMillisAtActivation, IsInAddedTime: $isInAddedTimeInitially")
         
+        timerStartJob?.cancel()
+        timerStartJob = null
+
         if (gameCountDownTimer != null) {
             Log.w(TAG, "Timer already running, stopping existing timer before starting new one.")
             gameCountDownTimer?.cancel()
@@ -341,13 +347,13 @@ class GameTimerService : Service() {
         // Register step sensor listener
         sensorManager.unregisterListener(stepSensorListener)
         stepSensor?.let {
-            sensorManager.registerListener(stepSensorListener, it, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(stepSensorListener, it, SensorManager.SENSOR_DELAY_NORMAL)
             Log.d(TAG, "Step sensor listener registered.")
         }
 
         acquireWakeLock()
         
-        serviceScope.launch {
+        timerStartJob = serviceScope.launch {
             initialMillisForCurrentTicker = if (isInAddedTimeInitially) {
                 MAX_ADDED_TIME_COUNTUP_DURATION // In added time, ticker just runs a long time
             } else {
@@ -371,6 +377,8 @@ class GameTimerService : Service() {
             }
 
             healthServicesManager.startExercise(game.isAssistantReferee) // Start HS tracking
+
+            if (!isActive) return@launch
 
             Log.d(TAG, "Starting CountdownTimer. For Phase: ${game.currentPhase}, Initial Ticker ms: $initialMillisForCurrentTicker, ElapsedAtActivation: $elapsedMillisAtActivation, IsInAddedTime: $isInAddedTimeInitially, RegDuration: $currentRegulationDuration")
 
@@ -442,6 +450,8 @@ class GameTimerService : Service() {
 
     private fun pauseGameTimerInternally(reason: String) {
         Log.d(TAG, "pauseGameTimerInternally: $reason")
+        timerStartJob?.cancel()
+        timerStartJob = null
         gameCountDownTimer?.cancel()
         gameCountDownTimer = null
         _timerStateFlow.update { it.copy(isTimerRunning = false) }
@@ -451,6 +461,8 @@ class GameTimerService : Service() {
 
     fun pauseGameTimer(reason: String? = null) {
         Log.d(TAG, "pauseGameTimer called. Reason: $reason")
+        timerStartJob?.cancel()
+        timerStartJob = null
         gameCountDownTimer?.cancel()
         gameCountDownTimer = null
         sensorManager.unregisterListener(stepSensorListener)
@@ -489,6 +501,8 @@ class GameTimerService : Service() {
 
     fun commandStopGameSessionAndCleanup(onComplete: () -> Unit) {
         Log.d(TAG, "commandStopGameSessionAndCleanup called")
+        timerStartJob?.cancel()
+        timerStartJob = null
         gameCountDownTimer?.cancel()
         gameCountDownTimer = null
         sensorManager.unregisterListener(stepSensorListener)
@@ -640,6 +654,7 @@ class GameTimerService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "Service Destroyed.")
+        timerStartJob?.cancel()
         gameCountDownTimer?.cancel()
         sensorManager.unregisterListener(stepSensorListener)
         serviceJob.cancel()

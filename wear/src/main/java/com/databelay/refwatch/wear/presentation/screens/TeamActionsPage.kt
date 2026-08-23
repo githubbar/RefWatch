@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,11 +49,17 @@ fun TeamActionsPage(
     onNavigateToLogCard: (team: Team, cardType: CardType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val scrollState = rememberScrollState()
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -62,7 +70,7 @@ fun TeamActionsPage(
                 color = if (teamColor.isDark()) Color.White else teamColor,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Goal Button
             if (isPlayablePhase) {
@@ -81,7 +89,7 @@ fun TeamActionsPage(
             } else {
                 Spacer(modifier = Modifier.height(ButtonDefaults.LargeIconSize))
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Card Buttons in a Row
             Row(
@@ -127,7 +135,7 @@ fun CardShapedButton(
             contentColor = contentColor
         ),
         modifier = modifier
-            .aspectRatio(.90f)
+            .aspectRatio(1.4f)
             .border(
                 1.dp,
                 contentColor.copy(alpha = 0.5f),
@@ -137,7 +145,8 @@ fun CardShapedButton(
         Text(
             text,
             style = MaterialTheme.typography.bodyExtraSmall,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

@@ -23,13 +23,19 @@ android {
         buildConfig = true
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     defaultConfig {
         applicationId = "com.databelay.refwatch"
         minSdk = 34
         targetSdk = 36
 //        Version code scheme explained here:  https://developer.android.com/training/wearables/packaging
-        versionCode = 361100001
-        versionName = "1.1.0"
+        versionCode = 361150001
+        versionName = "1.1.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         buildConfigField(
@@ -49,11 +55,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
     }
     useLibrary("wear-sdk")
 }
@@ -69,8 +75,6 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(libs.androidx.wear.compose.navigation) // If you're using Wear Navigation
     implementation(libs.androidx.navigation.runtime.android)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.json)
 
@@ -86,49 +90,35 @@ dependencies {
     implementation(libs.hilt.android) // Use the same version as the plugin
     implementation(libs.androidx.hilt.navigation.compose)
 
-    implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModels
-    implementation(libs.play.services.wearable)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.play.services.wearable) // Crucial
-    implementation(libs.androidx.lifecycle.runtime.ktx) // For coroutines
-
     implementation(libs.gson)
-    implementation(libs.androidx.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.horologist.compose.layout)
     implementation(libs.horologist.compose.material)
-    implementation(libs.wear.tooling.preview)
     implementation(libs.androidx.wear.ongoing)
     implementation(libs.androidx.wear.compose.material3)
     implementation(libs.androidx.health.services)
-    implementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.material3)
     
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.foundation)
-    implementation(libs.screenshot.validation.api)
-    implementation(libs.androidx.core.ktx)
-
-
 
     screenshotTestImplementation(libs.kotlinx.coroutines.android)
     screenshotTestImplementation(libs.kotlinx.coroutines.core)
     screenshotTestImplementation(libs.screenshot.validation.api)
-    screenshotTestImplementation(libs.wear.tooling.preview)
-    screenshotTestImplementation(libs.androidx.ui.tooling)
 
     ksp(libs.hilt.compiler)
-    debugImplementation(libs.androidx.ui.tooling) // Or latest version
-    debugImplementation(libs.ui.test.manifest)
+    implementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.wear.tooling.preview)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }
 

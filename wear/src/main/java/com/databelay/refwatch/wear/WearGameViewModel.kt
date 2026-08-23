@@ -255,13 +255,31 @@ class WearGameViewModel @Inject constructor(
             }.launchIn(viewModelScope)
 
         _activeGame.filterNotNull()
-            .debounce(750L) 
+            .distinctUntilChanged { old, new ->
+                old.currentPhase == new.currentPhase &&
+                old.homeScore == new.homeScore &&
+                old.awayScore == new.awayScore &&
+                old.events.size == new.events.size &&
+                old.status == new.status &&
+                old.kickOffTeam == new.kickOffTeam &&
+                old.inAddedTime == new.inAddedTime
+            }
+            .debounce(500L)
             .onEach { latestGameToSave ->
-                // Move heavy snapshot and saving logic to Dispatchers.Default
                 viewModelScope.launch(Dispatchers.Default) {
-                    val snapshot = latestGameToSave.toSnapshotForStorage()
                     if (latestGameToSave.status != GameStatus.COMPLETED) {
-                        Log.i(tag, "Significant change for game ${snapshot.id}. Persisting to gameStorage.")
+                        Log.i(tag, "Significant change for game ${latestGameToSave.id}. Persisting.")
+                        gameStorage.addOrUpdateGame(latestGameToSave)
+                    }
+                }
+            }.launchIn(viewModelScope)
+
+        _activeGame.filterNotNull()
+            .debounce(30000L)
+            .onEach { latestGameToSave ->
+                viewModelScope.launch(Dispatchers.Default) {
+                    if (latestGameToSave.status != GameStatus.COMPLETED) {
+                        Log.i(tag, "Incidental data sampling for game ${latestGameToSave.id}. Persisting.")
                         gameStorage.addOrUpdateGame(latestGameToSave)
                     }
                 }
@@ -561,16 +579,6 @@ class WearGameViewModel @Inject constructor(
             return
         }
 
-        if (currentGame.status == GameStatus.IN_PROGRESS && !currentGame.isTimerRunning && !isCurrentGameSessionActive) {
-            Log.i(
-                tag,
-                "toggleTimer: Starting NEW GAME SESSION for phase ${currentPhase.readable()}."
-            )
-            startForegroundService()
-            gameTimerService?.commandStartGameSessionAndTimer(currentGame, currentGame.actualTimeElapsedInPeriodMillis)
-            isCurrentGameSessionActive = true
-        }
-
         if (currentGame.isTimerRunning) {
             gameTimerService?.pauseGameTimer(reason = "Paused: ${currentPhase.readable()}")
             Log.d(tag, "Timer PAUSED for ${currentPhase.readable()}.")
@@ -582,15 +590,19 @@ class WearGameViewModel @Inject constructor(
                 )
                 return
             }
-            Log.d(tag, "ViewModel about to call service.resumeGameTimer. Game details: ID=${currentGame.id}, Phase=${currentGame.currentPhase}, Elapsed=${currentGame.actualTimeElapsedInPeriodMillis}, IsTimerRunning=${currentGame.isTimerRunning}, InAddedTime=${currentGame.inAddedTime}")
             startForegroundService()
-            gameTimerService?.resumeGameTimer(currentGame)
-            Log.d(tag, "Timer RESUMED for ${currentPhase.readable()}.")
-            if (!isCurrentGameSessionActive) { 
-                startForegroundService()
+            if (!isCurrentGameSessionActive) {
+                Log.i(
+                    tag,
+                    "toggleTimer: Starting NEW GAME SESSION for phase ${currentPhase.readable()}."
+                )
                 gameTimerService?.commandStartGameSessionAndTimer(currentGame, currentGame.actualTimeElapsedInPeriodMillis)
                 isCurrentGameSessionActive = true
+            } else {
+                Log.d(tag, "toggleTimer: Resuming timer for phase ${currentPhase.readable()}.")
+                gameTimerService?.resumeGameTimer(currentGame)
             }
+            Log.d(tag, "Timer STARTED/RESUMED for ${currentPhase.readable()}.")
         }
     }
 

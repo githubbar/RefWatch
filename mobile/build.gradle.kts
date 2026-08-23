@@ -9,7 +9,7 @@ plugins {
     kotlin("plugin.serialization") version "2.1.21"
     id("com.google.gms.google-services") // If your mobile app uses Firebase directly
     id("com.google.devtools.ksp")        // Apply KSP if you use it for Room, etc.
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.hilt.android)
     alias(libs.plugins.secrets)
 }
 
@@ -30,14 +30,20 @@ android {
 //        Reserve the last two digits for a multi-APK variant, such as 00.
 //
 //        For example, the sample values here—28, 152, 01, and 00—result in a version code of 281520100.
-        versionCode = 361100000
-        versionName = "1.1.0"
+        versionCode = 361150000
+        versionName = "1.1.5"
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"") // BUILD_TIME becomes accessible in code
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures {
         buildConfig = true
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     buildTypes {
@@ -50,11 +56,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
     }
 }
 
@@ -69,9 +75,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.compose.material3)
-
-    implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.foundation)
 
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
@@ -81,7 +85,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.ui.tooling)
 
-    implementation(libs.androidx.compose.material) // Replace with latest version
     implementation(libs.kotlinx.coroutines.android) // You likely have this or core
     implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(platform(libs.firebase.bom))
@@ -104,6 +107,5 @@ dependencies {
     // For Android Instrumented tests (like yours in androidTest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.google.truth) // Or
     ksp(libs.hilt.compiler) // Or kapt
 }

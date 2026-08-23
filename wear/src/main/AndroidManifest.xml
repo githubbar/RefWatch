@@ -40,10 +40,9 @@
         <service
             android:name=".wear.data.GameTimerService"
             android:foregroundServiceType="specialUse|location|health">
-                <property
+            <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Referee timer that needs to be always in foreground to be available at a glance."
-                />
+                android:value="Sports referee match management. The timer is a mission-critical feature that must remain active and visible to the referee throughout the match to ensure accurate timing of periods and stoppages. It uses an ongoing activity to provide real-time updates and quick access during the game." />
         </service>
 <!--       !!!!!! WearDataListenerService: Although data is obtained directly from firestore
                     we still need to keep this service to get auth token from phone

@@ -34,7 +34,6 @@ import androidx.wear.compose.material3.VerticalPageIndicator
 import androidx.wear.compose.material3.VerticalPagerScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
-import com.android.tools.screenshot.PreviewTest
 import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
@@ -300,7 +299,6 @@ fun GameScreenWithPager(
     }
 
 // -------------------------------- Previews -----------------------------------------------
-@PreviewTest
 @OptIn(ExperimentalFoundationApi::class)
 @Preview(device = "id:wearos_large_round", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true)
 @Composable

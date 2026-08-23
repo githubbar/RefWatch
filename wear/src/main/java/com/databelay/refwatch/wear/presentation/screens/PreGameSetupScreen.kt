@@ -57,6 +57,7 @@ import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.theme.PredefinedJerseyColors
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
 
 @Composable
@@ -80,20 +81,27 @@ fun PreGameSetupScreen(
     val halftimeDurationMinutes = game?.halftimeDurationMinutes ?: 10
 
     ScreenScaffold(
+        scrollState = listState,
         scrollIndicator = {
-            ScrollIndicator(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                state = listState
-            )
+            ScrollIndicator(state = listState)
+        },
+        edgeButton = {
+            EdgeButton(
+                onClick = onCreateMatchClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Icon(Icons.Filled.Check, contentDescription = "Create Match")
+            }
         },
         modifier = modifier,
         contentPadding = PaddingValues(vertical = 0.dp, horizontal = 2.dp),
-
-        ) { contentPadding ->
+    ) { contentPadding ->
         ScalingLazyColumn(
-            state = listState, contentPadding = contentPadding,
-
-            ) {
+            state = listState,
+            contentPadding = contentPadding,
+        ) {
             item {
                 ListHeader(
                     modifier = Modifier.fillMaxWidth(),
@@ -196,19 +204,6 @@ fun PreGameSetupScreen(
                     valueRange = 5..30
                 )
             }
-
-
-            // Create Match Button
-            item {
-                EdgeButton(
-                    onClick = onCreateMatchClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-                ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Create Match")
-                }
-            }
         }
     }
 }
@@ -225,52 +220,59 @@ fun TeamNameEditDialogContent(
 
     val columnState = rememberScalingLazyListState()
 
-    ScalingLazyColumn(
-        state = columnState,
-        contentPadding = PaddingValues(vertical = 8.dp, horizontal = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        item {
-            ListHeader(
-                modifier = Modifier
-                    .fillMaxWidth(),
-            ) {
-                Text(
-                    "Edit Team Name",
-                    style = MaterialTheme.typography.titleSmall,
-                    textAlign = TextAlign.Center
+    ScreenScaffold(
+        scrollState = columnState,
+        scrollIndicator = { ScrollIndicator(state = columnState) }
+    ) { contentPadding ->
+        ScalingLazyColumn(
+            state = columnState,
+            contentPadding = contentPadding,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            item {
+                ListHeader(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                ) {
+                    Text(
+                        "Edit Team Name",
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+            item {
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+//                label = { Text("Team Name") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (text.isNotBlank()) {
+                                onSave(text)
+                            }
+                        }
+                    ),
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
-        }
-        item {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-//                label = { Text("Team Name") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (text.isNotBlank()) {
-                            onSave(text)
-                        }
-                    }
-                )
-            )
-        }
-        item {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(
-                    8.dp,
-                    Alignment.CenterHorizontally
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                AlertDialogDefaults.DismissButton(onClick = onDismiss)
-                AlertDialogDefaults.ConfirmButton(onClick = { onSave(text) })
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(
+                        8.dp,
+                        Alignment.CenterHorizontally
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AlertDialogDefaults.DismissButton(onClick = onDismiss)
+                    AlertDialogDefaults.ConfirmButton(onClick = { onSave(text) })
+                }
             }
         }
     }
@@ -327,6 +329,71 @@ fun ColorPickerButton(label: String, currentColor: Color, onClick: () -> Unit) {
  * This remains available for the parent composable to use.
  */
 @Composable
+fun SimpleColorPickerDialogContent(
+    title: String,
+    availableColors: List<Color>,
+    onColorSelected: (Color) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val listState = rememberScalingLazyListState()
+    ScreenScaffold(
+        scrollState = listState,
+        scrollIndicator = { ScrollIndicator(state = listState) }
+    ) { contentPadding ->
+        ScalingLazyColumn(
+            state = listState,
+            contentPadding = contentPadding,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            item {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+            items(availableColors.chunked(3)) { rowColors ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    rowColors.forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .padding(4.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    CircleShape
+                                )
+                                .clickable { onColorSelected(color) }
+                        )
+                    }
+                }
+            }
+            item {
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A dialog Composable for picking a color.
+ * This remains available for the parent composable to use.
+ */
+@Composable
 fun SimpleColorPickerDialog(
     title: String,
     availableColors: List<Color>,
@@ -334,61 +401,15 @@ fun SimpleColorPickerDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(
-        true,
+        visible = true,
         onDismissRequest = onDismiss,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(12.dp))
-            val listState = rememberScalingLazyListState()
-            ScalingLazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(vertical = 8.dp, horizontal = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(availableColors.chunked(3)) { rowColors ->
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        rowColors.forEach { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .padding(4.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                        CircleShape
-                                    )
-                                    .clickable { onColorSelected(color) }
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(0.7f)) {
-                Text("Cancel")
-            }
-        }
+        SimpleColorPickerDialogContent(
+            title = title,
+            availableColors = availableColors,
+            onColorSelected = onColorSelected,
+            onDismiss = onDismiss
+        )
     }
 }
 
@@ -470,16 +491,14 @@ fun PreviewPreGameSetupScreen() {
         )
     }
 }
-/*
-
-@Preview(device = "id:wearos_small_round",showBackground = true)
+@Preview(device = "id:wearos_small_round", showBackground = true)
 @Preview(device = "id:wearos_square", showBackground = true)
-@Preview(device = "id:wearos_large_round",showBackground = true)
+@Preview(device = "id:wearos_large_round", showBackground = true)
 @WearPreviewFontScales
 @Composable
 fun PreviewTeamNameEditDialog_Home() {
     RefWatchWearTheme {
-        AppScaffold() {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             TeamNameEditDialogContent(
                 teamLabel = "Home",
                 initialValue = "Warriors",
@@ -488,4 +507,20 @@ fun PreviewTeamNameEditDialog_Home() {
             )
         }
     }
-}*/
+}
+
+@Preview(device = "id:wearos_small_round", showBackground = true)
+@Preview(device = "id:wearos_square", showBackground = true)
+@Preview(device = "id:wearos_large_round", showBackground = true)
+@WearPreviewFontScales
+@Composable
+fun PreviewSimpleColorPickerDialog() {
+    RefWatchWearTheme {
+        SimpleColorPickerDialogContent(
+            title = "Home Color",
+            availableColors = PredefinedJerseyColors,
+            onColorSelected = {},
+            onDismiss = {}
+        )
+    }
+}

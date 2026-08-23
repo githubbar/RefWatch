@@ -1,6 +1,7 @@
 package com.databelay.refwatch.wear.presentation.screens
 
 import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +33,9 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
+import com.databelay.refwatch.common.CardType
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.Team
@@ -256,9 +259,9 @@ private fun createPreviewGame(
     return baseGame.copy(isTimerRunning = finalIsTimerRunning)
 }
 
-@Preview(device = "id:wearos_small_round",name = "AddedTime SmRnd",showBackground = true)
-@Preview(device = "id:wearos_large_round",name = "AddedTime LrgRnd",showBackground = true)
-@Preview(device = "id:wearos_square",name = "AddedTime Sqr",showBackground = true)
+//@Preview(device = "id:wearos_small_round",name = "AddedTime SmRnd",showBackground = true)
+//@Preview(device = "id:wearos_large_round",name = "AddedTime LrgRnd",showBackground = true)
+@Preview(device = "id:wearos_square",name = "RegulationTime Sqr",showBackground = true)
 @WearPreviewFontScales
 @Composable
 fun Preview_MainGameDisplay_RegulationTime() {
@@ -335,3 +338,60 @@ fun Preview_MainGameDisplay_Kickoff() {
         )
     }
 }
+
+@OptIn(ExperimentalFoundationApi::class)
+@Preview(device = "id:wearos_small_round", name = "Pager - Home Actions", showBackground = true)
+@Preview(device = "id:wearos_large_round", name = "Pager - Home Actions", showBackground = true)
+@WearPreviewFontScales
+@Composable
+fun Preview_GamePager_HomeActions() {
+    val sampleGame = createPreviewGame(
+        currentPhase = GamePhase.FIRST_HALF,
+        actualTimeElapsedInPeriodMillis = 10 * 60000L,
+        homeScore = 1,
+        awayScore = 0
+    )
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
+    RefWatchWearTheme {
+        GamePagerContent(
+            game = sampleGame,
+            pagerState = pagerState,
+            onKickOff = {},
+            onAddGoal = {},
+            onNavigateToLogCard = { _, _ -> },
+            onPenaltyAttemptRecorded = {}
+        )
+    }
+}
+
+@Preview(device = "id:wearos_small_round", name = "Log Card Yellow", showBackground = true)
+@WearPreviewFontScales
+@Composable
+fun Preview_LogCard_Yellow() {
+    RefWatchWearTheme {
+        LogCardScreen(
+            preselectedTeam = Team.HOME,
+            cardType = CardType.YELLOW,
+            onLogCard = { _, _, _ -> },
+            onCancel = {}
+        )
+    }
+}
+
+@Preview(device = "id:wearos_small_round", name = "Edit Team Name", showBackground = true)
+@Preview(device = "id:wearos_large_round", name = "Edit Team Name", showBackground = true)
+@WearPreviewFontScales
+@Composable
+fun Preview_EditTeamName() {
+    RefWatchWearTheme {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            TeamNameEditDialogContent(
+                teamLabel = "Home",
+                initialValue = "Warriors",
+                onSave = { },
+                onDismiss = { }
+            )
+        }
+    }
+}
+

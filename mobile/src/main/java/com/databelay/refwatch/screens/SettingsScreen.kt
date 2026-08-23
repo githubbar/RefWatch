@@ -198,8 +198,8 @@ fun SettingsScreen(
             // --- ADD BUILD INFO TEXT HERE ---
             Text(
                 text = "Version: $appVersionName $buildDateString", // Display version name
-                color = androidx.wear.compose.material.MaterialTheme.colors.primary,
-                style = androidx.wear.compose.material.MaterialTheme.typography.caption1.copy(fontSize = 14.sp),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
