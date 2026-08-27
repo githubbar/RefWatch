@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.1"
+agp = "9.3.2"
 composeWearNavigationVersion = "1.5.3"
 composeNavigationVersion = "2.9.5"
 espressoCore = "3.6.1"
@@ -54,7 +54,7 @@ media3CommonKtx = "1.8.0"
 foundationLayout = "1.9.0"
 screenshotVersion = "0.0.1-alpha14"
 foundation = "1.9.2"
-composeUiTooling = "1.5.2"
+composeUiTooling = "1.6.2"
 
 [libraries]
 androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -105,8 +106,7 @@ fun PenaltyShootoutScreen(
             ) {
                 Button(
                     onClick = { onPenaltyAttemptRecorded(true) },
-                    modifier = Modifier
-                        .size(ButtonDefaults.LargeIconSize),
+                    modifier = Modifier.defaultMinSize(minWidth = ButtonDefaults.LargeIconSize, minHeight = ButtonDefaults.LargeIconSize),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -125,8 +125,7 @@ fun PenaltyShootoutScreen(
                 )
                 Button(
                     onClick = { onPenaltyAttemptRecorded(false) },
-                    modifier = Modifier
-                        .size(ButtonDefaults.LargeIconSize),
+                    modifier = Modifier.defaultMinSize(minWidth = ButtonDefaults.LargeIconSize, minHeight = ButtonDefaults.LargeIconSize),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )

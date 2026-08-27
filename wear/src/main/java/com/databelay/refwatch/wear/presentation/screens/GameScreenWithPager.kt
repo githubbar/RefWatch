@@ -300,7 +300,7 @@ fun GameScreenWithPager(
 
 // -------------------------------- Previews -----------------------------------------------
 @OptIn(ExperimentalFoundationApi::class)
-@Preview(device = "id:wearos_large_round", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true)
+@Preview(device = "id:wearos_large_round", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true, fontScale = 2.0f)
 @Composable
 fun GameScreenWithPagerPreviewSmallRegulationTime() {
     val sampleGame = Game.defaults().copy(
@@ -336,7 +336,7 @@ fun GameScreenWithPagerPreviewSmallRegulationTime() {
 }
 
 @OptIn(ExperimentalFoundationApi::class)
-@Preview(device = "id:wearos_large_round", name = "Settings Page Open", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true)
+@Preview(device = "id:wearos_large_round", name = "Settings Page Open", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true, fontScale = 2.0f)
 @Composable
 fun GameScreenWithPagerPreviewSettingsOpen() {
     val sampleGame = Game.defaults().copy(currentPhase = GamePhase.FIRST_HALF)
@@ -369,7 +369,7 @@ fun GameScreenWithPagerPreviewSettingsOpen() {
 
 //@Preview(device = "id:wearos_small_round",name = "AddedTime SmRnd",showBackground = true)
 //@Preview(device = "id:wearos_square",name = "AddedTime Sqr",showBackground = true)
-@Preview(device = "id:wearos_large_round",name = "AddedTime LrgRnd",showSystemUi = true, backgroundColor = 0xff000000, showBackground = true)
+@Preview(device = "id:wearos_large_round", name = "AddedTime LrgRnd", showSystemUi = true, backgroundColor = 0xff000000, showBackground = true, fontScale = 2.0f)
 //@WearPreviewFontScales
 @Composable
 fun Preview_MainGameDisplay_Penalties() {

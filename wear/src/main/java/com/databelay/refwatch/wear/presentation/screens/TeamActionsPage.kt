@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -77,11 +78,11 @@ fun TeamActionsPage(
                 Button(
                     onClick = { onAddGoal(team) },
                     shape = CircleShape,
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier.defaultMinSize(minWidth = 60.dp, minHeight = 60.dp),
                 ) {
                     Text(
                         "+1",
-                        style = MaterialTheme.typography.displayLarge,
+                        style = MaterialTheme.typography.displayMedium,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     )
@@ -135,7 +136,7 @@ fun CardShapedButton(
             contentColor = contentColor
         ),
         modifier = modifier
-            .aspectRatio(1.4f)
+            .defaultMinSize(minHeight = 44.dp)
             .border(
                 1.dp,
                 contentColor.copy(alpha = 0.5f),
@@ -151,10 +152,7 @@ fun CardShapedButton(
     }
 }
 
-@Preview(device = WearDevices.LARGE_ROUND, showBackground = true)
-@Preview(device =  WearDevices.SMALL_ROUND, showBackground = true)
-@Preview(device =  WearDevices.SQUARE, showBackground = true)
-@WearPreviewFontScales
+@Preview(device = WearDevices.SMALL_ROUND, fontScale = 2.0f, group = "Accessibility", name = "2.0x")
 @Composable
 fun TeamActionsPagePreview() {
     RefWatchWearTheme {
