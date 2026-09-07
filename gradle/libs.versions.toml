@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.2"
+agp = "9.4.0"
 composeWearNavigationVersion = "1.5.3"
 composeNavigationVersion = "2.9.5"
 espressoCore = "3.6.1"
@@ -32,6 +32,7 @@ composeFoundation = "1.5.3"
 rules = "1.6.1"
 runner = "1.6.2"
 wearOngoing = "1.1.0"
+wearInput = "1.2.0"
 activityCompose = "1.11.0"
 coreSplashscreen = "1.0.1"
 appcompat = "1.7.0"
@@ -78,6 +79,7 @@ androidx-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", v
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiToolingVersion" }
 androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingVersion" }
 androidx-wear-ongoing = { module = "androidx.wear:wear-ongoing", version.ref = "wearOngoing" }
+androidx-wear-input = { module = "androidx.wear:wear-input", version.ref = "wearInput" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore", version.ref = "firebaseFirestore" }

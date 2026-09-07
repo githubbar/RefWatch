@@ -21,7 +21,6 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.PagerState
 import androidx.wear.compose.foundation.pager.VerticalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material.PageIndicatorState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.ButtonDefaults
@@ -158,8 +157,6 @@ sealed class ConfirmationDialogInfo(
 @Composable
 fun GameScreenWithPager(
     game: Game,
-    collectPositionInfo: Boolean,
-    onToggleCollectPositionInfo: (Boolean) -> Unit,
     horizontalPagerState: PagerState,
     verticalPagerState: PagerState,
     onKickOff: () -> Unit,
@@ -231,8 +228,6 @@ fun GameScreenWithPager(
                     1 -> {
                         GameSettingsScreen(
                             game = game,
-                            collectPositionInfo = collectPositionInfo,
-                            onToggleCollectPositionInfo = onToggleCollectPositionInfo,
                             onAttemptFinishGame = {
                                 activeDialogInfo = ConfirmationDialogInfo.FinishGame(
                                     onConfirm = onConfirmEndMatch,
@@ -314,8 +309,6 @@ fun GameScreenWithPagerPreviewSmallRegulationTime() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -346,8 +339,6 @@ fun GameScreenWithPagerPreviewSettingsOpen() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -380,8 +371,6 @@ fun Preview_MainGameDisplay_Penalties() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.em
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
@@ -125,7 +126,8 @@ fun MainGameDisplayScreen(
     val scrollState = rememberScrollState()
     ScreenScaffold(
         modifier = modifier.fillMaxSize(),
-        scrollState = scrollState
+        scrollState = scrollState,
+        scrollIndicator = { ScrollIndicator(state = scrollState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -375,23 +377,6 @@ fun Preview_LogCard_Yellow() {
             onLogCard = { _, _, _ -> },
             onCancel = {}
         )
-    }
-}
-
-@Preview(device = "id:wearos_small_round", name = "Edit Team Name", showBackground = true)
-@Preview(device = "id:wearos_large_round", name = "Edit Team Name", showBackground = true)
-@WearPreviewFontScales
-@Composable
-fun Preview_EditTeamName() {
-    RefWatchWearTheme {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            TeamNameEditDialogContent(
-                teamLabel = "Home",
-                initialValue = "Warriors",
-                onSave = { },
-                onDismiss = { }
-            )
-        }
     }
 }
 

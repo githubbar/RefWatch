@@ -1,7 +1,6 @@
 package com.databelay.refwatch.wear.presentation.screens
 
 import android.util.Log
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,6 +16,9 @@ import com.databelay.refwatch.wear.navigation.WearNavRoutes
 
 private const val TAG = "PreGameSetupRoute"
 
+private const val KEY_HOME_TEAM_NAME = "home_team_name"
+private const val KEY_AWAY_TEAM_NAME = "away_team_name"
+
 @Composable
 fun PreGameSetupRoute(
     navController: NavController,
@@ -24,15 +26,37 @@ fun PreGameSetupRoute(
 ) {
     val activeGame by gameViewModel.activeGame.collectAsState()
 
-    var showHomeTeamEditDialog by remember { mutableStateOf(false) }
-    var showAwayTeamEditDialog by remember { mutableStateOf(false) }
     var showHomeColorPickerDialog by remember { mutableStateOf(false) }
     var showAwayColorPickerDialog by remember { mutableStateOf(false) }
 
+    // Team names are collected through the system input activity (keyboard, voice or
+    // handwriting) rather than an in-app text field -- Wear Compose has no TextField.
+    val textInputLauncher = rememberTextInputLauncher { key, value ->
+        when (key) {
+            KEY_HOME_TEAM_NAME -> gameViewModel.updateHomeTeamName(value)
+            KEY_AWAY_TEAM_NAME -> gameViewModel.updateAwayTeamName(value)
+            else -> Log.w(TAG, "Unexpected text input key: $key")
+        }
+    }
+
     PreGameSetupScreen(
         game = activeGame,
-        onEditHomeTeamNameClick = { showHomeTeamEditDialog = true },
-        onEditAwayTeamNameClick = { showAwayTeamEditDialog = true },
+        onEditHomeTeamNameClick = {
+            textInputLauncher.launch(
+                key = KEY_HOME_TEAM_NAME,
+                title = "Home team",
+                label = "Home team name",
+                currentValue = activeGame?.homeTeamName
+            )
+        },
+        onEditAwayTeamNameClick = {
+            textInputLauncher.launch(
+                key = KEY_AWAY_TEAM_NAME,
+                title = "Away team",
+                label = "Away team name",
+                currentValue = activeGame?.awayTeamName
+            )
+        },
         onHomeColorPickerClick = { showHomeColorPickerDialog = true },
         onAwayColorPickerClick = { showAwayColorPickerDialog = true },
         onSetHalfDuration = { duration -> gameViewModel.setHalfDuration(duration) },
@@ -47,30 +71,6 @@ fun PreGameSetupRoute(
             }
         }
     )
-
-    if (showHomeTeamEditDialog) {
-        TeamNameEditDialog(
-            teamLabel = "Home",
-            initialValue = activeGame?.homeTeamName ?: "Home",
-            onSave = {
-                gameViewModel.updateHomeTeamName(it)
-                showHomeTeamEditDialog = false
-            },
-            onDismiss = { showHomeTeamEditDialog = false }
-        )
-    }
-
-    if (showAwayTeamEditDialog) {
-        TeamNameEditDialog(
-            teamLabel = "Away",
-            initialValue = activeGame?.awayTeamName ?: "Away",
-            onSave = {
-                gameViewModel.updateAwayTeamName(it)
-                showAwayTeamEditDialog = false
-            },
-            onDismiss = { showAwayTeamEditDialog = false }
-        )
-    }
 
     if (showHomeColorPickerDialog) {
         SimpleColorPickerDialog(

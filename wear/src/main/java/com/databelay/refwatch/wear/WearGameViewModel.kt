@@ -75,6 +75,7 @@ import javax.inject.Inject
 
 
 import android.content.SharedPreferences
+import com.databelay.refwatch.common.WearSyncConstants
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -87,12 +88,38 @@ class WearGameViewModel @Inject constructor(
 ) : AndroidViewModel(applicationContext as Application), IWearGameViewModel {
     private val tag = "WearGameViewModel"
 
-    private val _collectPositionInfo = MutableStateFlow(prefs.getBoolean("collect_position_info", false))
+    // --- Settings owned by the phone's Settings screen ---
+    // The phone pushes these over the data layer and [WearDataListenerService] writes them
+    // into prefs, so these watch prefs rather than reading once at construction. Both
+    // default to off, which is the behaviour the watch had before any sync arrives.
+
+    /** Whether the watch records GPS during a game. */
+    private val _collectPositionInfo = MutableStateFlow(
+        prefs.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
+    )
     override val collectPositionInfo: StateFlow<Boolean> = _collectPositionInfo.asStateFlow()
 
-    fun setCollectPositionInfo(enabled: Boolean) {
-        prefs.edit { putBoolean("collect_position_info", enabled) }
-        _collectPositionInfo.value = enabled
+    /** Whether to ask who scored after a goal. */
+    private val _logGoalScorer = MutableStateFlow(
+        prefs.getBoolean(WearSyncConstants.KEY_LOG_GOAL_SCORER, false)
+    )
+    override val logGoalScorer: StateFlow<Boolean> = _logGoalScorer.asStateFlow()
+
+    // Held as a field: SharedPreferences only keeps a weak reference to its listeners, so a
+    // local would be collected and the settings would silently stop updating.
+    private val prefsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { changedPrefs, key ->
+            when (key) {
+                WearSyncConstants.KEY_LOG_GOAL_SCORER ->
+                    _logGoalScorer.value = changedPrefs.getBoolean(key, false)
+
+                WearSyncConstants.KEY_COLLECT_POSITION_INFO ->
+                    _collectPositionInfo.value = changedPrefs.getBoolean(key, false)
+            }
+        }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
     }
 
     override val gamesList: StateFlow<List<Game>> = gameStorage.gamesListFlow
@@ -375,6 +402,7 @@ class WearGameViewModel @Inject constructor(
         Log.d(tag, "WearGameViewModel onCleared")
         stopAddedTimeReminderVibration()
         unbindFromGameTimerService()
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
     }
 
     private fun loadInitialActiveGameInternal(currentGames: List<Game>): Game {
@@ -759,7 +787,11 @@ class WearGameViewModel @Inject constructor(
         }
     }
 
-    fun addGoal(team: Team) {
+    /**
+     * @param playerNumber the scorer's shirt number, or null when the "Log goal scorer"
+     *   setting is off or the referee skipped the prompt. The goal is recorded either way.
+     */
+    fun addGoal(team: Team, playerNumber: Int? = null) {
         val currentGame = _activeGame.value ?: return
         if (!currentGame.currentPhase.isPlayablePhase()) return
 
@@ -771,7 +803,8 @@ class WearGameViewModel @Inject constructor(
             team = team,
             gameTimeMillis = currentGame.actualTimeElapsedInPeriodMillis.toDouble(),
             homeScoreAtTime = newHomeScore,
-            awayScoreAtTime = newAwayScore
+            awayScoreAtTime = newAwayScore,
+            playerNumber = playerNumber
         )
         // Update game state including the new event via _activeGame.update, then add to list via specific method
         _activeGame.update {

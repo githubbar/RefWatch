@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,18 +30,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.ChipDefaults.chipColors
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.ToggleButton
-import androidx.wear.compose.material.ToggleButtonDefaults
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconToggleButton
+import androidx.wear.compose.material3.IconToggleButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.ScrollIndicator
@@ -85,18 +84,18 @@ fun CompactGameFilter(
                 GameListFilterState.PAST -> "Past games ($pastCount)"
             }
 
-            ToggleButton(
+            IconToggleButton(
                 checked = isSelected,
                 onCheckedChange = { if (it) onFilterSelected(filterEnum) },
-                modifier = Modifier.size(ToggleButtonDefaults.SmallToggleButtonSize),
-                colors = ToggleButtonDefaults.toggleButtonColors(
-                    checkedBackgroundColor = Color.Green.copy(alpha = .5f),
+                modifier = Modifier.size(IconToggleButtonDefaults.SmallSize),
+                colors = IconToggleButtonDefaults.colors(
+                    checkedContainerColor = Color.Green.copy(alpha = .5f),
                 )
             ) {
                 Icon(
                     imageVector = iconVector,
                     contentDescription = contentDescription,
-                    modifier = Modifier.size(ToggleButtonDefaults.SmallIconSize)
+                    modifier = Modifier.size(IconToggleButtonDefaults.SmallIconSize)
                 )
             }
         }
@@ -139,10 +138,10 @@ fun GameListScreen(
     val listState = rememberScalingLazyListState()
 
     ScreenScaffold(
-        scrollIndicator = { ScrollIndicator(modifier = Modifier.align(Alignment.CenterEnd), state = listState) },
+        scrollState = listState,
+        scrollIndicator = { ScrollIndicator(state = listState) },
         modifier = modifier
             .fillMaxSize(),
-        contentPadding = PaddingValues(2.dp),
     ) { contentPadding ->
             ScalingLazyColumn(
                 state = listState, contentPadding = contentPadding,
@@ -154,13 +153,10 @@ fun GameListScreen(
 
                 if (selectedFilterState == GameListFilterState.UPCOMING) {
                     item {
-                        Chip(
+                        Button(
                             onClick = onNavigateToNewGame,
                             label = {
-                                Text(
-                                    "New Game",
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                                Text("New Game")
                             },
                             icon = {
                                 Icon(
@@ -170,10 +166,11 @@ fun GameListScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth(0.9f),
-                            colors = chipColors(
-                                backgroundColor = MaterialTheme.colorScheme.secondaryContainer.copy(
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(
                                     alpha = 0.4f
-                                )
+                                ),
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         )
                     }
@@ -239,26 +236,28 @@ fun GameListScreen(
 
 @Composable
 fun ScheduledGameItem(game: Game, onClick: () -> Unit) {
-    Chip(
+    val hasFieldNumber = !game.fieldNumber.isNullOrBlank()
+    Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(0.95f),
-        colors = chipColors(
-            backgroundColor = MaterialTheme.colorScheme.primary,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            secondaryContentColor = MaterialTheme.colorScheme.onPrimary,
+            iconColor = MaterialTheme.colorScheme.onPrimary,
         ),
         label = {
             Column(horizontalAlignment = Alignment.Start) {
                 Text(
                     text = "${game.homeTeamName} vs ${game.awayTeamName}",
                     maxLines = 2,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelMedium
                 )
                 if (game.status == GameStatus.COMPLETED) {
                     Text(
                         text = "Final: ${game.homeScore} - ${game.awayScore}",
-                        color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.labelMedium,
-//                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -268,8 +267,7 @@ fun ScheduledGameItem(game: Game, onClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.Filled.SyncProblem,
                     contentDescription = "Needs sync with phone",
-                    modifier = Modifier.size(ChipDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    modifier = Modifier.size(ButtonDefaults.SmallIconSize),
                 )
             }
         },
@@ -279,10 +277,7 @@ fun ScheduledGameItem(game: Game, onClick: () -> Unit) {
                 val venueString = game.venue?.takeIf { it.isNotBlank() }
                 val fieldNumberString = game.fieldNumber?.takeIf { it.isNotBlank() }
 
-                Text(
-                    text = dateTimeString,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
+                Text(text = dateTimeString)
 
                 val locationDetails = mutableListOf<String>()
                 venueString?.let { locationDetails.add(it) }
@@ -292,21 +287,23 @@ fun ScheduledGameItem(game: Game, onClick: () -> Unit) {
                     Text(
                         text = locationDetails.joinToString(" - "),
                         maxLines = 1,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
         },
-        icon = {
-            game.fieldNumber?.let {
+        // Passing null rather than an empty lambda keeps the button from reserving
+        // icon space for games that have no field number.
+        icon = if (hasFieldNumber) {
+            {
                 Icon(
                     imageVector = Icons.Filled.LocationOn,
                     contentDescription = "Field Number available",
-                    modifier = Modifier.size(ChipDefaults.IconSize),
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
                 )
             }
-        }
+        } else null
     )
 }
 

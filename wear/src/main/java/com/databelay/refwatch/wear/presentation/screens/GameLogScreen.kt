@@ -27,12 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults.chipColors
-import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CardDefaults
+import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.ScrollIndicator
@@ -69,20 +67,15 @@ fun GameLogScreen(
     }
     val listState = rememberScalingLazyListState()
     ScreenScaffold(
-        scrollIndicator = {
-            ScrollIndicator(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                state = listState
-            )
-        },
-        modifier = modifier
-            .fillMaxSize()
-            .padding(2.dp),
-                contentPadding = PaddingValues(vertical = 0.dp, horizontal = 2.dp),
-
+        scrollState = listState,
+        scrollIndicator = { ScrollIndicator(state = listState) },
+        modifier = modifier.fillMaxSize(),
     ) { contentPadding ->
         ScalingLazyColumn(
             state = listState,
+            // Consume the scaffold's responsive padding so the first and last cards
+            // are not clipped by the bezel on round screens.
+            contentPadding = contentPadding,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 2.dp), // Adjusted padding slightly for cards

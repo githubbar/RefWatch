@@ -41,13 +41,19 @@ data class GoalScoredEvent( // ENSURE NO 'protected', 'private', or 'internal' M
     override val timestamp: Double = System.currentTimeMillis().toDouble(),
     override val gameTimeMillis: Double,
     val homeScoreAtTime: Int,
-    val awayScoreAtTime: Int
+    val awayScoreAtTime: Int,
+    // Optional: only captured when the "Log goal scorer" setting is on, and the referee
+    // can still skip it. Nullable with a default so goals recorded by earlier versions
+    // (and already synced to Firestore) keep deserializing.
+    val playerNumber: Int? = null
 ) : GameEvent() {
     @get:Exclude // Exclude from Firebase automatic mapping
     override val displayString: String
-        get() = "Goal: ${team.name} ($homeScoreAtTime-$awayScoreAtTime) at ${
-            gameTimeMillis.toLong().formatTime()
-        }"
+        get() = buildString {
+            append("Goal: ${team.name}")
+            playerNumber?.let { append(" #$it") }
+            append(" ($homeScoreAtTime-$awayScoreAtTime) at ${gameTimeMillis.toLong().formatTime()}")
+        }
 }
 
 @Serializable

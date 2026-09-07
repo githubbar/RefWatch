@@ -24,6 +24,7 @@ object WearNavRoutes {
     const val GAME_IN_PROGRESS_SCREEN = "game_in_progress"
     const val GAME_LOG_SCREEN = "game_log"
     const val LOG_CARD_SCREEN = "log_card"
+    const val GOAL_SCORER_SCREEN = "goal_scorer"
     const val GAME_ANALYTICS_SCREEN = "game_analytics"
     // --- Route Helper Functions ---
 
@@ -50,6 +51,14 @@ object WearNavRoutes {
      */
     fun logCardRoute(team: Team, cardType: CardType): String {
         return "$LOG_CARD_SCREEN/${team.name}/${cardType.name}" // Use path segments
+    }
+
+    /**
+     * Creates the navigation route for the goal scorer prompt.
+     * Only reached when the "Log goal scorer" setting is on.
+     */
+    fun goalScorerRoute(team: Team): String {
+        return "$GOAL_SCORER_SCREEN/${team.name}"
     }
 
 }

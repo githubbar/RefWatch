@@ -27,6 +27,7 @@ fun GameAnalyticsScreen(
     val currentHR = game.heartRateHistory.lastOrNull()?.bpm ?: 0.0
 
     ScreenScaffold(
+        scrollState = listState,
         scrollIndicator = {
             ScrollIndicator(state = listState)
         },

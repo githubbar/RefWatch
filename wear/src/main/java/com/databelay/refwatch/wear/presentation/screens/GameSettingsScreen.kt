@@ -32,8 +32,6 @@ import com.databelay.refwatch.common.theme.RefWatchWearTheme
 @Composable
 fun GameSettingsScreen(
     game: Game,
-    collectPositionInfo: Boolean,
-    onToggleCollectPositionInfo: (Boolean) -> Unit,
     onAttemptFinishGame: () -> Unit,
     onAttemptResetPeriodTimer: () -> Unit,
     onAttemptResetFullGame: () -> Unit,
@@ -44,14 +42,15 @@ fun GameSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberScalingLazyListState()
-    Box(
-        modifier = modifier
-            .fillMaxSize(),
-    ) {
+    ScreenScaffold(
+        modifier = modifier.fillMaxSize(),
+        scrollState = listState,
+        scrollIndicator = { ScrollIndicator(state = listState) }
+    ) { contentPadding ->
         ScalingLazyColumn(
             state = listState,
-            modifier = Modifier
-                .padding(horizontal = 8.dp, vertical = 0.dp),
+            contentPadding = contentPadding,
+            modifier = Modifier.padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
         ) {
@@ -152,16 +151,6 @@ fun GameSettingsScreen(
             }
 
             item {
-                CheckboxButton(
-                    checked = collectPositionInfo,
-                    onCheckedChange = onToggleCollectPositionInfo,
-                    label = { Text("Collect Position") },
-                    secondaryLabel = { Text("GPS Tracking") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            item {
                 Button(
                     onClick = onAttemptResetFullGame,
                     modifier = Modifier.fillMaxWidth(),
@@ -180,10 +169,6 @@ fun GameSettingsScreen(
                 }
             }
         }
-        ScrollIndicator(
-            modifier = Modifier.align(Alignment.CenterStart),
-            state = listState
-        )
     }
 }
 
@@ -300,8 +285,6 @@ fun SettingsPageContentPreview() {
     RefWatchWearTheme {
         GameSettingsScreen(
             game = Game.defaults().copy(currentPhase = GamePhase.FIRST_HALF, isTimerRunning = true),
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             onAttemptFinishGame = {},
             onAttemptResetPeriodTimer = {},
             onAttemptResetFullGame = {},

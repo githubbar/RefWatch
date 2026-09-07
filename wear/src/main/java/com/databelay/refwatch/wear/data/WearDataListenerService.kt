@@ -1,6 +1,8 @@
 package com.databelay.refwatch.wear.data
 
+import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 import com.databelay.refwatch.common.WearSyncConstants
 import com.databelay.refwatch.wear.auth.WatchAuthManager
 import com.google.android.gms.wearable.CapabilityInfo
@@ -29,6 +31,9 @@ class WearDataListenerService : WearableListenerService() {
 
     @Inject
     lateinit var watchAuthManager: WatchAuthManager
+
+    @Inject
+    lateinit var prefs: SharedPreferences
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d(tag, "onDataChanged - events: ${dataEvents.count}")
@@ -67,6 +72,30 @@ class WearDataListenerService : WearableListenerService() {
                             if (watchAuthManager.currentPhoneUserId.value != null) {
                                 phoneUserIdChanged = true
                             }
+                        }
+                    }
+                }
+
+                // Settings the phone owns. Cached in the watch's own prefs so the value
+                // survives restarts and is available while the phone is out of range.
+                WearSyncConstants.PATH_SETTINGS -> {
+                    if (event.type == DataEvent.TYPE_CHANGED) {
+                        val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+                        val logGoalScorer =
+                            dataMap.getBoolean(WearSyncConstants.KEY_LOG_GOAL_SCORER, false)
+                        val collectPositionInfo =
+                            dataMap.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
+                        Log.i(
+                            tag,
+                            "Settings received from phone. logGoalScorer=$logGoalScorer, " +
+                                "collectPositionInfo=$collectPositionInfo"
+                        )
+                        prefs.edit {
+                            putBoolean(WearSyncConstants.KEY_LOG_GOAL_SCORER, logGoalScorer)
+                            putBoolean(
+                                WearSyncConstants.KEY_COLLECT_POSITION_INFO,
+                                collectPositionInfo
+                            )
                         }
                     }
                 }

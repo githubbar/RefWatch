@@ -16,6 +16,7 @@ interface IWearGameViewModel {
     val isOnline: StateFlow<Boolean>
     val activeGame: StateFlow<Game?>
     val collectPositionInfo: StateFlow<Boolean>
+    val logGoalScorer: StateFlow<Boolean>
 }
 
 object PreviewTools {

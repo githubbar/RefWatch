@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
 import androidx.wear.tooling.preview.devices.WearDevices
@@ -51,15 +53,16 @@ fun TeamActionsPage(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
-        contentAlignment = Alignment.Center
-    ) {
+    ScreenScaffold(
+        modifier = modifier.fillMaxSize(),
+        scrollState = scrollState,
+        scrollIndicator = { ScrollIndicator(state = scrollState) }
+    ) { contentPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(contentPadding)
                 .padding(horizontal = 12.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -92,9 +95,10 @@ fun TeamActionsPage(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Card Buttons in a Row
+            // Card Buttons in a Row. Use the full available width so the labels have
+            // room to wrap at large font scales instead of being clipped.
             Row(
-                modifier = Modifier.fillMaxWidth(.7f),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -152,7 +156,9 @@ fun CardShapedButton(
     }
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, fontScale = 2.0f, group = "Accessibility", name = "2.0x")
+@Preview(device = WearDevices.SMALL_ROUND, showBackground = true)
+@Preview(device = WearDevices.LARGE_ROUND, showBackground = true)
+@WearPreviewFontScales
 @Composable
 fun TeamActionsPagePreview() {
     RefWatchWearTheme {

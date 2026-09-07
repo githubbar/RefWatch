@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,6 +60,7 @@ import com.databelay.refwatch.wear.presentation.screens.GameAnalyticsScreen
 import com.databelay.refwatch.wear.presentation.screens.GameListScreen
 import com.databelay.refwatch.wear.presentation.screens.GameLogScreen
 import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
+import com.databelay.refwatch.wear.presentation.screens.GoalScorerScreen
 import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupRoute
@@ -74,6 +76,7 @@ fun NavigationRoutes() {
     val allGames by gameViewModel.gamesList.collectAsStateWithLifecycle() // Assuming gamesList is the correct source
     val isOnline by gameViewModel.isOnline.collectAsStateWithLifecycle()
     val collectPositionInfo by gameViewModel.collectPositionInfo.collectAsStateWithLifecycle()
+    val logGoalScorer by gameViewModel.logGoalScorer.collectAsStateWithLifecycle()
     val context = LocalContext.current // Get the context
 
     // Keep the screen on during an active match to ensure the app stays "on top"
@@ -276,11 +279,21 @@ fun NavigationRoutes() {
                 if (activeGame != null) {
                     val onKickOff = remember { { gameViewModel.kickOff() } }
                     val onResetGame = remember { { gameViewModel.resetGame() } }
-                    val onToggleCollectPositionInfo = remember { { enabled: Boolean -> gameViewModel.setCollectPositionInfo(enabled) } }
                     val onSetToHaveExtraTime = remember { { gameViewModel.setToHaveExtraTime() } }
                     val onSetToHavePenalties = remember { { gameViewModel.setToHavePenalties() } }
                     val onToggleTimer = remember { { gameViewModel.toggleTimer() } }
-                    val onAddGoal = remember { { team: Team -> gameViewModel.addGoal(team) } }
+                    // With the setting off this stays a single tap, exactly as before. With
+                    // it on, the goal is recorded on the scorer screen instead -- either by
+                    // Save (with a number) or Skip (without one).
+                    val onAddGoal = remember(navController, logGoalScorer) {
+                        { team: Team ->
+                            if (logGoalScorer) {
+                                navController.navigate(WearNavRoutes.goalScorerRoute(team))
+                            } else {
+                                gameViewModel.addGoal(team)
+                            }
+                        }
+                    }
                     val onResetPeriodTimer = remember { { gameViewModel.resetTimer() } }
                     val onPenaltyAttemptRecorded = remember { { scored: Boolean -> gameViewModel.recordPenaltyAttempt(scored) } }
                     
@@ -324,8 +337,6 @@ fun NavigationRoutes() {
                     GameScreenWithPager(
                         modifier = Modifier.fillMaxSize(),
                         game = activeGame!!,
-                        collectPositionInfo = collectPositionInfo,
-                        onToggleCollectPositionInfo = onToggleCollectPositionInfo,
                         horizontalPagerState = horizontalPagerState,
                         verticalPagerState = verticalPagerState,
                         onKickOff = onKickOff,
@@ -346,6 +357,44 @@ fun NavigationRoutes() {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Loading Game Details...")
                     }
+                }
+            }
+
+            composable(
+                route = "${WearNavRoutes.GOAL_SCORER_SCREEN}/{${WearNavRoutes.TEAM_ARG}}",
+                arguments = listOf(
+                    navArgument(WearNavRoutes.TEAM_ARG) { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val team = backStackEntry.arguments
+                    ?.getString(WearNavRoutes.TEAM_ARG)
+                    ?.let { Team.valueOf(it.uppercase()) }
+                val game = activeGame
+
+                if (team != null && game != null) {
+                    // Both paths record the goal, then return to the match. Only the scorer
+                    // number differs, so a mis-tap or an unseen shirt never loses the goal.
+                    val returnToGame = {
+                        navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
+                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                    GoalScorerScreen(
+                        team = team,
+                        teamName = if (team == Team.HOME) game.homeTeamName else game.awayTeamName,
+                        teamColor = if (team == Team.HOME) game.homeTeamColor else game.awayTeamColor,
+                        onConfirm = { playerNumber ->
+                            gameViewModel.addGoal(team, playerNumber)
+                            returnToGame()
+                        },
+                        onSkip = {
+                            gameViewModel.addGoal(team)
+                            returnToGame()
+                        }
+                    )
+                } else {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
                 }
             }
 
@@ -444,7 +493,17 @@ fun NavigationRoutes() {
                         )
                     }
                 } else {
-                    Text("Error: Invalid navigation arguments for Log Card.")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Error: Invalid navigation arguments for Log Card.",
+                            textAlign = TextAlign.Center
+                        )
+                    }
                     LaunchedEffect(Unit) {
                         delay(2000)
                         navController.popBackStack()

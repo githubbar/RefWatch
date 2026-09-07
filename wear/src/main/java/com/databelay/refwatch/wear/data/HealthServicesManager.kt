@@ -1,5 +1,6 @@
 package com.databelay.refwatch.wear.data
 
+import com.databelay.refwatch.common.WearSyncConstants
 import android.content.Context
 import android.util.Log
 import androidx.health.services.client.ExerciseClient
@@ -74,7 +75,7 @@ class HealthServicesManager @Inject constructor(
         }
 
         // Disable GPS tracking for Assistant Referees
-        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean("collect_position_info", false)
+        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
 
         val capabilities = exerciseClient.getCapabilitiesWithException()
         val exerciseCapabilities = capabilities.getExerciseTypeCapabilities(ExerciseType.SOCCER)

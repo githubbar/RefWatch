@@ -36,7 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTooltipState
@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.databelay.refwatch.auth.AuthState
 import com.databelay.refwatch.common.Game
@@ -259,7 +260,12 @@ fun GameListScreen(
             verticalArrangement = Arrangement.SpaceEvenly,
         ) {
             // --- TABS FOR FILTERING ---
-            TabRow(selectedTabIndex = if (selectedTab == GameStatus.SCHEDULED) 0 else 1) { // Determine index based on selectedTab
+            // ScrollableTabRow sizes each tab to its label instead of splitting the width
+            // evenly, so "Upcoming (12)" is not truncated at large font scales.
+            PrimaryScrollableTabRow(
+                selectedTabIndex = if (selectedTab == GameStatus.SCHEDULED) 0 else 1,
+                edgePadding = 0.dp
+            ) {
                 Tab(
                     selected = selectedTab == GameStatus.SCHEDULED,
                     onClick = { onTabSelected(GameStatus.SCHEDULED) },
@@ -375,7 +381,8 @@ fun GameListItem(
                                 text = locationDetails.joinToString(" - "), // e.g., "City Park - Field: 3" or just "Field: 3" or just "City Park"
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.tertiary,
-                                maxLines = 2
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                         }

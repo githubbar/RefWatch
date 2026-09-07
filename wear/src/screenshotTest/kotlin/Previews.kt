@@ -51,8 +51,6 @@ fun GameScreenWithPagerScreenshotPreview() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -91,8 +89,6 @@ fun GameScreenWithPagerSettingsScreenshotPreview() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},
@@ -131,8 +127,6 @@ fun GameScreenWithPagerPenaltiesScreenshotPreview() {
     RefWatchWearTheme {
         GameScreenWithPager(
             game = sampleGame,
-            collectPositionInfo = true,
-            onToggleCollectPositionInfo = {},
             horizontalPagerState = horizontalPagerState,
             verticalPagerState = verticalPagerState,
             onKickOff = {},

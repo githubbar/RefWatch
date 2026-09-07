@@ -34,8 +34,8 @@ android {
         minSdk = 34
         targetSdk = 36
 //        Version code scheme explained here:  https://developer.android.com/training/wearables/packaging
-        versionCode = 361150001
-        versionName = "1.1.5"
+        versionCode = 361170001
+        versionName = "1.1.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         buildConfigField(
@@ -84,7 +84,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.play.services.auth) // Check for latest
     implementation(libs.hilt.android) // Use the same version as the plugin
@@ -95,11 +94,10 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.horologist.compose.layout)
-    implementation(libs.horologist.compose.material)
     implementation(libs.androidx.wear.ongoing)
+    implementation(libs.androidx.wear.input)
     implementation(libs.androidx.wear.compose.material3)
     implementation(libs.androidx.health.services)
-    implementation(libs.androidx.compose.material3)
     
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.androidx.compose.foundation.layout)

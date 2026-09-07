@@ -15,15 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,17 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material.CompactButton
-import androidx.wear.compose.material.OutlinedChip
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
@@ -52,6 +43,7 @@ import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.ScrollIndicator
 import androidx.wear.compose.material3.Text
@@ -96,7 +88,7 @@ fun PreGameSetupScreen(
             }
         },
         modifier = modifier,
-        contentPadding = PaddingValues(vertical = 0.dp, horizontal = 2.dp),
+        // Left at the responsive default so the list clears the bezel and the EdgeButton.
     ) { contentPadding ->
         ScalingLazyColumn(
             state = listState,
@@ -114,53 +106,52 @@ fun PreGameSetupScreen(
                 }
             }
 
-            // Team Name Editors
+            // Team Name Editors. These are stacked rather than placed side by side so
+            // that each name gets the full screen width; at large font scales a
+            // half-width chip ellipsises the name down to a character or two.
             item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceAround,
+                OutlinedButton(
+                    onClick = onEditHomeTeamNameClick,
+                    icon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            modifier = Modifier.size(ButtonDefaults.SmallIconSize),
+                            contentDescription = "Edit Home Team Name"
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                ) {
-                    OutlinedChip(
-                        onClick = onEditHomeTeamNameClick,
-                        label = {
-                            Text(
-                                homeTeamName,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                Icons.Default.Edit,
-                                modifier = Modifier.size(12.dp),
-                                contentDescription = "Edit Home Team Name"
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-//                        Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedChip(
-                        onClick = onEditAwayTeamNameClick,
-                        label = {
-                            Text(
-                                awayTeamName,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                Icons.Default.Edit,
-                                modifier = Modifier.size(12.dp),
-                                contentDescription = "Edit Away Team Name"
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                        .padding(horizontal = 8.dp),
+                    label = {
+                        Text(
+                            homeTeamName,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
+            }
+            item {
+                OutlinedButton(
+                    onClick = onEditAwayTeamNameClick,
+                    icon = {
+                        Icon(
+                            Icons.Default.Edit,
+                            modifier = Modifier.size(ButtonDefaults.SmallIconSize),
+                            contentDescription = "Edit Away Team Name"
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    label = {
+                        Text(
+                            awayTeamName,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
             }
 
             // Jersey Colors
@@ -208,99 +199,6 @@ fun PreGameSetupScreen(
     }
 }
 
-
-@Composable
-fun TeamNameEditDialogContent(
-    teamLabel: String,
-    initialValue: String,
-    onSave: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var text by remember { mutableStateOf(initialValue) }
-
-    val columnState = rememberScalingLazyListState()
-
-    ScreenScaffold(
-        scrollState = columnState,
-        scrollIndicator = { ScrollIndicator(state = columnState) }
-    ) { contentPadding ->
-        ScalingLazyColumn(
-            state = columnState,
-            contentPadding = contentPadding,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                ListHeader(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                ) {
-                    Text(
-                        "Edit Team Name",
-                        style = MaterialTheme.typography.titleSmall,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-            item {
-                TextField(
-                    value = text,
-                    onValueChange = { text = it },
-//                label = { Text("Team Name") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            if (text.isNotBlank()) {
-                                onSave(text)
-                            }
-                        }
-                    ),
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-            }
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(
-                        8.dp,
-                        Alignment.CenterHorizontally
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    AlertDialogDefaults.DismissButton(onClick = onDismiss)
-                    AlertDialogDefaults.ConfirmButton(onClick = { onSave(text) })
-                }
-            }
-        }
-    }
-}
-
-/**
- * A dialog Composable for editing a team's name.
- * This remains available for the parent composable to use.
- */
-@Composable
-fun TeamNameEditDialog(
-    teamLabel: String,
-    initialValue: String,
-    onSave: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    Dialog(
-        visible = true,
-        onDismissRequest = onDismiss,
-    ) {
-        TeamNameEditDialogContent(
-            teamLabel,
-            initialValue,
-            onSave,
-            onDismiss,
-        )
-    }
-}
 
 @Composable
 fun ColorPickerButton(label: String, currentColor: Color, onClick: () -> Unit) {
@@ -435,31 +333,50 @@ fun DurationSettingStepper(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            CompactButton(
+            // Material3 Button only applies a minimum height, so it grows with the font
+            // scale. The Material2 CompactButton used here previously forced
+            // requiredSize(32.dp), which clipped the glyph at large font sizes.
+            Button(
                 onClick = {
                     if (currentValue - step >= valueRange.first) onValueChange(
                         currentValue - step
                     )
                 },
-                modifier = Modifier.size(40.dp)
-            ) { Text("-", fontSize = 18.sp) }
+                modifier = Modifier.defaultMinSize(minWidth = 48.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    "-",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Text(
                 text = "$currentValue min",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .defaultMinSize(minWidth = 60.dp),
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
                 textAlign = TextAlign.Center
             )
-            CompactButton(
+            Button(
                 onClick = {
                     if (currentValue + step <= valueRange.last) onValueChange(
                         currentValue + step
                     )
                 },
-                modifier = Modifier.size(40.dp)
-            ) { Text("+", fontSize = 18.sp) }
+                modifier = Modifier.defaultMinSize(minWidth = 48.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    "+",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
@@ -491,24 +408,6 @@ fun PreviewPreGameSetupScreen() {
         )
     }
 }
-@Preview(device = "id:wearos_small_round", showBackground = true)
-@Preview(device = "id:wearos_square", showBackground = true)
-@Preview(device = "id:wearos_large_round", showBackground = true)
-@WearPreviewFontScales
-@Composable
-fun PreviewTeamNameEditDialog_Home() {
-    RefWatchWearTheme {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            TeamNameEditDialogContent(
-                teamLabel = "Home",
-                initialValue = "Warriors",
-                onSave = { },
-                onDismiss = { }
-            )
-        }
-    }
-}
-
 @Preview(device = "id:wearos_small_round", showBackground = true)
 @Preview(device = "id:wearos_square", showBackground = true)
 @Preview(device = "id:wearos_large_round", showBackground = true)

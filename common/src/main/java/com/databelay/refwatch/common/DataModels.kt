@@ -211,4 +211,12 @@ object WearSyncConstants {
     const val PHONE_APP_CAPABILITY = "phone_app_capability"
     const val NEW_ADHOC_GAME_FROM_WATCH_PATH_PREFIX = "/new_adhoc_game_from_watch"
 
+    // --- Settings pushed from the phone to the watch ---
+    // The phone owns these; the watch caches whatever it last received.
+    const val PATH_SETTINGS = "/settings"
+    const val KEY_LOG_GOAL_SCORER = "log_goal_scorer"
+    const val KEY_COLLECT_POSITION_INFO = "collect_position_info"
+    // Included so every put produces a distinct DataItem. Without it, toggling a value
+    // back to one the data layer already holds is a no-op and never reaches the watch.
+    const val KEY_SETTINGS_UPDATED_AT = "settings_updated_at"
 }

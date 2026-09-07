@@ -176,25 +176,25 @@ fun AddEditGameScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 singleLine = true
             )
-            // Location Row
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = uiState.venue,
-                    onValueChange = onVenueChange,
-                    label = { Text("Venue / Location (Optional)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = uiState.fieldNumber,
-                    onValueChange = onFieldNumberChange,
-                    label = { Text("Field Number (Optional)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-            }
+            // Location fields. These carry the longest labels on the form, so they are
+            // stacked full width rather than shared across a row -- at large font scales
+            // a half-width label is truncated.
+            OutlinedTextField(
+                value = uiState.venue,
+                onValueChange = onVenueChange,
+                label = { Text("Venue / Location (Optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = uiState.fieldNumber,
+                onValueChange = onFieldNumberChange,
+                label = { Text("Field Number (Optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
             OutlinedTextField(
                 value = uiState.competition,
                 onValueChange = onCompetitionChange,

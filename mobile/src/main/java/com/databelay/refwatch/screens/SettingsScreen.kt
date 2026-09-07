@@ -73,6 +73,7 @@ fun SettingsScreen(
     val buildDateString = BuildConfig.BUILD_TIME
 
     val collectPositionInfo by settingsViewModel.collectPositionInfo.collectAsStateWithLifecycle()
+    val logGoalScorer by settingsViewModel.logGoalScorer.collectAsStateWithLifecycle()
 
     // LaunchedEffect to get version name (it's a synchronous call but good practice
     // if it were asynchronous, and keeps UI responsive during initial composition)
@@ -190,6 +191,31 @@ fun SettingsScreen(
                 Switch(
                     checked = collectPositionInfo,
                     onCheckedChange = { settingsViewModel.setCollectPositionInfo(it) }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Ask For Player Number",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "After each goal, the watch asks which player scored. " +
+                            "Leave off to record goals in a single tap.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = logGoalScorer,
+                    onCheckedChange = { settingsViewModel.setLogGoalScorer(it) }
                 )
             }
 
