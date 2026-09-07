@@ -13,6 +13,24 @@ plugins {
     alias(libs.plugins.secrets)
 }
 
+// Version code scheme: https://developer.android.com/training/wearables/packaging
+//   36        | 117             | 00           | 00
+//   targetSdk | product version | build number | multi-APK variant (mobile = 00)
+fun refWatchVersionCode(versionName: String, variant: Int): Int {
+    val parts = versionName.substringBefore('-').split(".")
+    val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
+    val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
+    return 36 * 10_000_000 + (major * 100 + minor * 10 + patch) * 10_000 + variant
+}
+
+// Local builds use the fallback; CI passes -PversionName=<tag without the "v">,
+// so tagging v1.1.8 yields versionName 1.1.8 and versionCode 361180000.
+// -PversionCode=<int> overrides the derived code when you need to hand-pick it.
+val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.1.7"
+val appVersionCode: Int = (findProperty("versionCode") as String?)?.toInt()
+    ?: refWatchVersionCode(appVersionName, variant = 0)
+
 android {
     namespace = "com.databelay.refwatch"
     compileSdk = 36
@@ -30,8 +48,8 @@ android {
 //        Reserve the last two digits for a multi-APK variant, such as 00.
 //
 //        For example, the sample values here—28, 152, 01, and 00—result in a version code of 281520100.
-        versionCode = 361170000
-        versionName = "1.1.7"
+        versionCode = appVersionCode
+        versionName = appVersionName
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"") // BUILD_TIME becomes accessible in code
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

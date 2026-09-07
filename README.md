@@ -77,6 +77,8 @@ Description: RefWatch Wear is an app designed to assist soccer referees in manag
    - Deploy: `firebase deploy --only functions`
    - Test locally: `firebase emulators:start --only functions`
    - View logs: `firebase functions:log`
+2. CI/CD: GitHub Actions builds debug APKs on every push to `main` and publishes
+   signed release APKs/AABs when a `v*` tag is pushed. See [RELEASING.md](RELEASING.md).
  
 ## Technologies Used
 
