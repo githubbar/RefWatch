@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -69,7 +70,7 @@ fun rememberPlayerNumberPickerState(): PlayerNumberPickerState {
 fun PlayerNumberPicker(
     state: PlayerNumberPickerState,
     modifier: Modifier = Modifier,
-    height: Dp = PickerHeight
+    height: Dp = pickerHeight()
 ) {
     // Units starts focused: most shirt numbers are single digit or end in the digit the
     // referee is most likely to adjust.
@@ -125,8 +126,13 @@ private fun DigitPicker(
         readOnly = !selected,
         onSelected = onSelected,
         userScrollEnabled = !touchExplorationEnabled || selected,
+        // Picker fades its top and bottom edges by PickerDefaults.GradientRatio. Over a
+        // viewport only tall enough for one digit plus neighbours, that fade reaches the
+        // selected digit and reads as the number being cut off. Two columns of large
+        // digits are legible as a picker without it.
+        gradientRatio = 0f,
         modifier = Modifier
-            .size(width = PickerWidth, height = height)
+            .size(width = pickerWidth(), height = height)
             // Picker only reports onSelected through semantics (i.e. to screen readers), so
             // an ordinary tap on the unselected digit needs handling here or the tens column
             // would be unreachable by touch. Skipped under touch exploration, where the
@@ -177,7 +183,23 @@ private fun PickerDigit(digit: Int) {
     )
 }
 
-private val PickerWidth = 56.dp
-// Deliberately short: on a 192dp small round screen the header, picker and action row
-// have to share the height, and the picker still shows the neighbouring digits.
-private val PickerHeight = 66.dp
+/**
+ * Sized from the digit's own text size rather than a fixed dp, so it grows with the user's
+ * font scale. A fixed height clipped the digits top and bottom at the largest Wear font
+ * scale, which is exactly the kind of cut-off text the store review flags.
+ *
+ * The multiplier leaves room for the selected digit plus a sliver of its neighbours, which
+ * is what makes it read as a picker rather than a label.
+ */
+@Composable
+private fun pickerHeight(): Dp {
+    val fontSize = MaterialTheme.typography.displaySmall.fontSize
+    return with(LocalDensity.current) { fontSize.toDp() * 2.2f }
+}
+
+/** Wide enough for one digit at the largest font scale, again derived from the text size. */
+@Composable
+private fun pickerWidth(): Dp {
+    val fontSize = MaterialTheme.typography.displaySmall.fontSize
+    return with(LocalDensity.current) { fontSize.toDp() * 1.6f }
+}

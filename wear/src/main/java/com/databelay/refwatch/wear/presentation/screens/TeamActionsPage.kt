@@ -1,7 +1,9 @@
 // In TeamActionsPage.kt
 package com.databelay.refwatch.wear.presentation.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +23,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Button
@@ -63,7 +70,9 @@ fun TeamActionsPage(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(contentPadding)
-                .padding(horizontal = 12.dp, vertical = 24.dp),
+                // No extra vertical inset: contentPadding already reserves 10% of the
+                // screen top and bottom, and doubling it pushed the cards off the bottom.
+                .padding(horizontal = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -73,6 +82,10 @@ fun TeamActionsPage(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (teamColor.isDark()) Color.White else teamColor,
                 textAlign = TextAlign.Center,
+                // Callers pass a name already shortened by shortName(), but guard anyway so
+                // a long name cannot push the cards off the bottom of the screen.
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -95,66 +108,69 @@ fun TeamActionsPage(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Card Buttons in a Row. Use the full available width so the labels have
-            // room to wrap at large font scales instead of being clipped.
+            // The two cards, drawn as the cards themselves rather than labelled buttons.
+            // A word like "Yellow" cannot wrap, and side by side there is not enough width
+            // for it at the largest font scale -- it was being clipped mid-word. Stacking
+            // the buttons fixed the text but pushed the red card off the bottom, and a
+            // referee needs both within one tap. Shape and colour carry the meaning here as
+            // well as any label would, and they cost no width at any font scale.
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(CardButtonWidthFraction),
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Yellow Card Button
                 CardShapedButton(
                     onClick = { onNavigateToLogCard(team, CardType.YELLOW) },
-                    text = "Yellow",
-                    backgroundColor = Color.Yellow,
-                    contentColor = Color.Black,
-                    modifier = Modifier.weight(1f)
+                    contentDescription = "Yellow card",
+                    cardColor = Color.Yellow
                 )
-
-                // Red Card Button
                 CardShapedButton(
                     onClick = { onNavigateToLogCard(team, CardType.RED) },
-                    text = "Red",
-                    backgroundColor = Color.Red,
-                    contentColor = Color.White,
-                    modifier = Modifier.weight(1f)
+                    contentDescription = "Red card",
+                    cardColor = Color.Red
                 )
             }
         }
     }
 }
 
+/**
+ * A referee's card, shaped and coloured like the real thing, as a button.
+ *
+ * Carries no text, so there is nothing to clip at any font scale. [contentDescription] is
+ * what a screen reader announces, and it is the only thing that names the card.
+ */
 @Composable
 fun CardShapedButton(
     onClick: () -> Unit,
-    text: String,
-    backgroundColor: Color,
-    contentColor: Color,
+    contentDescription: String,
+    cardColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            contentColor = contentColor
-        ),
+    val shape = RoundedCornerShape(4.dp)
+    Box(
         modifier = modifier
-            .defaultMinSize(minHeight = 44.dp)
-            .border(
-                1.dp,
-                contentColor.copy(alpha = 0.5f),
-                RoundedCornerShape(8.dp)
+            // A real card is taller than it is wide. Sized in dp on purpose: this is a
+            // graphic, not text, so it should not grow with the font scale and squeeze the
+            // rest of the screen.
+            .size(width = 44.dp, height = 60.dp)
+            .clip(shape)
+            .background(cardColor)
+            .border(1.dp, Color.Black.copy(alpha = 0.35f), shape)
+            .clickable(
+                onClick = onClick,
+                onClickLabel = contentDescription,
+                role = Role.Button
             )
-    ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyExtraSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+            .semantics { this.contentDescription = contentDescription }
+    )
 }
+
+/**
+ * Content on a round screen has to stay inside the circle. At the vertical position these
+ * sit, a full-width row would have its ends cut off by the bezel.
+ */
+private const val CardButtonWidthFraction = 0.82f
 
 @Preview(device = WearDevices.SMALL_ROUND, showBackground = true)
 @Preview(device = WearDevices.LARGE_ROUND, showBackground = true)

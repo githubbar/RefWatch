@@ -2,6 +2,7 @@ package com.databelay.refwatch.wear.presentation.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,10 +64,13 @@ fun GoalScorerScreen(
             // the default font scale, still scrollable when a large scale pushes it over.
             verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)
         ) {
+            // Inset like the buttons below: this row sits near the top of the screen where
+            // the circle is at its narrowest, and a full-width row put the colour dot
+            // outside the visible area.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(ActionWidthFraction)
             ) {
                 ColorIndicator(color = teamColor, indicatorSize = 14.dp)
                 Spacer(modifier = Modifier.width(6.dp))
@@ -83,19 +87,26 @@ fun GoalScorerScreen(
             // caption cost a line this screen does not have.
             PlayerNumberPicker(state = pickerState)
 
+            // Side by side, but inset from the edges. These were originally laid out across
+            // the full width, which put both ends outside the round screen; stacking them
+            // instead pushed Skip off the bottom. "Save" and "Skip" are short enough to sit
+            // together inside the circle even at the largest font scale.
             Row(
+                modifier = Modifier.fillMaxWidth(ActionWidthFraction),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = onSkip,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors()
+                    colors = ButtonDefaults.outlinedButtonColors(),
+                    contentPadding = CompactActionPadding
                 ) {
                     Text(
                         "Skip",
                         textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -105,11 +116,14 @@ fun GoalScorerScreen(
                         // than blocking the referee on a screen that is holding up the game.
                         if (playerNumber > 0) onConfirm(playerNumber) else onSkip()
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    contentPadding = CompactActionPadding
                 ) {
                     Text(
                         "Save",
                         textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -135,3 +149,16 @@ fun GoalScorerScreenPreview() {
         )
     }
 }
+
+/**
+ * Buttons on a round screen have to stay inside the circle; a full-width button at this
+ * vertical position has its ends cut off by the bezel.
+ */
+private const val ActionWidthFraction = 0.82f
+
+/**
+ * ButtonDefaults.ContentPadding reserves 14dp each side, which at the largest font scale
+ * left too little room for the label and ellipsised "Skip" down to "S...". These labels are
+ * short, so they do not need the standard inset.
+ */
+private val CompactActionPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.Text
@@ -41,19 +42,25 @@ fun KickOffSelectionScreen(
     ScreenScaffold(
         scrollState = scrollState,
         scrollIndicator = { ScrollIndicator(state = scrollState) }
-    ) {
+    ) { contentPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 24.dp),
+                .padding(contentPadding)
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+        // Was "${currentPhase.readable()} : Kick-Off", which for a kick-off selection phase
+        // reads "Kick-off Selection : Kick-Off" -- long enough to wrap onto three lines at
+        // the largest font scale and push the team choices off the bottom of the screen.
         Text(
-            text = "${game.currentPhase.readable()} : Kick-Off",
-            style = MaterialTheme.typography.bodySmall,
+            text = "Who kicks off?",
+            style = MaterialTheme.typography.titleSmall,
             textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .padding(bottom = 8.dp)
@@ -75,7 +82,7 @@ fun KickOffSelectionScreen(
                 Spacer(Modifier.height(4.dp))
                 ColorIndicator(
                     color = game.homeTeamColor,
-                    indicatorSize = 60.dp,
+                    indicatorSize = 52.dp,
                     outlineWidth = 2.dp,
                 )
             }
@@ -90,7 +97,7 @@ fun KickOffSelectionScreen(
                 Spacer(Modifier.height(4.dp))
                 ColorIndicator(
                     color = game.awayTeamColor,
-                    indicatorSize = 60.dp,
+                    indicatorSize = 52.dp,
                     outlineWidth = 2.dp,
                 )
             }
