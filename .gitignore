@@ -22,3 +22,6 @@ local.properties
 # Secrets
 .env*
 secrets.properties
+
+# Release artifacts downloaded from CI by /release
+/dist/

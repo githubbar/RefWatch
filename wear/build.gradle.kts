@@ -13,28 +13,73 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-// Version code scheme: https://developer.android.com/training/wearables/packaging
-//   36        | 117             | 00           | 01
-//   targetSdk | product version | build number | multi-APK variant (wear = 01)
+// Version code scheme: 4 | major | minor(2) | patch(2) | variant(2)
+//   401020001 = v1.2.0, wear
+//
+// The 400_000_000 floor exists so every derived code stays above 361190001, the last
+// code published under the previous scheme. That scheme was
+//   36 * 10_000_000 + (major*100 + minor*10 + patch) * 10_000 + variant
+// which gave minor and patch a single digit each, so 1.1.10 and 1.2.0 both produced
+// 361200001. Play requires version codes to be unique and strictly increasing, so that
+// collision would have made one of those versions unpublishable. Minor and patch now
+// get two digits each; the ceiling is 9.99.99 -> 409999901, well under Play's
+// 2100000000 limit.
 fun refWatchVersionCode(versionName: String, variant: Int): Int {
     val parts = versionName.substringBefore('-').split(".")
     val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
     val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
     val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
-    return 36 * 10_000_000 + (major * 100 + minor * 10 + patch) * 10_000 + variant
+    return 400_000_000 + major * 1_000_000 + minor * 10_000 + patch * 100 + variant
 }
 
 // Local builds use the fallback; CI passes -PversionName=<tag without the "v">,
-// so tagging v1.1.8 yields versionName 1.1.8 and versionCode 361180001.
+// so tagging v1.2.0 yields versionName 1.2.0 and versionCode 401020001.
 // -PversionCode=<int> overrides the derived code when you need to hand-pick it.
-val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.1.7"
+val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.2.0"
 val appVersionCode: Int = (findProperty("versionCode") as String?)?.toInt()
     ?: refWatchVersionCode(appVersionName, variant = 1)
+
+// Optional local release signing.
+//
+// CI does NOT use this: it builds unsigned and then signs with apksigner/jarsigner from
+// the ANDROID_KEYSTORE_* repository secrets. These properties are absent on CI, so
+// canSignLocally is false there and the workflow's own signing step still applies.
+//
+// The Play upload key is the PKCS#12 keystore Android Studio has been using, alias
+// `key0` (SHA1 A2:91:2C:C8:...). NOTE it is a different key from
+// ~/keystores/refwatch-release.jks, which was generated later for CI and which Play
+// rejects -- see the Signing section of CLAUDE.md before changing any of this.
+//
+// To sign locally, add these to ~/.gradle/gradle.properties -- never to a file inside
+// this repository:
+//   refwatchStoreFile=C:/Users/oleyk/keys_for_android_studio
+//   refwatchStorePassword=<store password>
+//   refwatchKeyAlias=key0
+//   refwatchKeyPassword=<key password, same as the store password for PKCS#12>
+val releaseStoreFile = (findProperty("refwatchStoreFile") as String?)?.let { file(it) }
+val releaseStorePassword = findProperty("refwatchStorePassword") as String?
+val releaseKeyAlias = findProperty("refwatchKeyAlias") as String?
+val releaseKeyPassword = findProperty("refwatchKeyPassword") as String?
+val canSignLocally = releaseStoreFile?.exists() == true &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.databelay.refwatch"
     compileSdk = 36
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
+
+    signingConfigs {
+        if (canSignLocally) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
 
     buildFeatures {
         compose = true
@@ -65,6 +110,8 @@ android {
 
     buildTypes {
         release {
+            // null on CI, where the workflow signs the output itself.
+            signingConfig = if (canSignLocally) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

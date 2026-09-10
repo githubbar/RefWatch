@@ -106,12 +106,28 @@ jobs:
 
       - run: chmod +x ./gradlew
 
+      # Renders every Wear screen at the largest font scale (1.24) on a small round
+      # screen and compares against the baselines in wear/src/screenshotTestDebug.
+      # This app was rejected from Play twice for text being cut off at large font
+      # sizes; unlike the unit-test job, this one deliberately GATES the build, so a
+      # layout regression cannot reach a release.
+      - name: Wear font-scale screenshot tests
+        run: ./gradlew :wear:validateDebugScreenshotTest --stacktrace
+
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: wear/build/reports/screenshotTest/
+          if-no-files-found: ignore
+
       - name: Build debug APKs
         if: steps.variant.outputs.release != 'true'
         run: ./gradlew :mobile:assembleDebug :wear:assembleDebug --stacktrace
 
-      # On a tag, versionName/versionCode come from the tag itself: v1.1.8 ->
-      # versionName 1.1.8, versionCode 361180000 (mobile) / 361180001 (wear).
+      # On a tag, versionName/versionCode come from the tag itself: v1.2.0 ->
+      # versionName 1.2.0, versionCode 401020000 (mobile) / 401020001 (wear).
       # Off a tag, the fallback values in the module build files are used.
       - name: Build release APKs and AABs
         if: steps.variant.outputs.release == 'true'

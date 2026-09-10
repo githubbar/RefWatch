@@ -13,27 +13,58 @@ plugins {
     alias(libs.plugins.secrets)
 }
 
-// Version code scheme: https://developer.android.com/training/wearables/packaging
-//   36        | 117             | 00           | 00
-//   targetSdk | product version | build number | multi-APK variant (mobile = 00)
+// Version code scheme: 4 | major | minor(2) | patch(2) | variant(2)
+//   401020000 = v1.2.0, mobile
+//
+// The 400_000_000 floor exists so every derived code stays above 361190001, the last
+// code published under the previous scheme. That scheme was
+//   36 * 10_000_000 + (major*100 + minor*10 + patch) * 10_000 + variant
+// which gave minor and patch a single digit each, so 1.1.10 and 1.2.0 both produced
+// 361200000. Play requires version codes to be unique and strictly increasing, so that
+// collision would have made one of those versions unpublishable. Minor and patch now
+// get two digits each; the ceiling is 9.99.99 -> 409999900, well under Play's
+// 2100000000 limit.
 fun refWatchVersionCode(versionName: String, variant: Int): Int {
     val parts = versionName.substringBefore('-').split(".")
     val major = parts.getOrNull(0)?.toIntOrNull() ?: 0
     val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0
     val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
-    return 36 * 10_000_000 + (major * 100 + minor * 10 + patch) * 10_000 + variant
+    return 400_000_000 + major * 1_000_000 + minor * 10_000 + patch * 100 + variant
 }
 
 // Local builds use the fallback; CI passes -PversionName=<tag without the "v">,
-// so tagging v1.1.8 yields versionName 1.1.8 and versionCode 361180000.
+// so tagging v1.2.0 yields versionName 1.2.0 and versionCode 401020000.
 // -PversionCode=<int> overrides the derived code when you need to hand-pick it.
-val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.1.7"
+val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.2.0"
 val appVersionCode: Int = (findProperty("versionCode") as String?)?.toInt()
     ?: refWatchVersionCode(appVersionName, variant = 0)
+
+// Optional local release signing. See the matching comment in wear/build.gradle.kts:
+// CI leaves these properties unset and signs its own output, so this only affects
+// local release builds.
+val releaseStoreFile = (findProperty("refwatchStoreFile") as String?)?.let { file(it) }
+val releaseStorePassword = findProperty("refwatchStorePassword") as String?
+val releaseKeyAlias = findProperty("refwatchKeyAlias") as String?
+val releaseKeyPassword = findProperty("refwatchKeyPassword") as String?
+val canSignLocally = releaseStoreFile?.exists() == true &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.databelay.refwatch"
     compileSdk = 36
+
+    signingConfigs {
+        if (canSignLocally) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.databelay.refwatch"
@@ -66,6 +97,8 @@ android {
 
     buildTypes {
         release {
+            // null on CI, where the workflow signs the output itself.
+            signingConfig = if (canSignLocally) signingConfigs.getByName("release") else null
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
