@@ -73,13 +73,16 @@ what Android Studio's Generate Signed Bundle wizard uses; the path and alias are
 remembered in `.idea/workspace.xml` under `KEY_STORE_PATH` / `KEY_ALIAS`.
 
 **`C:\Users\oleyk\keystores\refwatch-release.jks`** (alias `refwatch`, RSA 4096) is a
-*different*, later-generated key with fingerprint `SHA1: 6B:AF:C7:99:...`. It is what the
-`ANDROID_KEYSTORE_*` GitHub secrets contain, so **every CI-produced artifact is signed
-with the wrong key and Play rejects it** ("Your Android App Bundle is signed with the
-wrong key"). v1.1.8 and v1.1.9 release assets are affected.
+*different*, later-generated key with fingerprint `SHA1: 6B:AF:C7:99:...`. Play rejects
+anything signed with it ("Your Android App Bundle is signed with the wrong key"). The
+`ANDROID_KEYSTORE_*` GitHub secrets once held it, so the v1.1.8 and v1.1.9 release assets
+are unusable. **Do not use this key.**
 
-Until the CI secrets are re-encoded from the upload key, take release bundles from a
-**local** build, not from the GitHub Release.
+The secrets were re-encoded from the upload key (alias `key0`; for this PKCS#12 keystore
+the store and key passwords are the same) and CI signing was confirmed correct from
+v1.2.1 on. The v1.2.0 tag run failed at signing and published no Release. CI and local
+builds now produce equivalent, uploadable bundles — but still check the fingerprint,
+because a secret that drifts from the keystore fails silently into the wrong key.
 
 Local signing: both modules have a `signingConfig` that activates only when
 `refwatchStoreFile` / `refwatchStorePassword` / `refwatchKeyAlias` /
@@ -102,17 +105,21 @@ key was actually used before uploading:
 Versions come from the git tag: CI passes `-PversionName=${tag#v}`, and
 `refWatchVersionCode` in each module's `build.gradle.kts` derives the code from it.
 
-**Known bug:** the formula is `major*100 + minor*10 + patch`, giving minor and patch one
-digit each, so `1.1.10` and `1.2.0` both yield `361200001`. Play requires unique,
-strictly increasing codes. This needs fixing before either version ships.
+The formula is `400_000_000 + major*1_000_000 + minor*10_000 + patch*100 + variant`
+(wear variant 1, mobile 0), so v1.2.1 is `401020101` / `401020100`. Minor and patch get
+two digits each. The 400_000_000 floor keeps every code above the old scheme's last
+published code (`361190001`); the old scheme gave minor and patch one digit each and made
+`1.1.10` collide with `1.2.0`. Play requires unique, strictly increasing codes, so a tag
+can never be reused for a new upload — bump the version instead. Play has rejected
+`401020001` (v1.2.0).
 
 Use `/release` for the full sequence. The short version: verify, commit, push `main`,
 then tag and push the tag — the tag push is what publishes a public GitHub Release, so
 confirm before it.
 
-The workflow (`.github/workflows/build.yml`) does **not** currently run
-`validateDebugScreenshotTest`, and its unit-test job is deliberately non-gating, so a
-red test does not block a release.
+The workflow (`.github/workflows/build.yml`) gates the release build on
+`:wear:validateDebugScreenshotTest`. Its unit-test job is deliberately non-gating, so a
+red unit test does not block a release.
 
 ## Settings
 
