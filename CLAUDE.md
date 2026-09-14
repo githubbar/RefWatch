@@ -35,6 +35,19 @@ Reading those PNGs found four clipped screens that reasoning about the code had 
 
 Things that bit us, worth checking in new layouts:
 
+- **Dialogs are not rendered unless you render them.** A Wear `Dialog` / `AlertDialog`
+  opens its own window, which preview rendering does not capture, so the audit passed for
+  ten Play rejections while the confirmation dialogs clipped their buttons. Split each
+  dialog into a `*Content` composable (built on `AlertDialogContent`) and add it to
+  `FontScaleAudit.kt`.
+- `AlertDialogDefaults.ConfirmButton` / `DismissButton` are **fixed-size icon buttons**
+  (63x54dp, 60dp). Never put a text label in them — use the icon and make the label the
+  `contentDescription`. Labelled choices go in full-width `Button`s.
+- `ConfirmationDialog` caps its text at 3 non-scrolling lines and `AlertDialog` titles at 3.
+  Anything longer belongs in an `AlertDialog` text slot, which scrolls.
+- The watch also has a **Bold text** setting that previews cannot simulate; check it on a
+  device.
+
 - `ScreenScaffold`'s `contentPadding` already reserves **10% of screen height** top and
   bottom. Adding another `vertical =` padding on top of it eats half a small screen.
 - On a round screen, `fillMaxWidth()` content near the top or bottom has its ends cut

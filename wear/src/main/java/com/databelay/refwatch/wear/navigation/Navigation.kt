@@ -14,9 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Report
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,12 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.ConfirmationDialog
-import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.Dialog
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TimeText
@@ -63,7 +56,9 @@ import com.databelay.refwatch.wear.presentation.screens.GameScreenWithPager
 import com.databelay.refwatch.wear.presentation.screens.GoalScorerScreen
 import com.databelay.refwatch.wear.presentation.screens.KickOffSelectionScreen
 import com.databelay.refwatch.wear.presentation.screens.LogCardScreen
+import com.databelay.refwatch.wear.presentation.screens.PermissionRequiredDialogContent
 import com.databelay.refwatch.wear.presentation.screens.PreGameSetupRoute
+import com.databelay.refwatch.wear.presentation.screens.SecondYellowDialogContent
 import kotlinx.coroutines.delay
 
 const val TAG = "NavigationRoutes"
@@ -154,40 +149,18 @@ fun NavigationRoutes() {
 
     // Dialog to show when permission is denied
     if (showPermissionDeniedDialog) {
-        AlertDialog(
+        Dialog(
             visible = true,
-            onDismissRequest = { showPermissionDeniedDialog = false }, // Hide dialog on timeout
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Report,
-                    contentDescription = "Warning Icon",
-                    modifier = Modifier.size(ConfirmationDialogDefaults.IconSize)
-                )
-            },
-            title = {
-                Text("Permission Required")
-            },
-            text = {
-                Text(
-                    "This app requires Body Sensors, Location, and Notifications to track your game activity and keep the timer running reliably. Please enable them in settings.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            },
-            confirmButton = {
-                AlertDialogDefaults.ConfirmButton(
-                    onClick = {
-                        showPermissionDeniedDialog = false
-                        context.startActivity(openSettingsIntent) // Go to settings
-                    },
-                )
-            },
-            dismissButton = {
-                AlertDialogDefaults.DismissButton(
-                    onClick = { showPermissionDeniedDialog = false }, // Just dismiss the dialog
-                )
-            },
-
-        )
+            onDismissRequest = { showPermissionDeniedDialog = false },
+        ) {
+            PermissionRequiredDialogContent(
+                onOpenSettings = {
+                    showPermissionDeniedDialog = false
+                    context.startActivity(openSettingsIntent)
+                },
+                onDismiss = { showPermissionDeniedDialog = false },
+            )
+        }
     }
 
     val startDestination = remember(activeGame) {
@@ -465,31 +438,21 @@ fun NavigationRoutes() {
                             }
                         },
                     )
-                    ConfirmationDialog(
+                    val closeRedCardDialog = {
+                        showRedCardConfirmationDialog = false
+                        navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
+                            popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                    Dialog(
                         visible = showRedCardConfirmationDialog,
-                        onDismissRequest = {
-                            showRedCardConfirmationDialog = false
-                            navController.navigate(WearNavRoutes.GAME_IN_PROGRESS_SCREEN) {
-                                popUpTo(WearNavRoutes.GAME_LIST_SCREEN) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        },
-                        text = {
-                            Text(
-                                text = "Second yellow for player $confirmedRedPlayerNumber of team $team. Auto red card issued.",
-                                color = MaterialTheme.colorScheme.onError
-
-                            )
-                        },
-                        colors = ConfirmationDialogDefaults.colors(
-                            iconColor = MaterialTheme.colorScheme.onErrorContainer,
-                            iconContainerColor = MaterialTheme.colorScheme.primary,
-                        )
+                        onDismissRequest = closeRedCardDialog,
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Report,
-                            contentDescription = null,
-                            modifier = Modifier.size(ConfirmationDialogDefaults.SmallIconSize),
+                        SecondYellowDialogContent(
+                            team = team,
+                            playerNumber = confirmedRedPlayerNumber,
+                            onDismiss = closeRedCardDialog,
                         )
                     }
                 } else {

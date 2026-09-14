@@ -110,7 +110,10 @@ fun GameListScreen(
     onGameSelected: (Game) -> Unit,
     onViewLog: (String) -> Unit,
     onNavigateToNewGame: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Overridable so screenshot tests can pin it; the real value embeds the build time,
+    // which would change the render on every build.
+    versionLabel: String? = null
 ) {
     val tag = "GameListScreen"
     LaunchedEffect(allGames) {
@@ -124,6 +127,7 @@ fun GameListScreen(
     LaunchedEffect(Unit) {
         appVersionName = getAppVersionName(context)
     }
+    val versionText = versionLabel ?: "Version: $appVersionName $buildDateString"
 
     val (upcomingGames, pastGames) = remember(allGames) {
         val (scheduled, completed) = allGames.partition { it.status == GameStatus.SCHEDULED }
@@ -207,7 +211,7 @@ fun GameListScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Version: $appVersionName $buildDateString",
+                        text = versionText,
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
