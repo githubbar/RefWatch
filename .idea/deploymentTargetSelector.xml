@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="mobile">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-08-25T12:07:37.379290500Z">
+        <DropdownSelection timestamp="2026-09-21T12:02:00.273780500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=H631104000078F2T02AU" />
+              <DeviceId pluginId="Wireless" identifier="serviceName=adb-4ec8f1c7-ycTAAu" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="wear">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-09-07T18:00:51.253894700Z">
+        <DropdownSelection timestamp="2026-09-21T10:58:14.453963400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=H631104000078F2T02AU" />
+              <DeviceId pluginId="Wireless" identifier="serviceName=adb-H631104000078F2T02AU-ftICIT" />
             </handle>
           </Target>
         </DropdownSelection>
