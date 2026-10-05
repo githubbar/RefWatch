@@ -1,6 +1,7 @@
 package com.databelay.refwatch.navigation // Create this package
 
 import android.net.Uri
+import android.widget.Toast
 import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -134,9 +135,22 @@ fun RefWatchNavHost() {
 
                 if (icsEvents != null) {
                     Log.d(TAG, "Successfully parsed ${icsEvents.size} events from URI.")
-                    val gamesToImport = icsEvents.map { Game(it) } // Convert SimpleIcsEvent to Game
-                    mobileGameViewModel.addOrUpdateGames(gamesToImport)
-                    // Optionally, show a success message to the user (e.g., via a Snackbar or Toast)
+                    val appContext = context.applicationContext
+                    Toast.makeText(appContext, "Reading ${icsEvents.size} games…", Toast.LENGTH_SHORT).show()
+                    mobileGameViewModel.importIcsEvents(icsEvents) { summary ->
+                        val skipped = if (summary.alreadyImported > 0) {
+                            " ${summary.alreadyImported} already in your list."
+                        } else ""
+                        val message = when {
+                            summary.added == 0 -> "No new games.$skipped"
+                            summary.aiFailure == null -> "Added ${summary.added} games.$skipped"
+                            summary.readByAi == 0 ->
+                                "Added ${summary.added} games with the built-in parser (AI unavailable: ${summary.aiFailure}).$skipped"
+                            else ->
+                                "Added ${summary.added} games; ${summary.added - summary.readByAi} read by the built-in parser (${summary.aiFailure}).$skipped"
+                        }
+                        Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+                    }
                 } else {
                     Log.e(TAG, "Failed to parse ICS events from URI.")
                     // Optionally, show an error message

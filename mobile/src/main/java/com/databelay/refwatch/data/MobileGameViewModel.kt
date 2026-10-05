@@ -8,8 +8,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
+import com.databelay.refwatch.common.GameImportKey
 import com.databelay.refwatch.common.GameStatus
 import com.databelay.refwatch.common.IMobileGameViewModel
+import com.databelay.refwatch.common.SimpleIcsEvent
+import com.databelay.refwatch.data.ai.AiScheduleExtractor
 import com.databelay.refwatch.common.WearSyncConstants
 import com.databelay.refwatch.di.UserIdFlow
 import com.google.android.gms.wearable.DataClient
@@ -51,6 +54,7 @@ class MobileGameViewModel @Inject constructor(
     application: Application,
     private val gameRepository: GameStorageMobile,
     @UserIdFlow private val userIdFlow: Flow<String?>,
+    private val aiScheduleExtractor: AiScheduleExtractor,
 //    val onboardingViewModel: OnboardingViewModel // <-- ADD THIS LINE
 ) : AndroidViewModel(application), IMobileGameViewModel {
 
@@ -467,6 +471,52 @@ class MobileGameViewModel @Inject constructor(
             // Emit the event. The list should ideally have updated or be updating shortly.
             _scrollToTopGamesListEvent.emit(Unit)
             Log.d(TAG, "ScrollToTopGamesList event emitted.")
+        }
+    }
+
+    private val _importInProgress = MutableStateFlow(false)
+    val importInProgress: StateFlow<Boolean> = _importInProgress.asStateFlow()
+
+    data class ImportSummary(
+        val added: Int,
+        /** Games in the file that were already in the list and were left untouched. */
+        val alreadyImported: Int,
+        /** New games the AI read; the rest of the new games kept the regex parse. */
+        val readByAi: Int,
+        val aiFailure: String?
+    )
+
+    /**
+     * Imports parsed calendar events. Games already in the list are skipped, matched by
+     * [GameImportKey] since exports regenerate UIDs. Only new games are read by the AI, with the
+     * prompt from Settings; anything it cannot answer keeps the regex parse.
+     */
+    fun importIcsEvents(events: List<SimpleIcsEvent>, onDone: (ImportSummary) -> Unit) {
+        viewModelScope.launch {
+            _importInProgress.value = true
+            try {
+                val newEvents = GameImportKey.newEvents(events, gamesList.value)
+                // Ids come from the regex parse, which every later import also starts from.
+                val idsByUid = newEvents.associate { event ->
+                    event.uid to GameImportKey.of(event)?.let(GameImportKey::documentId)
+                }
+                val outcome = aiScheduleExtractor.enrich(newEvents)
+                val games = outcome.events.map { event ->
+                    val game = Game(event)
+                    idsByUid[event.uid]?.let { game.copy(id = it) } ?: game
+                }
+                addOrUpdateGames(games)
+                val summary = ImportSummary(
+                    added = games.size,
+                    alreadyImported = events.size - newEvents.size,
+                    readByAi = outcome.aiCount,
+                    aiFailure = outcome.failure
+                )
+                Log.d(TAG, "Import: $summary")
+                onDone(summary)
+            } finally {
+                _importInProgress.value = false
+            }
         }
     }
 
