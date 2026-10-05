@@ -20,6 +20,7 @@ import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.PutDataRequest
 import com.google.android.gms.wearable.Wearable
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,7 +62,6 @@ class MobileGameViewModel @Inject constructor(
     companion object {
         private const val TAG = "MobileGameViewModel"
         private const val WATCH_GAME_PAYLOAD_KEY = WearSyncConstants.KEY_GAME_UPDATE
-        private const val SYNC_TO_WATCH_DELAY_MS = 3000L // 3 seconds, adjust as needed
     }
     // --- Onboarding Tooltip State ---
     @OptIn(ExperimentalMaterial3Api::class)
@@ -72,16 +72,6 @@ class MobileGameViewModel @Inject constructor(
     private val _scrollToTopGamesListEvent =
         MutableSharedFlow<Unit>(replay = 0) // Simpler: just Unit event
     val scrollToTopGamesListEvent: SharedFlow<Unit> = _scrollToTopGamesListEvent.asSharedFlow()
-
-    // Job to manage the delayed task of syncing to the watch
-    private var syncToWatchJob: Job? = null
-
-    // You'll need a way to know if the watch is connected.
-    // This could be a Flow from a service that monitors wearable capabilities.
-    // For this example, let's assume you have a way to call a function when connection status changes.
-    // Replace this with your actual watch connectivity detection mechanism.
-    private val _watchConnectedState = MutableStateFlow(true) // Example state
-    val watchConnectedState: StateFlow<Boolean> = _watchConnectedState.asStateFlow()
 
     private val dataClient by lazy { Wearable.getDataClient(application) }
 
@@ -143,10 +133,8 @@ class MobileGameViewModel @Inject constructor(
             Log.d("MobileVM", "DataChangedListener added for watch updates.")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to add DataClient listener. Wearable API might be unavailable.", e)
-            if (e is com.google.android.gms.common.api.ApiException && e.statusCode == 17) {
-                _watchConnectedState.value = false
-            }
         }
+        deleteObsoleteGamesListItem()
 
         viewModelScope.launch {
             // Collect the injected userIdFlow to update the internal _currentUserId
@@ -158,71 +146,30 @@ class MobileGameViewModel @Inject constructor(
                 }
             }
         }
+    }
 
-        // Collect gamesList to sync to watch (this part syncs whenever gamesList changes AFTER the initial delay)
+    /**
+     * Older versions pushed the whole games list to the watch as one DataItem. The watch reads
+     * games from Firestore and never used it, and with recorded GPS and heart-rate history the
+     * item grew past the Data Layer's ~100 KB limit, so every push failed. Deleting the item that
+     * earlier versions left behind frees it from the data layer on both devices.
+     */
+    private fun deleteObsoleteGamesListItem() {
         viewModelScope.launch {
-            gamesList
-                .collectLatest { currentGamesList ->
-                    val userId = _currentUserId.value
-                    if (userId != null && _watchConnectedState.value) { // Only sync if watch is considered connected
-                        Log.d(TAG, "Games list changed for user $userId (${currentGamesList.size} games). Syncing to watch.")
-                        syncGamesToWatchInternal(currentGamesList) // Changed to internal to avoid immediate call
-                    } else if (userId == null && currentGamesList.isEmpty() && _watchConnectedState.value) {
-                        Log.d(TAG, "User logged out, games list is empty. Syncing empty list to clear watch.")
-                        syncGamesToWatchInternal(emptyList())
-                    } else if (!_watchConnectedState.value) {
-                        Log.d(TAG, "Games list changed, but watch is not connected. Sync deferred.")
-                    }
-                }
-        }
-
-        // Example: Reacting to watch connection changes
-        // Replace this with your actual connection status observation logic
-        viewModelScope.launch {
-            watchConnectedState.collectLatest { isConnected ->
-                if (isConnected) {
-                    Log.i(TAG, "Watch connection established. Scheduling full sync TO watch after a delay.")
-                    scheduleFullSyncToWatchWithDelay()
-                } else {
-                    Log.i(TAG, "Watch disconnected. Cancelling any pending sync TO watch.")
-                    syncToWatchJob?.cancel()
-                }
+            try {
+                val uri = Uri.Builder()
+                    .scheme(PutDataRequest.WEAR_URI_SCHEME)
+                    .path(WearSyncConstants.PATH_GAMES_LIST)
+                    .build()
+                val deleted = dataClient.deleteDataItems(uri).await()
+                if (deleted > 0) Log.i(TAG, "Deleted $deleted obsolete games-list DataItem(s).")
+            } catch (e: Exception) {
+                // No Wear API or no watch: there is nothing stored to delete.
+                Log.d(TAG, "Could not delete obsolete games-list DataItem.", e)
             }
         }
     }
 
-    // Call this method from your service or mechanism that detects watch connection status
-    fun onWatchConnectionChanged(isConnected: Boolean) {
-        _watchConnectedState.value = isConnected
-    }
-
-    private fun scheduleFullSyncToWatchWithDelay() {
-        syncToWatchJob?.cancel() // Cancel any existing delayed sync
-        syncToWatchJob = viewModelScope.launch(Dispatchers.IO) {
-            Log.d(TAG, "Waiting ${SYNC_TO_WATCH_DELAY_MS}ms before syncing all games to watch...")
-            delay(SYNC_TO_WATCH_DELAY_MS)
-
-            // Check connection again after delay, in case it disconnected during the delay
-            if (!_watchConnectedState.value) {
-                Log.i(TAG, "Watch disconnected during delay. Aborting sync TO watch.")
-                return@launch
-            }
-
-            val userId = _currentUserId.value
-            if (userId != null) {
-                // Fetch the most current list of games to send.
-                // gamesList.value might be stale if it hasn't recomposed/recollected yet.
-                // It's safer to query the repository or use a first() on the flow if appropriate.
-                // For simplicity, using gamesList.value which is updated by its own collector.
-                val gamesToSend = gamesList.value
-                Log.i(TAG, "Delay finished. Syncing ${gamesToSend.size} games to watch for user $userId.")
-                syncGamesToWatchInternal(gamesToSend)
-            } else {
-                Log.i(TAG, "Delay finished, but user is null. Syncing empty list to watch.")
-                syncGamesToWatchInternal(emptyList())
-            }
-        }
-    }
     private fun processGameDataFromWatch(dataMapItem: DataMapItem, pathGameId: String?) {
         val userId = _currentUserId.value
         if (userId == null) {
@@ -266,49 +213,6 @@ class MobileGameViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             gameRepository.deleteGame(userId, game.id).onFailure {
                 Log.e(TAG, "Failed to delete game: ${it.localizedMessage}")
-            }
-        }
-    }
-
-    private fun syncGamesToWatchInternal(games: List<Game>) {
-        val userIdForSync = _currentUserId.value // Use the ID for whom these games are relevant
-
-        if (userIdForSync == null && games.isNotEmpty()) {
-            Log.w(TAG, "syncGamesToWatch: Attempting to sync non-empty games list but _currentUserId is null. This is unusual. Skipping sync.")
-            return
-        }
-        // If userIdForSync is null and games is empty, it means user logged out, send empty list.
-        // If userIdForSync is not null, send the games (even if empty for that user).
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // In phone's MobileGameViewModel, before sending
-                val nodes = Wearable.getNodeClient(getApplication<Application>()).connectedNodes.await()
-                if (nodes.isEmpty()) {
-                    Log.e(TAG, "PHONE: No connected Wear OS nodes found. Data will be queued by DataClient but may not send immediately.")
-                } else {
-                    Log.i(TAG, "PHONE: Connected nodes: ${nodes.joinToString { it.displayName }}")
-                }
-
-                val jsonString = AppJsonConfiguration.encodeToString(games)
-                Log.d(TAG, "syncGamesToWatch: Sending to watch. Path: ${WearSyncConstants.PATH_GAMES_LIST}, User: $userIdForSync, Games: ${games.size}")
-                // ... (rest of PutDataMapRequest logic) ...
-
-                val putDataMapReq = PutDataMapRequest.create(WearSyncConstants.PATH_GAMES_LIST)
-                getCurrentUserId()?.let { putDataMapReq.dataMap.putString(WearSyncConstants.KEY_USER_ID, it) } // Add the user ID
-                putDataMapReq.dataMap.putString(WearSyncConstants.KEY_GAMES_JSON, jsonString)
-                putDataMapReq.dataMap.putLong("syncTimestamp", System.currentTimeMillis())
-                putDataMapReq.setUrgent()
-                val putDataReq = putDataMapReq.asPutDataRequest()
-                dataClient.putDataItem(putDataReq).await()
-                Log.i(TAG, "syncGamesToWatch: Games list for user $userIdForSync (${games.size}) sent successfully.")
-            } catch (e: Exception) {
-                Log.e(TAG, "syncGamesToWatch: Failed for user $userIdForSync.", e)
-                // If Wearable API is not available on this device (ApiException 17), 
-                // mark watch as disconnected to prevent further attempts.
-                if (e is com.google.android.gms.common.api.ApiException && e.statusCode == 17) {
-                    _watchConnectedState.value = false
-                }
             }
         }
     }

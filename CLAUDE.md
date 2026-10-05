@@ -121,6 +121,13 @@ The workflow (`.github/workflows/build.yml`) gates the release build on
 `:wear:validateDebugScreenshotTest`. Its unit-test job is deliberately non-gating, so a
 red unit test does not block a release.
 
+## Games reach the watch through Firestore, not the Data Layer
+
+The watch reads `users/{uid}/games` with its own Firestore listener. Do not push game lists
+over the Wear Data Layer: a DataItem is limited to ~100 KB, and games carry GPS and heart-rate
+history, so a full list failed at 3.7 MB. Only sign-in (`/phone_user_id`), settings
+(`/settings`) and single game updates from the watch use the Data Layer.
+
 ## Settings
 
 `collectPositionInfo` and `logGoalScorer` are owned by the **phone** Settings screen and
