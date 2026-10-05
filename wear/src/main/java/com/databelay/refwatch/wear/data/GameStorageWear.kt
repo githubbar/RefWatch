@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.ui.unit.size
 import androidx.core.content.edit
 // import androidx.core.content.edit // Not strictly needed if using withContext for prefs
+import com.databelay.refwatch.common.WatchGames
 import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.Game
 import com.databelay.refwatch.common.GameEvent
@@ -77,7 +78,7 @@ class GameStorageWear @Inject constructor(
     val networkStatusFlow: StateFlow<ConnectivityObserver.Status> = _networkStatusFlow.asStateFlow()
 
     private var currentUserId: String? = null
-    private var firestoreListenerRegistration: ListenerRegistration? = null
+    private var firestoreListenerRegistrations: List<ListenerRegistration> = emptyList()
 
     init {
         Log.d(tag, "Initializing GameStorageWear.")
@@ -107,7 +108,7 @@ class GameStorageWear @Inject constructor(
                     Log.i(tag, "Network became available for user $userId. Triggering pending sync.")
                     syncPendingGames(userId)
                     // Re-attach listener if it was detached due to prior network unavailability
-                    if (firestoreListenerRegistration == null) {
+                    if (firestoreListenerRegistrations.isEmpty()) {
                          Log.i(tag, "Network reconnected, re-attaching Firestore listener for user $userId.")
                          attachFirestoreListener(userId)
                     }
@@ -146,50 +147,62 @@ class GameStorageWear @Inject constructor(
     }
 
     private fun attachFirestoreListener(userId: String) {
-        // ... (existing setup and error handling for listener) ...
-        Log.d(tag, "Attempting to attach Firestore listener for user: $userId (Wear)")
+        Log.d(tag, "Attempting to attach Firestore listeners for user: $userId (Wear)")
 
+        // Two queries instead of the whole collection; see WatchGames. Each keeps its latest
+        // result here, and the list shown is their union.
+        val games = firestore.collection("users").document(userId).collection("games")
+        val queries = listOf(
+            games.whereNotEqualTo(WatchGames.PHASE_FIELD, WatchGames.ENDED_PHASE),
+            games.whereGreaterThanOrEqualTo(
+                WatchGames.DATE_FIELD,
+                WatchGames.recentCutoff(System.currentTimeMillis())
+            )
+        )
+        val latestResults = arrayOfNulls<List<Game>>(queries.size)
 
-        val gamesCollection = firestore.collection("users").document(userId).collection("games")
-        firestoreListenerRegistration = gamesCollection.addSnapshotListener { snapshots, e ->
-            if (snapshots == null) {
-                Log.w(tag, "Firestore snapshots were null for user $userId. Not updating game list.")
-                _dataFetchStatusFlow.value = DataFetchStatus.NO_DATA_AVAILABLE 
-                return@addSnapshotListener
-            }
+        firestoreListenerRegistrations = queries.mapIndexed { index, query ->
+            query.addSnapshotListener { snapshots, e ->
+                if (snapshots == null) {
+                    Log.w(tag, "Firestore snapshots were null for user $userId (query $index). Not updating game list.", e)
+                    if (latestResults.all { it == null }) {
+                        _dataFetchStatusFlow.value = DataFetchStatus.NO_DATA_AVAILABLE
+                    }
+                    return@addSnapshotListener
+                }
+                Log.d(tag, "Firestore listener (Wear) query $index received ${snapshots.size()} documents for user $userId.")
 
-            Log.d(tag, "Firestore listener (Wear) received ${snapshots.size()} documents for user $userId.")
-
-            storageScope.launch {
-                val gamesFromFirestore = snapshots.documents.mapNotNull { doc ->
+                // Snapshot callbacks arrive on the main thread one at a time, so
+                // latestResults needs no further locking.
+                latestResults[index] = snapshots.documents.mapNotNull { doc ->
                     try {
-                        val gameBase = doc.toObject(Game::class.java) 
-                        if (gameBase == null) return@mapNotNull null
-                        
-                        val parsedEvents = parseGameEventsFromDocument(doc)
-                        gameBase.copy(id = doc.id, events = parsedEvents)
+                        val gameBase = doc.toObject(Game::class.java) ?: return@mapNotNull null
+                        gameBase.copy(id = doc.id, events = parseGameEventsFromDocument(doc))
                     } catch (docEx: Exception) {
                         Log.e(tag, "Listener (Wear): Error processing document ${doc.id}", docEx)
                         null
                     }
                 }
+                val now = System.currentTimeMillis()
+                val gamesFromFirestore = latestResults.filterNotNull().flatten()
+                    .distinctBy { it.id }
+                    .filter { WatchGames.isShown(it, now) }
 
                 if (_gamesListFlow.value != gamesFromFirestore) {
                     _gamesListFlow.value = gamesFromFirestore
-                    saveGamesToCache(gamesFromFirestore, userId)
+                    storageScope.launch { saveGamesToCache(gamesFromFirestore, userId) }
                 }
-                
                 _dataFetchStatusFlow.value = if (gamesFromFirestore.isEmpty()) DataFetchStatus.NO_DATA_AVAILABLE else DataFetchStatus.SUCCESS
             }
         }
-        Log.i(tag, "Firestore listener attached (Wear) for user: $userId")
+        Log.i(tag, "Firestore listeners attached (Wear) for user: $userId")
     }
 
     private fun detachFirestoreListener() {
-        if (firestoreListenerRegistration != null) {
-            firestoreListenerRegistration?.remove()
-            firestoreListenerRegistration = null
-            Log.d(tag, "Firestore listener detached.")
+        if (firestoreListenerRegistrations.isNotEmpty()) {
+            firestoreListenerRegistrations.forEach { it.remove() }
+            firestoreListenerRegistrations = emptyList()
+            Log.d(tag, "Firestore listeners detached.")
         }
     }
 
@@ -200,8 +213,10 @@ class GameStorageWear @Inject constructor(
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 val gamesKey = "$gamesCacheKeyPrefix$userId"
                 val jsonString = prefs.getString(gamesKey, null)
+                // Caches written before WatchGames existed can hold completed games.
                 val cachedGames = if (jsonString != null) {
                     AppJsonConfiguration.decodeFromString<List<Game>>(jsonString)
+                        .filter { WatchGames.isShown(it, System.currentTimeMillis()) }
                 } else {
                     emptyList()
                 }
