@@ -112,7 +112,8 @@ android {
         release {
             // null on CI, where the workflow signs the output itself.
             signingConfig = if (canSignLocally) signingConfigs.getByName("release") else null
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
