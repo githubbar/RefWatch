@@ -35,7 +35,7 @@ fun refWatchVersionCode(versionName: String, variant: Int): Int {
 // Local builds use the fallback; CI passes -PversionName=<tag without the "v">,
 // so tagging v1.2.0 yields versionName 1.2.0 and versionCode 401020001.
 // -PversionCode=<int> overrides the derived code when you need to hand-pick it.
-val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.2.1"
+val appVersionName: String = (findProperty("versionName") as String?)?.removePrefix("v") ?: "1.2.2"
 val appVersionCode: Int = (findProperty("versionCode") as String?)?.toInt()
     ?: refWatchVersionCode(appVersionName, variant = 1)
 
