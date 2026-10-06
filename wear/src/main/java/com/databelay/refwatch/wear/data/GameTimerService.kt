@@ -591,17 +591,14 @@ class GameTimerService : Service() {
         // START_FOREGROUND should only be called once or when needed to keep service alive
         // subsequent updates can just use notify()
         if (!isForegroundServiceRunning()) {
-            var foregroundServiceType = 0
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                foregroundServiceType = foregroundServiceType or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            try {
+                startForeground(ONGOING_NOTIFICATION_ID_SERVICE, notification, foregroundServiceTypes())
+                isServiceForeground = true
+            } catch (e: SecurityException) {
+                // Android 14+ refuses the health type without Body sensors or Physical activity
+                // permission. The timer keeps running; only background protection is lost.
+                Log.e(TAG, "Could not start foreground service", e)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                foregroundServiceType = foregroundServiceType or
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-            }
-            startForeground(ONGOING_NOTIFICATION_ID_SERVICE, notification, foregroundServiceType)
-            isServiceForeground = true
         } else {
             notificationManager.notify(ONGOING_NOTIFICATION_ID_SERVICE, notification)
         }
@@ -626,6 +623,20 @@ class GameTimerService : Service() {
         }
         startGameTimer(game, elapsedMillis, inAddedTime)
     }
+    /**
+     * The service is a workout (health) for the whole match, and a location service only while
+     * GPS is actually recorded. Play rejects a location type the user cannot see being used.
+     */
+    private fun foregroundServiceTypes(): Int {
+        val tracksPosition = healthServicesManager.collectsPosition(currentInternalGame?.isAssistantReferee ?: false) &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        return if (tracksPosition) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        }
+    }
+
     private fun isForegroundServiceRunning(): Boolean {
         return isServiceForeground
     }

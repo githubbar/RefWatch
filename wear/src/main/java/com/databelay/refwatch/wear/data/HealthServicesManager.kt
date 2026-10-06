@@ -55,6 +55,10 @@ class HealthServicesManager @Inject constructor(
     private val _stepUpdates = MutableStateFlow<StepSample?>(null)
     val stepUpdates: StateFlow<StepSample?> = _stepUpdates.asStateFlow()
 
+    /** Whether a game records GPS: only when the phone's setting is on, and never for an AR. */
+    fun collectsPosition(isAssistantReferee: Boolean): Boolean =
+        !isAssistantReferee && prefs.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
+
     suspend fun startExercise(isAssistantReferee: Boolean = false) {
         Log.d(TAG, "Starting exercise (isAR: $isAssistantReferee)")
 
@@ -74,8 +78,7 @@ class HealthServicesManager @Inject constructor(
             return
         }
 
-        // Disable GPS tracking for Assistant Referees
-        val collectPositionInfo = if (isAssistantReferee) false else prefs.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
+        val collectPositionInfo = collectsPosition(isAssistantReferee)
 
         val capabilities = exerciseClient.getCapabilitiesWithException()
         val exerciseCapabilities = capabilities.getExerciseTypeCapabilities(ExerciseType.SOCCER)
