@@ -8,6 +8,7 @@ import com.databelay.refwatch.common.WearSyncConstants
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -223,7 +224,13 @@ class AuthViewModel @Inject constructor(
                 // No need to directly set _authState or _isLoading here upon success of this call.
             }.onFailure { exception ->
                 Log.e(TAG, "Failed to delete user account via repository.", exception)
-                _authError.value = "Failed to delete account: ${exception.localizedMessage ?: "Unknown error"}"
+                _authError.value = if (exception is FirebaseAuthRecentLoginRequiredException) {
+                    // Firebase only deletes an account signed in within the last few minutes.
+                    // The games are already erased; signing in again lets the retry finish.
+                    "For security, sign out and sign back in, then delete your account again."
+                } else {
+                    "Failed to delete account: ${exception.localizedMessage ?: "Unknown error"}"
+                }
                 _isLoading.value = false // Explicitly stop loading on failure
             }
         }

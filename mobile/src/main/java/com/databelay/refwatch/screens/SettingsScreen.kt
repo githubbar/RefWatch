@@ -66,6 +66,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onDeleteAccountConfirmed: () -> Unit,
+    isDeletingAccount: Boolean = false,
+    deleteAccountError: String? = null,
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -252,10 +254,20 @@ fun SettingsScreen(
 
             Button(
                 onClick = { showDeleteConfirmationDialog = true },
+                enabled = !isDeletingAccount,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Delete Account")
+                Text(if (isDeletingAccount) "Deleting…" else "Delete Account")
+            }
+            if (deleteAccountError != null) {
+                Text(
+                    text = deleteAccountError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
             }
         }
     }

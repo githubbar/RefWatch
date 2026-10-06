@@ -167,11 +167,15 @@ fun RefWatchNavHost() {
         startDestination = MobileNavRoutes.LOADING_SCREEN // Start with loading to check auth
     ) {
         composable(MobileNavRoutes.SETTINGS_SCREEN) {
+            val authError by authViewModel.authError.collectAsState()
+            val authLoading by authViewModel.isLoading.collectAsState()
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onDeleteAccountConfirmed = {
                     authViewModel.deleteUserAccount()
-                }
+                },
+                isDeletingAccount = authLoading,
+                deleteAccountError = authError
             )
         }
         composable(MobileNavRoutes.LOADING_SCREEN) {
