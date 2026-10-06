@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.databelay.refwatch.common.WearSyncConstants
+import com.databelay.refwatch.data.ai.DEFAULT_EXTRACTION_PROMPT
+import com.databelay.refwatch.data.ai.PromptRepository
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: SharedPreferences,
-    private val dataClient: DataClient
+    private val dataClient: DataClient,
+    private val promptRepository: PromptRepository
 ) : ViewModel() {
 
     /**
@@ -51,6 +54,17 @@ class SettingsViewModel @Inject constructor(
         _logGoalScorer.value = enabled
         syncSettingsToWatch()
     }
+
+    /** The prompt the AI uses to read imported schedules. Phone-only; the watch never sees it. */
+    val extractionPrompt: StateFlow<String> = promptRepository.activePrompt
+    val savedPrompts: StateFlow<Map<String, String>> = promptRepository.savedPrompts
+    val defaultPrompt: String = DEFAULT_EXTRACTION_PROMPT
+
+    fun setExtractionPrompt(text: String) = promptRepository.setActivePrompt(text)
+    fun loadDefaultPrompt() = promptRepository.loadDefault()
+    fun loadSavedPrompt(name: String) = promptRepository.loadSaved(name)
+    fun saveCurrentPromptAs(name: String) = promptRepository.save(name, extractionPrompt.value)
+    fun deleteSavedPrompt(name: String) = promptRepository.delete(name)
 
     /**
      * Pushes the phone-owned settings to the watch. The data layer keeps the item, so a

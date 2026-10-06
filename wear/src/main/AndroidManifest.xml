@@ -61,7 +61,6 @@
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
                 <data android:scheme="wear" />
                 <data android:host="*" />
-                <data android:pathPrefix="/games_list_all" />
                 <data android:pathPrefix="/phone_user_id" />
                 <!-- Settings pushed from the phone, e.g. "ask for player number after goal".
                      Without this the DATA_CHANGED intent is never delivered for that path. -->

@@ -140,6 +140,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services) // Or the latest version
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.ai)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.functions)
     implementation(libs.gson) // Or latest version

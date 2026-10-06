@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -64,6 +66,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onDeleteAccountConfirmed: () -> Unit,
+    isDeletingAccount: Boolean = false,
+    deleteAccountError: String? = null,
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -74,6 +78,8 @@ fun SettingsScreen(
 
     val collectPositionInfo by settingsViewModel.collectPositionInfo.collectAsStateWithLifecycle()
     val logGoalScorer by settingsViewModel.logGoalScorer.collectAsStateWithLifecycle()
+    val extractionPrompt by settingsViewModel.extractionPrompt.collectAsStateWithLifecycle()
+    val savedPrompts by settingsViewModel.savedPrompts.collectAsStateWithLifecycle()
 
     // LaunchedEffect to get version name (it's a synchronous call but good practice
     // if it were asynchronous, and keeps UI responsive during initial composition)
@@ -98,6 +104,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.Top
@@ -219,6 +226,19 @@ fun SettingsScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ExtractionPromptSection(
+                prompt = extractionPrompt,
+                defaultPrompt = settingsViewModel.defaultPrompt,
+                savedPrompts = savedPrompts,
+                onPromptChange = settingsViewModel::setExtractionPrompt,
+                onLoadDefault = settingsViewModel::loadDefaultPrompt,
+                onSaveAs = settingsViewModel::saveCurrentPromptAs,
+                onLoadSaved = { settingsViewModel.loadSavedPrompt(it) },
+                onDeleteSaved = settingsViewModel::deleteSavedPrompt
+            )
+
             Spacer(modifier = Modifier.height(24.dp)) // More space before other settings
 
             // --- ADD BUILD INFO TEXT HERE ---
@@ -230,14 +250,24 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             // --- END BUILD INFO TEXT ---
-            Spacer(modifier = Modifier.weight(1f)) // Pushes delete account to bottom
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = { showDeleteConfirmationDialog = true },
+                enabled = !isDeletingAccount,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Delete Account")
+                Text(if (isDeletingAccount) "Deleting…" else "Delete Account")
+            }
+            if (deleteAccountError != null) {
+                Text(
+                    text = deleteAccountError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
             }
         }
     }

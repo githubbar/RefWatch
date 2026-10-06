@@ -2,6 +2,7 @@
 package com.databelay.refwatch.auth
 
 import android.util.Log
+import com.databelay.refwatch.data.GameStorageMobile
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -35,7 +36,8 @@ interface AuthRepository {
 // --- Hilt-Injectable Implementation ---
 @Singleton // This repository can be a singleton
 class FirebaseAuthRepository @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val gameStorage: GameStorageMobile
     // If you need a specific CoroutineScope for stateIn, you can inject one:
     // @ApplicationScope private val externalScope: CoroutineScope // Requires defining @ApplicationScope
 ) : AuthRepository {
@@ -176,6 +178,10 @@ class FirebaseAuthRepository @Inject constructor(
             Log.w(TAG, "deleteUserAccount: No user currently authenticated to delete.")
             return Result.failure(Exception("No user authenticated to delete."))
         }
+
+        // Erase stored games first: once the account is gone the security rules no longer let
+        // this user reach them, and they would be orphaned in Firestore.
+        gameStorage.deleteAllUserData(currentUser.uid).onFailure { return Result.failure(it) }
 
         return try {
             Log.d(TAG, "Attempting to delete account for user: ${currentUser.uid}")

@@ -30,39 +30,31 @@ enum class AgeGroup(
     UNKNOWN("Unknown", 30, defaultHalftimeDurationMinutes = 5); // A sensible default if truly unknown
 
     companion object {
+        // One age label as a whole token: "U12", "U-15", "BU12", "U11B", "12U", "Under 10".
+        // League ranges such as "11U & Over" or "11U-19/20U" describe a division, not a team, so a
+        // label followed by a range connector or preceded by "/" or "-" is skipped.
+        private val AGE_LABEL = Regex(
+            """(?<![\w/-])(?:[BG]?U-?(\d{1,2})[BG]?|(\d{1,2})U|Under\s+(\d{1,2}))(?!\w)(?!\s*(?:&|-|–|/|\+|to\b|and\b))""",
+            RegexOption.IGNORE_CASE
+        )
+
         /**
-         * Parses an AgeGroup from a string.
-         * It tries to match common notations like "U10", "10U", "11U-12U", "U12", etc.
-         * Also handles specific names like "15 & Over 7v7".
+         * Parses an AgeGroup from free text: an enum name or display name ("U12", "12U"), or the
+         * first age label in the text ("Cutters Eleven U11 Girls", "BU12 Gold", "Under 10").
          */
         fun fromString(value: String?): AgeGroup {
             if (value.isNullOrBlank()) return UNKNOWN
 
-            val upperValue = value.uppercase().replace(" ", "").replace("-", "")
+            val normalized = value.trim().uppercase()
+            entries.find { it.name == normalized || it.displayName.uppercase() == normalized }?.let { return it }
 
-            // Direct match for specific display names or enum names first
-            entries.find {
-                it.displayName.uppercase().replace(" ", "").replace("-", "") == upperValue ||
-                        it.name == upperValue
-            }?.let { return it }
-
-            // Handle single 'U' values explicitly for better matching
-            // Example: "U12" or "12U"
-            val ageNumberMatch = Regex("(\\d+)U|U(\\d+)").find(upperValue)
-            if (ageNumberMatch != null) {
-                val age = (ageNumberMatch.groupValues[1].toIntOrNull() ?: ageNumberMatch.groupValues[2].toIntOrNull())
-                if (age != null) {
-                    // Try to match the enum name directly first (e.g., age 12 -> U12)
-                    entries.find { it.name == "U$age" }?.let { return it }
-                    return fromCalculatedAge(age)
-                }
-            }
-            // Last resort, try partial contains (less reliable)
-            return entries.find {
-                upperValue.contains(it.displayName.uppercase().replace(" ", "").replace("-", "")) ||
-                        upperValue.contains(it.name)
-            } ?: UNKNOWN
+            val match = AGE_LABEL.find(value) ?: return UNKNOWN
+            val age = match.groupValues.drop(1).firstNotNullOfOrNull { it.toIntOrNull() } ?: return UNKNOWN
+            return fromCalculatedAge(age)
         }
+
+        /** Soccer seasons run August to July and are named for the year they end in. */
+        fun seasonEndYear(date: LocalDate): Int = if (date.monthValue >= 8) date.year + 1 else date.year
 
         /**
          * Derives an AgeGroup based on a calculated age (e.g., current year - birth year).

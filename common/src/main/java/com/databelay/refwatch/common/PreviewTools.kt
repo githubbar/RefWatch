@@ -20,13 +20,21 @@ interface IWearGameViewModel {
 }
 
 object PreviewTools {
+    /**
+     * The "now" sample games are dated from. Fixed so screenshot tests render the same date
+     * text, and so the same card heights, on every run; a wall-clock "now" made
+     * FontScaleAudit fail depending on the time of day. 15 June 2030 15:00 UTC is the same
+     * calendar day in UTC (CI) and every US time zone.
+     */
+    const val PREVIEW_NOW_MILLIS = 1_907_766_000_000L
+
     fun createFirstHalfSampleGame(): Game {
         var game = Game.defaults().copy(
             id = "scheduledGame1",
             homeTeamName = "Alpha FC",
             awayTeamName = "Beta United",
             currentPhase = GamePhase.FIRST_HALF,
-            gameDateTimeEpochMillis = System.currentTimeMillis() + (2 * 60 * 60 * 1000L), // 2 hours from now
+            gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS + (2 * 60 * 60 * 1000L), // 2 hours from now
             refereeAssignment = "Referee",
             venue = "Stadium One",
         )
@@ -56,7 +64,7 @@ object PreviewTools {
             homeTeamName = "Alpha FC",
             awayTeamName = "Beta United",
             currentPhase = GamePhase.EXTRA_TIME_FIRST_HALF,
-            gameDateTimeEpochMillis = System.currentTimeMillis() + (2 * 60 * 60 * 1000L), // 2 hours from now
+            gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS + (2 * 60 * 60 * 1000L), // 2 hours from now
             refereeAssignment = "Assistant Referee 1",
             venue = "Stadium One",
         )
@@ -68,7 +76,7 @@ object PreviewTools {
             homeTeamName = "Alpha FC",
             awayTeamName = "Beta United",
             currentPhase = GamePhase.PENALTIES,
-            gameDateTimeEpochMillis = System.currentTimeMillis() + (2 * 60 * 60 * 1000L), // 2 hours from now
+            gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS + (2 * 60 * 60 * 1000L), // 2 hours from now
             venue = "Stadium One",
         )
     }
@@ -80,7 +88,7 @@ object PreviewTools {
                 id = "scheduledGame1",
                 homeTeamName = "Alpha FC",
                 awayTeamName = "Beta United",
-                gameDateTimeEpochMillis = System.currentTimeMillis() + (2 * 60 * 60 * 1000L), // 2 hours from now
+                gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS + (2 * 60 * 60 * 1000L), // 2 hours from now
                 gameNumber = "123",
                 venue = "Stadium One",
             ),
@@ -90,7 +98,7 @@ object PreviewTools {
                 awayTeamName = "Delta City",
                 homeTeamColorArgb = Color.parseColor("#3F51B5"), // Indigo
                 awayTeamColorArgb = Color.parseColor("#FFC107"), // Amber
-                gameDateTimeEpochMillis = System.currentTimeMillis() + (26 * 60 * 60 * 1000L), // 26 hours from now
+                gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS + (26 * 60 * 60 * 1000L), // 26 hours from now
                 gameNumber = "124",
                 venue = "Community Park",
             ),
@@ -120,7 +128,7 @@ object PreviewTools {
                 awayTeamName = "Purple Haze",
                 currentPhase = GamePhase.GAME_ENDED,
                 isTimerRunning = false,
-                gameDateTimeEpochMillis = System.currentTimeMillis() - (1 * 24 * 60 * 60 * 1000L), // 1 day ago
+                gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS - (1 * 24 * 60 * 60 * 1000L), // 1 day ago
                 homeScore = 3,
                 awayScore = 2,
                 homeTeamColorArgb = Color.GREEN,
@@ -133,7 +141,7 @@ object PreviewTools {
                 homeTeamName = "Black Cats",
                 awayTeamName = "White Knights",
                 currentPhase = GamePhase.GAME_ENDED,
-                gameDateTimeEpochMillis = System.currentTimeMillis() - (5 * 24 * 60 * 60 * 1000L), // 5 days ago
+                gameDateTimeEpochMillis = PREVIEW_NOW_MILLIS - (5 * 24 * 60 * 60 * 1000L), // 5 days ago
                 homeScore = 0,
                 awayScore = 0,
                 homeTeamColorArgb = Color.BLACK,

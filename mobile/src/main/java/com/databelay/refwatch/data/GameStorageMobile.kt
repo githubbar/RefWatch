@@ -11,6 +11,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -284,5 +285,40 @@ class GameStorageMobile(private val firestore: FirebaseFirestore) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Erases everything the user has stored in Firestore: every game, then the user document.
+     * Must run while the user is still signed in, since the security rules only let a user touch
+     * their own data. Games carry GPS and heart-rate history, so they are fetched a page at a time
+     * and read from the server, so games that never reached this device's cache are deleted too.
+     */
+    suspend fun deleteAllUserData(userId: String): Result<Unit> {
+        return try {
+            if (userId.isEmpty()) return Result.failure(IllegalArgumentException("User ID cannot be empty"))
+            val userDoc = firestore.collection(USERS_COLLECTION).document(userId)
+            var deleted = 0
+            while (true) {
+                val page = userDoc.collection(GAMES_COLLECTION)
+                    .limit(DELETE_PAGE_SIZE)
+                    .get(Source.SERVER)
+                    .await()
+                if (page.isEmpty) break
+                val batch = firestore.batch()
+                page.documents.forEach { batch.delete(it.reference) }
+                batch.commit().await()
+                deleted += page.size()
+            }
+            userDoc.delete().await()
+            Log.i(tag, "Deleted $deleted games and the user document for user $userId.")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(tag, "Error deleting data for user $userId", e)
+            Result.failure(e)
+        }
+    }
 }
+
+// Firestore caps a write batch at 500 operations; pages stay well below it and keep each
+// download of GPS-heavy games small.
+private const val DELETE_PAGE_SIZE = 100L
 

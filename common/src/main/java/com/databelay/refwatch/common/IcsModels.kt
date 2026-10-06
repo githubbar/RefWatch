@@ -143,17 +143,19 @@ object SimpleIcsEventFactory {
     private val FIELD_NUMBER_PATTERN: Pattern = Pattern.compile(""".*-\s*Field\s+([\w\d-]+)\s*(?:-.*|$|\))""", Pattern.MULTILINE or Pattern.CASE_INSENSITIVE)
     private val DATETIME_PROPERTY_PATTERN: Pattern = Pattern.compile("^\\s*(DTSTART|DTEND)(?:;TZID=([^:]+))?:(\\d{8}T\\d{6})(Z)?$", Pattern.MULTILINE)
     private val ICS_DATETIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
+    // Group 1 is the year ("2014B", "G2014", "2009/10"); group 2 is present for combined years.
     private val TEAM_BIRTH_YEAR_PATTERN: Pattern = Pattern.compile(
-        "\\b(\\d{4})(?:[A-Z]|(?:[/\\-]\\d{2,4}))?\\b", // The year itself is group 1
-        Pattern.CASE_INSENSITIVE
+        "(?<!\\d)((?:19|20)\\d{2})(?:[/\\-](\\d{2,4}))?(?!\\d)"
     )
+    // A trailing summary segment that is only a field id, as in "Karst Farm Park - 02B".
+    private val BARE_FIELD_PATTERN: Pattern = Pattern.compile("""-\s*(\d{1,2}[A-Z]?)\s*$""")
     private val ASSIGNMENT_ROLE_PATTERN: Pattern = Pattern.compile(
         """Referee Assignment:\s*([\w\s\d.-]+?)\s*(?:-\s*\d+|-\s*[\w\s]+? vs\.?)""",
         Pattern.CASE_INSENSITIVE
     )
 
     private val TEAM_VS_PATTERN: Pattern = Pattern.compile(
-        """Referee Assignment:\s*(?:Referee|Asst Referee \d)\s*-\s*(\d+)(?:\s+(.*?))?\s*vs\.?\s*(.*?)\s*-\s*(.*)""",
+        """Referee Assignment:\s*[^-]+?\s*-\s*(\d+)(?:\s+(.*?))?\s*vs\.?\s*(.*?)\s*-\s*(.*)""",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -237,19 +239,30 @@ object SimpleIcsEventFactory {
         }
     }
 
-    private fun extractBirthYearFromTeamName(teamName: String): Int? {
+    // For combined years ("2009/10") this is the older year, which is the one that limits the team.
+    private fun extractBirthYearFromTeamName(teamName: String, seasonEndYear: Int): Int? {
         val matcher = TEAM_BIRTH_YEAR_PATTERN.matcher(teamName)
-        if (matcher.find()) {
-            val yearStr = matcher.group(1)
-            try {
-                val year = yearStr!!.toInt()
-                if (year in 1950..(LocalDate.now().year - 3)) {
-                    Log.d("IcsFactory", "Extracted birth year: $year from team: $teamName")
-                    return year
-                }
-            } catch (e: NumberFormatException) { /* Ignore */ }
+        while (matcher.find()) {
+            val year = matcher.group(1)!!.toInt()
+            if (year in 1950..(seasonEndYear - 3)) {
+                Log.d("IcsFactory", "Extracted birth year: $year from team: $teamName")
+                return year
+            }
         }
         return null
+    }
+
+    /**
+     * Teams play up, never down, so the oldest team sets the game's age group. An explicit age
+     * label on either team wins over birth years: clubs label teams "U11" while an opponent's
+     * birth year can map to a different group.
+     */
+    private fun ageGroupFromTeams(teams: List<String>, seasonEndYear: Int): AgeGroup? {
+        teams.map { AgeGroup.fromString(it) }.filter { it != AgeGroup.UNKNOWN }
+            .maxByOrNull { it.ordinal }?.let { return it }
+        val oldestBirthYear = teams.mapNotNull { extractBirthYearFromTeamName(it, seasonEndYear) }.minOrNull()
+            ?: return null
+        return AgeGroup.fromCalculatedAge(seasonEndYear - oldestBirthYear)
     }
 
     private fun populateUid(eventBlockContent: String, event: SimpleIcsEvent): Boolean {
@@ -292,13 +305,11 @@ object SimpleIcsEventFactory {
         var home: String? = null
         var away: String? = null
         var refereeAssignment: String? = null
-        var birthYear: Int? = null
+        var teamAgeGroup: AgeGroup? = null
         var fieldNumber: String? = null
-        
-        // Soccer age groups are determined by birth year relative to the season's end year.
-        // The season usually runs from August to July.
-        val today = LocalDate.now()
-        val seasonEndYear = if (today.monthValue >= 8) today.year + 1 else today.year
+
+        // Age is relative to the season the game is played in, not the season it is imported in.
+        val seasonEndYear = AgeGroup.seasonEndYear(event.dtStart?.toLocalDate() ?: LocalDate.now())
 
         if (event.summary != null) {
             val summaryText = event.summary!! // Safe due to null check
@@ -314,12 +325,15 @@ object SimpleIcsEventFactory {
                 gameNumber = if (gameNumber.isNullOrEmpty()) "000" else gameNumber
                 home = if (home.isNullOrEmpty()) "Home" else home
                 away = if (away.isNullOrEmpty()) "Away" else away
-                birthYear = home.let { extractBirthYearFromTeamName(it) } ?: away?.let { extractBirthYearFromTeamName(it) }
+                teamAgeGroup = ageGroupFromTeams(listOf(home, away), seasonEndYear)
             }
             val fieldMatcher = FIELD_NUMBER_PATTERN.matcher(summaryText)
+            val bareFieldMatcher = BARE_FIELD_PATTERN.matcher(summaryText)
             if (fieldMatcher.find()) {
                 fieldNumber = fieldMatcher.group(1)?.trim() // Assign to local fieldNumber
                 Log.d("IcsFactory", "Extracted Field Number from summary: '$fieldNumber' for UID: ${event.uid}")
+            } else if (bareFieldMatcher.find()) {
+                fieldNumber = bareFieldMatcher.group(1)
             }
         }
         event.gameNumber = gameNumber
@@ -328,15 +342,9 @@ object SimpleIcsEventFactory {
         event.awayTeam = away
         event.refereeAssignment = refereeAssignment
 
-        if (birthYear != null) {
-            val soccerAge = seasonEndYear - birthYear
-            event.ageGroup = AgeGroup.fromCalculatedAge(soccerAge)
-        } else {
-            event.ageGroup = AgeGroup.fromString(event.summary)
-            if (event.ageGroup == AgeGroup.UNKNOWN) {
-                event.ageGroup = AgeGroup.fromString(event.description)
-            }
-        }
+        event.ageGroup = teamAgeGroup
+            ?: AgeGroup.fromString(event.summary).takeIf { it != AgeGroup.UNKNOWN }
+            ?: AgeGroup.fromString(event.description)
     }
 
     fun createFromEventBlock(eventBlockContent: String): SimpleIcsEvent? {
