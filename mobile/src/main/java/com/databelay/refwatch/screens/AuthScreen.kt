@@ -23,15 +23,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.databelay.refwatch.common.LegalLinks
 import com.databelay.refwatch.common.theme.RefWatchMobileTheme
 
 // In AuthScreen.kt
@@ -78,19 +81,18 @@ fun AuthScreen(
 
         // Conditional "Terms and Privacy Policy" text for Sign Up mode
         if (!isLoginMode) {
+            val linkStyles = TextLinkStyles(
+                style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)
+            )
             val annotatedText = buildAnnotatedString {
                 append("By signing up, you agree to our ")
-                pushStringAnnotation(tag = "TERMS", annotation = "https://example.com/terms") // Replace with your URL
-                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                withLink(LinkAnnotation.Url(LegalLinks.TERMS_OF_USE_URL, linkStyles)) {
                     append("Terms of Service")
                 }
-                pop()
                 append(" and ")
-                pushStringAnnotation(tag = "PRIVACY", annotation = "https://example.com/privacy") // Replace with your URL
-                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)) {
+                withLink(LinkAnnotation.Url(LegalLinks.PRIVACY_POLICY_URL, linkStyles)) {
                     append("Privacy Policy")
                 }
-                pop()
                 append(".")
             }
             Text(
