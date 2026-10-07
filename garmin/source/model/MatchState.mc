@@ -172,6 +172,114 @@ class MatchState {
         return true;
     }
 
+    // Returns the goal's event id, or null outside a half. The scorer can be added afterwards
+    // with setPlayerNumber, so the score changes the moment the referee presses Goal.
+    function addGoal(team as String, playerNumber as Number or Null, nowMs as Long) as String or Null {
+        if (!isPlaying()) {
+            return null;
+        }
+        if (team.equals(TEAM_HOME)) {
+            homeScore += 1;
+        } else {
+            awayScore += 1;
+        }
+        var event = newEvent("GOAL", nowMs);
+        event["team"] = team;
+        event["homeScoreAtTime"] = homeScore;
+        event["awayScoreAtTime"] = awayScore;
+        if (playerNumber != null) {
+            event["playerNumber"] = playerNumber;
+        }
+        events.add(event);
+        return event["id"] as String;
+    }
+
+    function setPlayerNumber(eventId as String, number as Number) as Void {
+        for (var i = 0; i < events.size(); i++) {
+            if ((events[i]["id"] as String).equals(eventId)) {
+                events[i]["playerNumber"] = number;
+            }
+        }
+    }
+
+    // Cards are allowed during either half and at half time.
+    function addCard(team as String, playerNumber as Number, cardType as String, nowMs as Long) as Void {
+        if (!isPlaying() && !phase.equals(PHASE_HALF_TIME)) {
+            return;
+        }
+        var event = newEvent("CARD", nowMs);
+        event["team"] = team;
+        event["playerNumber"] = playerNumber;
+        event["cardType"] = cardType;
+        events.add(event);
+    }
+
+    // Removes the most recent goal or card (phase changes are never undone) and returns it.
+    function undoLast() as Dictionary or Null {
+        for (var i = events.size() - 1; i >= 0; i--) {
+            var event = events[i];
+            var type = event["eventType"] as String;
+            if (type.equals("GOAL") || type.equals("CARD")) {
+                events.remove(event);
+                if (type.equals("GOAL")) {
+                    if ((event["team"] as String).equals(TEAM_HOME)) {
+                        homeScore -= 1;
+                    } else {
+                        awayScore -= 1;
+                    }
+                }
+                return event;
+            }
+        }
+        return null;
+    }
+
+    function toDict() as Dictionary {
+        return {
+            "id" => gameId,
+            "homeName" => homeName,
+            "awayName" => awayName,
+            "homeColor" => homeColor,
+            "awayColor" => awayColor,
+            "halfMinutes" => halfMinutes,
+            "halftimeMinutes" => halftimeMinutes,
+            "kickOffTeam" => kickOffTeam,
+            "scheduledStartMs" => scheduledStartMs,
+            "phase" => phase,
+            "homeScore" => homeScore,
+            "awayScore" => awayScore,
+            "events" => events,
+            "startedAtMs" => startedAtMs,
+            "periodStartMs" => periodStartMs,
+            "pausedTotalMs" => pausedTotalMs,
+            "pausedAtMs" => pausedAtMs,
+            "regulationAlerted" => regulationAlerted
+        };
+    }
+
+    static function fromDict(d as Dictionary) as MatchState {
+        var m = new MatchState(d);
+        m.phase = d["phase"] as String;
+        m.homeScore = d["homeScore"] as Number;
+        m.awayScore = d["awayScore"] as Number;
+        m.events = d["events"] as Array<Dictionary>;
+        m.startedAtMs = d["startedAtMs"] as Long or Null;
+        m.periodStartMs = d["periodStartMs"] as Long or Null;
+        m.pausedTotalMs = d["pausedTotalMs"] as Long;
+        m.pausedAtMs = d["pausedAtMs"] as Long or Null;
+        m.regulationAlerted = d["regulationAlerted"] as Boolean;
+        return m;
+    }
+
+    hidden function newEvent(type as String, nowMs as Long) as Dictionary {
+        return {
+            "eventType" => type,
+            "id" => Ids.newId(),
+            "timestamp" => nowMs.toDouble(),
+            "gameTimeMillis" => elapsedMs(nowMs).toDouble()
+        };
+    }
+
     hidden function startPeriod(nowMs as Long) as Void {
         periodStartMs = nowMs;
         pausedTotalMs = 0l;
