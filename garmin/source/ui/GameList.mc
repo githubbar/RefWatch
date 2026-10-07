@@ -36,10 +36,7 @@ class GameListDelegate extends WatchUi.Menu2InputDelegate {
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         if (item.getId() == :quickMatch) {
-            var match = new MatchState(GameList.quickMatchSetup());
-            match.kickOff(Clock.nowMs());
-            MatchStore.save(match);
-            Nav.showMatch(match);
+            PreMatch.push(GameList.quickMatchSetup());
         }
     }
 }

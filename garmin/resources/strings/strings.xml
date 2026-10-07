@@ -24,4 +24,12 @@
     <string id="SkyBlue">Sky blue</string>
     <string id="Grey">Grey</string>
     <string id="Custom">Custom</string>
+    <string id="Setup">Set-up</string>
+    <string id="KickOff">Kick off</string>
+    <string id="HomeColor">Home color</string>
+    <string id="AwayColor">Away color</string>
+    <string id="HalfLength">Half length</string>
+    <string id="BreakLength">Half-time break</string>
+    <string id="KickOffTeam">Kick-off team</string>
+    <string id="MinutesFormat">$1$ min</string>
 </strings>
