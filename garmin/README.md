@@ -24,13 +24,21 @@ Design: `docs/superpowers/specs/2026-10-07-garmin-app-design.md`.
 `-Run` starts the simulator if needed and then stays attached (monkeydo blocks until you
 press Ctrl+C or close the app). `-Test` returns when the tests finish.
 
-## Screenshot the simulator
-The simulator has no command-line screenshot. With the app running:
+## Drive and screenshot the simulator without taking focus
+The simulator has no command-line control, and bringing it to the front would interrupt
+whatever you are doing. `tools\sim.ps1` keeps its window far off-screen and inactive, presses
+buttons by posting mouse messages to it, and captures it with `PrintWindow`. It never
+focuses the window, moves the mouse or sends keystrokes. `build.ps1` starts the simulator
+this way too.
 
-    .\garmin\tools\sim-screenshot.ps1 -Out C:\temp\sim.png
+    .\garmin\tools\sim.ps1 -Start                 # launch if needed, parked off-screen
+    .\garmin\tools\sim.ps1 -Hide                  # park a simulator you opened yourself
+    .\garmin\tools\sim.ps1 -Device fenix5x -Click START,DOWN,DOWN -Out C:\temp\sim.png
+    .\garmin\tools\sim.ps1 -Out C:\temp\sim.png   # capture only
 
-It captures the simulator window (bringing it to the front first).
-
+Buttons are `START`, `BACK`, `UP`, `DOWN`; `-Wait` (ms, default 900) sets the pause after each
+click. Button positions are stored per device in the script (fenix5x and fr265 so far).
+Do not minimize the window: a minimized window does not render.
 ## Memory budget
 fēnix 5X watch-app limit: 1310720 bytes. Keep peak use under 60% (786432 bytes)
 (simulator: File → View Memory).

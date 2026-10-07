@@ -38,7 +38,8 @@ if ($compileExit -ne 0) { throw "monkeyc failed (exit $compileExit); see the com
 
 if ($Test -or $Run) {
     if (-not (Get-Process simulator -ErrorAction SilentlyContinue)) {
-        Start-Process "$bin\simulator.exe"
+        # Start it parked off-screen and inactive: the simulator must never take focus from the user.
+        & "$root\tools\sim.ps1" -Start
         Start-Sleep -Seconds 6
     }
     $runArgs = @($out, $Device)
