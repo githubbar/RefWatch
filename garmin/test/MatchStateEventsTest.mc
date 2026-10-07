@@ -114,3 +114,19 @@ function dictRoundTripPreservesState(logger as Logger) as Boolean {
     Test.assertEqual(30, copy.halfMinutes);
     return true;
 }
+
+(:test)
+function lastUndoableReturnsWhatUndoWouldRemoveWithoutRemovingIt(logger as Logger) as Boolean {
+    var m = testMatch();
+    m.kickOff(T0);
+    Test.assert(m.lastUndoable() == null);       // only the kick-off phase change so far
+    m.addGoal(TEAM_HOME, null, T0 + MIN);
+    m.addCard(TEAM_AWAY, 4, CARD_YELLOW, T0 + 2 * MIN);
+    var last = m.lastUndoable() as Dictionary;
+    Test.assertEqual("CARD", last["eventType"]);
+    Test.assertEqual(3, m.events.size());        // nothing removed
+    Test.assertEqual(last["id"], (m.undoLast() as Dictionary)["id"]);
+    Test.assertEqual("GOAL", (m.lastUndoable() as Dictionary)["eventType"]);
+    Test.assertEqual(1, m.homeScore);
+    return true;
+}

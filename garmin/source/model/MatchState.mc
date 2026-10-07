@@ -14,6 +14,7 @@ const TEAM_AWAY = "AWAY";
 const CARD_YELLOW = "YELLOW";
 const CARD_RED = "RED";
 
+
 // The rules of a match: periods, the clock, the score and the event log. It never reads the
 // clock and never touches storage or the screen; callers pass the current time in, so every
 // rule is unit-testable.
@@ -40,6 +41,9 @@ class MatchState {
     var pausedTotalMs as Long;
     var pausedAtMs as Long or Null;
     var regulationAlerted as Boolean;    // end-of-period vibration already given
+
+    // Version of the stored dictionary shape, see MatchStore.isValid.
+    static const SCHEMA_VERSION = 1;
 
     function initialize(setup as Dictionary) {
         gameId = setup["id"] as String;
@@ -214,28 +218,37 @@ class MatchState {
         events.add(event);
     }
 
-    // Removes the most recent goal or card (phase changes are never undone) and returns it.
-    function undoLast() as Dictionary or Null {
+    // The most recent goal or card (what undoLast would remove), without removing it.
+    function lastUndoable() as Dictionary or Null {
         for (var i = events.size() - 1; i >= 0; i--) {
-            var event = events[i];
-            var type = event["eventType"] as String;
+            var type = events[i]["eventType"] as String;
             if (type.equals("GOAL") || type.equals("CARD")) {
-                events.remove(event);
-                if (type.equals("GOAL")) {
-                    if ((event["team"] as String).equals(TEAM_HOME)) {
-                        homeScore -= 1;
-                    } else {
-                        awayScore -= 1;
-                    }
-                }
-                return event;
+                return events[i];
             }
         }
         return null;
     }
 
+    // Removes the most recent goal or card (phase changes are never undone) and returns it.
+    function undoLast() as Dictionary or Null {
+        var event = lastUndoable();
+        if (event == null) {
+            return null;
+        }
+        events.remove(event);
+        if ((event["eventType"] as String).equals("GOAL")) {
+            if ((event["team"] as String).equals(TEAM_HOME)) {
+                homeScore -= 1;
+            } else {
+                awayScore -= 1;
+            }
+        }
+        return event;
+    }
+
     function toDict() as Dictionary {
         return {
+            "v" => SCHEMA_VERSION,
             "id" => gameId,
             "homeName" => homeName,
             "awayName" => awayName,

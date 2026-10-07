@@ -1,7 +1,9 @@
 import Toybox.Lang;
 import Toybox.Test;
 
+(:debug)
 const T0 = 1000000000000l; // an arbitrary wall-clock start, epoch ms
+(:debug)
 const MIN = 60000l;
 
 (:test)

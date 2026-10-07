@@ -1,6 +1,7 @@
 import Toybox.Lang;
 
 // Shared fixture for unit tests. Not annotated (:test), so the runner does not call it.
+(:debug)
 function testMatch() as MatchState {
     return new MatchState({
         "id" => "test-game",
