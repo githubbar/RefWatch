@@ -48,7 +48,7 @@ garmin/
     model/MatchState.mc          match rules (no UI, no storage, no clock)
     model/MatchStore.mc          save / load / archive MatchState
     model/GameLog.mc             match-minute labels and log rows
-    model/TeamColors.mc          colour palette
+    model/TeamColors.mc          color palette
     ui/Ask.mc                yes/no confirmation helper
     ui/Pickers.mc                number pickers (minutes, player number)
     ui/GameList.mc               start menu
@@ -1407,7 +1407,7 @@ class MatchView extends WatchUi.View {
         return WatchUi.loadResource(id) as String;
     }
 
-    // "[bar] 2 - 1 [bar]" centred on y; each bar is that team's colour.
+    // "[bar] 2 - 1 [bar]" centred on y; each bar is that team's color.
     hidden function drawScore(dc as Graphics.Dc, w as Number, y as Numeric) as Void {
         var cx = w / 2;
         var font = Graphics.FONT_NUMBER_MILD;
@@ -1578,8 +1578,8 @@ Add inside `<strings>` in `garmin/resources/strings/strings.xml`:
 ```xml
     <string id="Setup">Set-up</string>
     <string id="KickOff">Kick off</string>
-    <string id="HomeColor">Home colour</string>
-    <string id="AwayColor">Away colour</string>
+    <string id="HomeColor">Home color</string>
+    <string id="AwayColor">Away color</string>
     <string id="HalfLength">Half length</string>
     <string id="BreakLength">Half-time break</string>
     <string id="KickOffTeam">Kick-off team</string>
@@ -1817,7 +1817,7 @@ In `garmin/source/ui/GameList.mc`, replace the body of `GameListDelegate.onSelec
 .\garmin\build.ps1 -Run
 ```
 
-Expected: tests `PASSED`. In the simulator: Quick match → Set-up lists Kick off, Home colour (Red), Away colour (Blue), Half length (45 min), Half-time break (15 min), Kick-off team (Home). Change each value; the sub-label updates. Kick off → match screen with the chosen colours, and half time after the chosen length. Screenshot the set-up menu, the colour list and the picker on `fenix5x` and `fr265`; check nothing is clipped. Then test with a 1-minute half to confirm half-time break, the "START: 2nd half" hint, the kick-off flip, and full time.
+Expected: tests `PASSED`. In the simulator: Quick match → Set-up lists Kick off, Home color (Red), Away color (Blue), Half length (45 min), Half-time break (15 min), Kick-off team (Home). Change each value; the sub-label updates. Kick off → match screen with the chosen colors, and half time after the chosen length. Screenshot the set-up menu, the color list and the picker on `fenix5x` and `fr265`; check nothing is clipped. Then test with a 1-minute half to confirm half-time break, the "START: 2nd half" hint, the kick-off flip, and full time.
 
 - [ ] **Step 6: Commit**
 

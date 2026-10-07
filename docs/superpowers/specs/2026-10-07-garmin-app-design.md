@@ -169,7 +169,7 @@ current period**, matching `WearGameViewModel` (`actualTimeElapsedInPeriodMillis
 Server behaviour:
 - Validates types, enum values, `events.length ≤ 200`, body ≤ 64 KB; otherwise `400`.
 - **Existing game:** merges only match-result fields (`currentPhase`, `homeScore`, `awayScore`,
-  `kickOffTeam`, `events`, team colours, durations, `lastUpdated`). Schedule fields (`venue`,
+  `kickOffTeam`, `events`, team colors, durations, `lastUpdated`). Schedule fields (`venue`,
   `notes`, `gameNumber`, `ageGroup`, …) are untouched. Team names and kick-off time are written
   only when the document is new.
 - **New game (quick match):** creates the document with the fields above, `userId` = uid, and
@@ -196,11 +196,11 @@ actions). The Light button is reserved by the system.
 
 1. **Game list** — "Quick match" first, then synced games (time, teams). Status line:
    "Linked · synced 2 min ago" / "Not linked" / "Not synced".
-2. **Pre-match** — teams with colour dots, half and halftime lengths, kick-off team, Record
+2. **Pre-match** — teams with color dots, half and halftime lengths, kick-off team, Record
    activity on/off. Each line is editable from a `Menu2`. START kicks off.
-3. **Match** — large clock (elapsed in period), period name, score beside each team's colour
+3. **Match** — large clock (elapsed in period), period name, score beside each team's color
    bar, time of day. Past regulation the watch vibrates once and the clock continues with added
-   time shown as `+2:14` in a distinct colour. Pause icon while stopped.
+   time shown as `+2:14` in a distinct color. Pause icon while stopped.
 4. **Team actions** — Goal, Yellow, Red. Cards open a two-column (tens/ones) number picker;
    goals log immediately unless "Log goal scorer" is on, in which case the picker opens with a
    Skip option.
