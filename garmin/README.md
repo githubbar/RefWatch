@@ -37,11 +37,11 @@ this way too.
     .\garmin\tools\sim.ps1 -Out C:\temp\sim.png   # capture only
 
 Buttons are `START`, `BACK`, `UP`, `DOWN`; `-Wait` (ms, default 900) sets the pause after each
-click. Button positions are stored per device in the script (fenix5x and fr265 so far).
+click. Button positions are stored per device in the script (all five products).
 Do not minimize the window: a minimized window does not render.
 ## Memory budget
 fēnix 5X watch-app limit: 1310720 bytes. Keep peak use under 60% (786432 bytes)
-(simulator: File → View Memory).
+(simulator: File → View Memory, or the used/limit kB figure in its status bar).
 
 ## Sideload to a watch
 Build for that watch's device ID, connect it by USB, and copy `garmin\bin\RefWatch-<device>.prg`
@@ -53,3 +53,26 @@ Sideloaded apps cannot be configured from Garmin Connect; test settings in the s
 The simulator does not turn a held mouse button posted by `sim.ps1` into a long press, so the
 match menu (`onMenu`) cannot be opened that way. Check it by temporarily mapping `onBack` to
 `onMenu()` in `MatchDelegate` (never commit that), or press the real button on a watch.
+
+## Phase 1 results
+
+Visual pass and memory were done in the simulator; the on-watch part is still to do.
+
+**Builds.** `build.ps1 -Device <id>` succeeds (no errors) for fenix5x, fenix7s, fenix7,
+epix2pro47mm and fr265. Only warning: the 70x70 launcher icon is scaled to each device's size.
+
+**Memory (fenix5x, limit 1275.5 kB in the simulator).** Status-bar figure after a match with
+7 goals and 3 cards (about 11 events with phase changes), the match menu and the game log
+scrolled to the end: 39.6 kB, 3.1% of the limit (budget 60%, about 765 kB). Idle start menu:
+29.7 kB. The status bar shows current use; a separate peak figure was not recorded.
+
+**Screens checked in the simulator on all five products** (start menu, set-up, half-length
+picker, match running / paused / added time, team menu, player-number picker, match menu,
+end-of-half and end-of-match confirmations, half time, second half, full time, game log):
+nothing clipped by the bezel, score bars clear of the edge, clock legible. No layout changes
+were needed. Hold UP (match menu) and short halves were simulated with temporary, uncommitted
+edits.
+
+**On-watch results (fenix5x): pending.** Checklist: launch from the app list; five buttons and
+hold UP; vibration at end of half and break; 10 minutes untouched; exit mid-match and resume;
+readability in sunlight.

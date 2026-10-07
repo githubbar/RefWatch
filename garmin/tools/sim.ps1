@@ -131,6 +131,9 @@ function Move-SimOffScreen([IntPtr]$h) {
 # resize its window per device, so these are fixed per device.
 $layouts = @{
     "fenix5x" = @{ START = @(440, 268); BACK = @(418, 440); UP = @(55, 350); DOWN = @(64, 418) }
+    "fenix7s" = @{ START = @(344, 214); BACK = @(334, 398); UP = @(30, 300); DOWN = @(50, 392) }
+    "fenix7"  = @{ START = @(378, 218); BACK = @(378, 432); UP = @(28, 322); DOWN = @(45, 432) }
+    "epix2pro47mm" = @{ START = @(612, 332); BACK = @(608, 655); UP = @(33, 470); DOWN = @(60, 612) }
     "fr265"   = @{ START = @(560, 362); BACK = @(562, 628); UP = @(48, 480); DOWN = @(80, 615) }
 }
 if ($Start -or $Hide) {
