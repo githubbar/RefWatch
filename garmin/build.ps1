@@ -27,8 +27,14 @@ New-Item -ItemType Directory -Force "$root\bin" | Out-Null
 $out = "$root\bin\RefWatch-$Device.prg"
 $compileArgs = @("-o", $out, "-f", "$root\monkey.jungle", "-y", $Key, "-d", $Device, "-w")
 if ($Test) { $compileArgs += "-t" }
-& "$bin\monkeyc.bat" @compileArgs
-if ($LASTEXITCODE -ne 0) { throw "monkeyc failed" }
+# Show monkeyc's stdout and stderr (compiler diagnostics go to stderr). Under
+# $ErrorActionPreference = "Stop", Windows PowerShell turns redirected stderr into a
+# terminating error, so relax it for this one call and rely on the exit code.
+$ErrorActionPreference = "Continue"
+& "$bin\monkeyc.bat" @compileArgs 2>&1 | ForEach-Object { Write-Host "$_" }
+$compileExit = $LASTEXITCODE
+$ErrorActionPreference = "Stop"
+if ($compileExit -ne 0) { throw "monkeyc failed (exit $compileExit); see the compiler output above" }
 
 if ($Test -or $Run) {
     if (-not (Get-Process simulator -ErrorAction SilentlyContinue)) {
