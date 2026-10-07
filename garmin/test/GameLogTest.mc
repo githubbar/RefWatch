@@ -47,3 +47,29 @@ function rowsDescribeEventsInOrder(logger as Logger) as Boolean {
     Test.assertEqual("Hawks #4", rows[4][1]);
     return true;
 }
+
+(:test)
+function halfTimeCardsShowHtInsteadOfAMinute(logger as Logger) as Boolean {
+    var m = testMatch();
+    m.kickOff(T0);
+    m.endPeriod(T0 + 30 * MIN);
+    m.addCard(TEAM_AWAY, 4, CARD_YELLOW, T0 + 36 * MIN);
+    var labels = {
+        "GOAL" => "Goal", "YELLOW" => "Yellow", "RED" => "Red", "HT" => "HT",
+        PHASE_FIRST_HALF => "1st half", PHASE_HALF_TIME => "Half time"
+    };
+    var rows = GameLog.rows(m, labels);
+    Test.assertEqual(3, rows.size());
+    Test.assertEqual("HT Yellow", rows[2][0]);
+    Test.assertEqual("Hawks #4", rows[2][1]);
+    return true;
+}
+
+(:test)
+function unlabeledPhasesFallBackToTheirName(logger as Logger) as Boolean {
+    var m = testMatch();
+    m.kickOff(T0);
+    var rows = GameLog.rows(m, {});
+    Test.assertEqual(PHASE_FIRST_HALF, rows[0][0]);
+    return true;
+}

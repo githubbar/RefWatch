@@ -8,6 +8,7 @@ module GameLogView {
             "GOAL" => WatchUi.loadResource(Rez.Strings.Goal),
             "YELLOW" => WatchUi.loadResource(Rez.Strings.YellowCard),
             "RED" => WatchUi.loadResource(Rez.Strings.RedCard),
+            "HT" => WatchUi.loadResource(Rez.Strings.HalfTimeShort),
             PHASE_FIRST_HALF => WatchUi.loadResource(Rez.Strings.FirstHalf),
             PHASE_HALF_TIME => WatchUi.loadResource(Rez.Strings.HalfTime),
             PHASE_SECOND_HALF => WatchUi.loadResource(Rez.Strings.SecondHalf),

@@ -51,4 +51,5 @@
     <string id="EndMatchPrompt">End match?</string>
     <string id="AbandonPrompt">Abandon match?</string>
     <string id="NoEvents">No events yet</string>
+    <string id="HalfTimeShort">HT</string>
 </strings>
