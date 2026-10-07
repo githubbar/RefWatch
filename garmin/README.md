@@ -40,7 +40,7 @@ Buttons are `START`, `BACK`, `UP`, `DOWN`; `-Wait` (ms, default 900) sets the pa
 click. Button positions are stored per device in the script (all five products).
 Do not minimize the window: a minimized window does not render.
 ## Memory budget
-fēnix 5X watch-app limit: 1310720 bytes. Keep peak use under 60% (786432 bytes)
+fēnix 5X watch-app limit: 1275.5 kB in the simulator. Keep use under 60% (about 765 kB)
 (simulator: File → View Memory, or the used/limit kB figure in its status bar).
 
 ## Sideload to a watch
@@ -61,17 +61,20 @@ Visual pass and memory were done in the simulator; the on-watch part is still to
 **Builds.** `build.ps1 -Device <id>` succeeds (no errors) for fenix5x, fenix7s, fenix7,
 epix2pro47mm and fr265. Only warning: the 70x70 launcher icon is scaled to each device's size.
 
-**Memory (fenix5x, limit 1275.5 kB in the simulator).** Status-bar figure after a match with
-7 goals and 3 cards (about 11 events with phase changes), the match menu and the game log
-scrolled to the end: 39.6 kB, 3.1% of the limit (budget 60%, about 765 kB). Idle start menu:
-29.7 kB. The status bar shows current use; a separate peak figure was not recorded.
+**Memory.** Figures are the simulator's status-bar kB. fenix5x limit 1275.5 kB, so 60% is about
+765 kB; fenix7s and epix2pro47mm limit 763.6 kB, so 60% is about 458 kB. On the fenix5x the
+heaviest point observed (7 goals and 3 cards, about 11 events with phase changes, the match menu
+and the game log scrolled to the end) was 39.6 kB, 3.1% of the limit; the idle start menu was
+29.7 kB. These are current-use readings at the heaviest point, not a measured peak.
 
 **Screens checked in the simulator on all five products** (start menu, set-up, half-length
 picker, match running / paused / added time, team menu, player-number picker, match menu,
-end-of-half and end-of-match confirmations, half time, second half, full time, game log):
-nothing clipped by the bezel, score bars clear of the edge, clock legible. No layout changes
-were needed. Hold UP (match menu) and short halves were simulated with temporary, uncommitted
-edits.
+end-of-half and end-of-match confirmations, half time, second half, full time, game log).
+Our own screens (match, pickers, half time, full time) are unclipped on all five products, with
+score bars clear of the edge and a legible clock. System menus (Menu2) show the next row partially
+at the bottom of round screens as a scroll hint; it is fully visible when focused. No layout
+changes were needed. Hold UP (match menu) and short halves were simulated with temporary,
+uncommitted edits. Touch input on fr265 and epix2pro47mm was not exercised (buttons only).
 
 **On-watch results (fenix5x): pending.** Checklist: launch from the app list; five buttons and
 hold UP; vibration at end of half and break; 10 minutes untouched; exit mid-match and resume;
