@@ -18,7 +18,6 @@ import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.core.content.ContextCompat
 import com.databelay.refwatch.common.AppJsonConfiguration
 import com.databelay.refwatch.common.CardIssuedEvent
 import com.databelay.refwatch.common.CardType
@@ -46,6 +45,7 @@ import com.databelay.refwatch.common.toSnapshotForStorage
 import com.databelay.refwatch.common.usesHalfDuration
 import com.databelay.refwatch.wear.data.GameStorageWear
 import com.databelay.refwatch.wear.data.GameTimerService
+import com.databelay.refwatch.wear.data.WorkoutReading
 import com.databelay.refwatch.wear.util.ConnectivityObserver // For network status
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -146,6 +146,9 @@ class WearGameViewModel @Inject constructor(
     private val _activeGame = MutableStateFlow<Game?>(null) // Start as null
     override val activeGame: StateFlow<Game?> = _activeGame.asStateFlow() // Expose as nullable
 
+    // The live heart rate while the match workout records; null when none is.
+    private val _workoutReading = MutableStateFlow<WorkoutReading?>(null)
+    val workoutReading: StateFlow<WorkoutReading?> = _workoutReading.asStateFlow()
 
     private var isCurrentGameSessionActive = false
 
@@ -161,6 +164,10 @@ class WearGameViewModel @Inject constructor(
             val binder = service as GameTimerService.LocalBinder
             gameTimerService = binder.getService()
             isServiceBound = true
+
+            gameTimerService?.timerStateFlow
+                ?.onEach { _workoutReading.value = it.workoutReading() }
+                ?.launchIn(viewModelScope)
 
             gameTimerService?.timerStateFlow
                 ?.distinctUntilChanged { oldState, newState ->
@@ -250,6 +257,7 @@ class WearGameViewModel @Inject constructor(
             Log.w(tag, "GameTimerService disconnected")
             gameTimerService = null
             isServiceBound = false
+            _workoutReading.value = null
         }
     }
 
@@ -321,9 +329,20 @@ class WearGameViewModel @Inject constructor(
     }
 
 
-    private fun startForegroundService() {
+    /**
+     * Starts the service without promising to go foreground: it goes foreground only once the
+     * workout records, which never happens if the sensors are denied, and a broken
+     * startForegroundService promise crashes the app. Callers are UI actions, so the app is in
+     * the foreground and a plain start is allowed. The service is bound regardless, so a refused
+     * start only costs the timer its life after the screen goes away.
+     */
+    private fun startTimerService() {
         val intent = Intent(getApplication(), GameTimerService::class.java)
-        ContextCompat.startForegroundService(getApplication(), intent)
+        try {
+            getApplication<Application>().startService(intent)
+        } catch (e: IllegalStateException) {
+            Log.e(tag, "Could not start GameTimerService", e)
+        }
     }
 
     private fun calculateInitialDisplayTime(game: Game): Long { 
@@ -618,7 +637,7 @@ class WearGameViewModel @Inject constructor(
                 )
                 return
             }
-            startForegroundService()
+            startTimerService()
             if (!isCurrentGameSessionActive) {
                 Log.i(
                     tag,
@@ -721,7 +740,7 @@ class WearGameViewModel @Inject constructor(
             cancelTimer()
         } else {
             if (updatedGame.currentPhase.isBreak()) {
-                startForegroundService()
+                startTimerService()
             }
             gameTimerService?.configureTimerForGame(
                 game = updatedGame,
@@ -760,7 +779,7 @@ class WearGameViewModel @Inject constructor(
             Log.i(tag, kickOffMessage)
             // Use the new addGameEventToList method
             addEvent(kickOffEvent)
-            startForegroundService()
+            startTimerService()
             gameTimerService?.startGameTimer(currentGame, currentGame.actualTimeElapsedInPeriodMillis, currentGame.inAddedTime)
             vibrate(VibrationPattern.GENERIC_EVENT)
         } else {

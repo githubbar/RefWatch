@@ -3,10 +3,13 @@ package com.databelay.refwatch.wear
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.MaterialTheme
 import com.android.tools.screenshot.PreviewTest
 import com.databelay.refwatch.common.CardIssuedEvent
@@ -21,6 +24,8 @@ import com.databelay.refwatch.common.Team
 import com.databelay.refwatch.common.shortName
 import com.databelay.refwatch.common.theme.PredefinedJerseyColors
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
+import com.databelay.refwatch.wear.data.WorkoutReading
+import com.databelay.refwatch.wear.presentation.screens.AnalyticsButton
 import com.databelay.refwatch.wear.presentation.screens.ConfirmationDialogInfo
 import com.databelay.refwatch.wear.presentation.screens.GameAnalyticsScreen
 import com.databelay.refwatch.wear.presentation.screens.GameListScreen
@@ -295,6 +300,37 @@ fun Audit_GameSettings() {
             onAttemptEndPhase = {}
         )
     }
+}
+
+/**
+ * The menu's analytics button while the workout records -- what shows Play the health foreground
+ * service. It sits below the fold of the menu render above, so it is rendered on its own, at the
+ * menu's width, in the middle of the screen where list items are full size.
+ */
+@Composable
+private fun AnalyticsButtonFrame(reading: WorkoutReading) {
+    RefWatchWearTheme {
+        Box(
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AnalyticsButton(workoutReading = reading, onClick = {})
+        }
+    }
+}
+
+@PreviewTest
+@Preview(device = SMALL_ROUND, showSystemUi = true, fontScale = MAX_FONT_SCALE, name = "07b Analytics button recording")
+@Composable
+fun Audit_AnalyticsButton_Recording() {
+    AnalyticsButtonFrame(WorkoutReading(heartRateBpm = 152))
+}
+
+@PreviewTest
+@Preview(device = SMALL_ROUND, showSystemUi = true, fontScale = MAX_FONT_SCALE, name = "07c Analytics button no reading yet")
+@Composable
+fun Audit_AnalyticsButton_NoReading() {
+    AnalyticsButtonFrame(WorkoutReading(heartRateBpm = null))
 }
 
 @PreviewTest

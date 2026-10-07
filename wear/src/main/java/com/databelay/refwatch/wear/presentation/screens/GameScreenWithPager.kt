@@ -41,6 +41,7 @@ import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.logBackStack
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
+import com.databelay.refwatch.wear.data.WorkoutReading
 import com.google.android.horologist.compose.layout.ColumnItemType
 import com.google.android.horologist.compose.layout.ColumnItemType.Companion.EdgeButtonPadding
 import com.google.android.horologist.compose.layout.rememberResponsiveColumnPadding
@@ -172,7 +173,8 @@ fun GameScreenWithPager(
     onResetPeriodTimer: () -> Unit, // For current period's timer
     onConfirmEndMatch: () -> Unit, // For finishing the game
     onPenaltyAttemptRecorded: (scored: Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    workoutReading: WorkoutReading? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -280,7 +282,8 @@ fun GameScreenWithPager(
                                     )
                                 }
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            workoutReading = workoutReading,
                         )
                     }
                 }

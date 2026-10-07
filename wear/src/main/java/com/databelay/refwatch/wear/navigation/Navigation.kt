@@ -72,6 +72,7 @@ fun NavigationRoutes() {
     val isOnline by gameViewModel.isOnline.collectAsStateWithLifecycle()
     val collectPositionInfo by gameViewModel.collectPositionInfo.collectAsStateWithLifecycle()
     val logGoalScorer by gameViewModel.logGoalScorer.collectAsStateWithLifecycle()
+    val workoutReading by gameViewModel.workoutReading.collectAsStateWithLifecycle()
     val context = LocalContext.current // Get the context
 
     // Keep the screen on during an active match to ensure the app stays "on top"
@@ -324,7 +325,8 @@ fun NavigationRoutes() {
                         onEndPhase = onEndPhase,
                         onResetPeriodTimer = onResetPeriodTimer,
                         onConfirmEndMatch = onConfirmEndMatch,
-                        onPenaltyAttemptRecorded = onPenaltyAttemptRecorded
+                        onPenaltyAttemptRecorded = onPenaltyAttemptRecorded,
+                        workoutReading = workoutReading
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -28,6 +28,7 @@ import com.databelay.refwatch.common.GamePhase
 import com.databelay.refwatch.common.hasTimer
 import com.databelay.refwatch.common.readable
 import com.databelay.refwatch.common.theme.RefWatchWearTheme
+import com.databelay.refwatch.wear.data.WorkoutReading
 
 @Composable
 fun GameSettingsScreen(
@@ -39,7 +40,8 @@ fun GameSettingsScreen(
     onViewAnalytics: () -> Unit,
     onToggleTimer: () -> Unit,
     onAttemptEndPhase: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    workoutReading: WorkoutReading? = null
 ) {
     val listState = rememberScalingLazyListState()
     ScreenScaffold(
@@ -98,6 +100,10 @@ fun GameSettingsScreen(
             }
 
             item {
+                AnalyticsButton(workoutReading = workoutReading, onClick = onViewAnalytics)
+            }
+
+            item {
                 Button(
                     onClick = onAttemptFinishGame,
                     modifier = Modifier.fillMaxWidth(),
@@ -139,19 +145,6 @@ fun GameSettingsScreen(
 
             item {
                 Button(
-                    onClick = onViewAnalytics,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        "View Analytics",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            item {
-                Button(
                     onClick = onAttemptResetFullGame,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -170,6 +163,38 @@ fun GameSettingsScreen(
             }
         }
     }
+}
+
+/**
+ * The timer service runs as a health foreground service, and Play rejected the app because
+ * nothing showed that it was recording. While the workout records, this button says so.
+ */
+@Composable
+fun AnalyticsButton(
+    workoutReading: WorkoutReading?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        label = {
+            Text(
+                "View Analytics",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        secondaryLabel = workoutReading?.let { reading ->
+            {
+                Text(
+                    reading.heartRateBpm?.let { "Recording · $it bpm" } ?: "Recording heart rate",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    )
 }
 
 @Composable

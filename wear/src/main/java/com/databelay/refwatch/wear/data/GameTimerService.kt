@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 const val ONGOING_NOTIFICATION_ID_SERVICE = 1
 const val ONGOING_NOTIFICATION_CHANNEL_ID = "game_timer_service_channel"
@@ -74,8 +75,22 @@ data class TimerState(
     val inAddedTime: Boolean = false,
     val latestLocation: LocationSample? = null,
     val latestHeartRate: HeartRateSample? = null,
-    val latestSteps: StepSample? = null
-)
+    val latestSteps: StepSample? = null,
+    val isTrackingWorkout: Boolean = false
+) {
+    /** The heart rate to show: null before the first reading and once readings stop arriving. */
+    fun heartRateBpm(now: Long = System.currentTimeMillis()): Int? =
+        latestHeartRate?.takeIf { now - it.timestamp < HEART_RATE_STALE_MS }?.bpm?.roundToInt()
+
+    /** What the screen shows of the workout; null when none is recording. */
+    fun workoutReading(): WorkoutReading? =
+        if (isTrackingWorkout) WorkoutReading(heartRateBpm()) else null
+}
+
+/** A recording workout as the referee sees it; [heartRateBpm] is null until a reading arrives. */
+data class WorkoutReading(val heartRateBpm: Int?)
+
+private const val HEART_RATE_STALE_MS = 30_000L
 
 @AndroidEntryPoint
 class GameTimerService : Service() {
@@ -144,6 +159,12 @@ class GameTimerService : Service() {
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         createNotificationChannel()
         Log.d(TAG, "Service Created. Step sensor available: ${stepSensor != null}")
+
+        serviceScope.launch {
+            healthServicesManager.isExerciseActive.collect { active ->
+                _timerStateFlow.update { it.copy(isTrackingWorkout = active) }
+            }
+        }
 
         serviceScope.launch {
             healthServicesManager.exerciseUpdateFlow().collect { update ->
@@ -220,12 +241,14 @@ class GameTimerService : Service() {
                                 altitude = it.value.altitude
                             )
                         },
+                        // Updates carrying only steps or distance keep the last reading, so the
+                        // displayed heart rate does not blink; [TimerState.heartRateBpm] ages it out.
                         latestHeartRate = hr?.let {
                             HeartRateSample(
                                 timestamp = System.currentTimeMillis(),
                                 bpm = it.value
                             )
-                        },
+                        } ?: state.latestHeartRate,
                         latestSteps = if (stepsDeltaToRecord != null && stepsDeltaToRecord > 0) {
                             StepSample(
                                 timestamp = System.currentTimeMillis(),
@@ -554,8 +577,18 @@ class GameTimerService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateNotificationAndOngoingActivity(statusText: String, isRunning: Boolean) {
+    private fun updateNotificationAndOngoingActivity(phaseText: String, isRunning: Boolean) {
         if (!canPostNotifications()) return
+
+        // While the workout records, every surface says so: Play requires the use of a health
+        // foreground service to be perceptible to the user.
+        val isTrackingWorkout = healthServicesManager.isExerciseActive.value
+        val statusText = if (isTrackingWorkout) {
+            val bpm = _timerStateFlow.value.heartRateBpm()?.toString() ?: "--"
+            "$phaseText · $bpm bpm"
+        } else {
+            phaseText
+        }
 
         val notificationBuilder = NotificationCompat.Builder(this, ONGOING_NOTIFICATION_CHANNEL_ID)
             .setContentTitle("RefWatch Match")
@@ -588,15 +621,20 @@ class GameTimerService : Service() {
 
         val notification = notificationBuilder.build()
 
-        // START_FOREGROUND should only be called once or when needed to keep service alive
-        // subsequent updates can just use notify()
-        if (!isForegroundServiceRunning()) {
+        // The service is a health foreground service, so it goes foreground only once the
+        // workout records; before kick-off, or when the sensors are denied, it is a plain
+        // notification. START_FOREGROUND is called once; later updates just use notify().
+        if (!isForegroundServiceRunning() && isTrackingWorkout) {
             try {
                 startForeground(ONGOING_NOTIFICATION_ID_SERVICE, notification, foregroundServiceTypes())
                 isServiceForeground = true
             } catch (e: SecurityException) {
                 // Android 14+ refuses the health type without Body sensors or Physical activity
                 // permission. The timer keeps running; only background protection is lost.
+                Log.e(TAG, "Could not start foreground service", e)
+            } catch (e: IllegalStateException) {
+                // ForegroundServiceStartNotAllowedException: the app went to the background
+                // before the workout started. Same consequence as above.
                 Log.e(TAG, "Could not start foreground service", e)
             }
         } else {

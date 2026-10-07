@@ -55,6 +55,14 @@ class HealthServicesManager @Inject constructor(
     private val _stepUpdates = MutableStateFlow<StepSample?>(null)
     val stepUpdates: StateFlow<StepSample?> = _stepUpdates.asStateFlow()
 
+    /**
+     * True while the match workout is recording. Play requires a health foreground service to
+     * be perceptible, so the timer service is foreground only while this is set, and the UI
+     * shows the heart rate for as long as it is.
+     */
+    private val _isExerciseActive = MutableStateFlow(false)
+    val isExerciseActive: StateFlow<Boolean> = _isExerciseActive.asStateFlow()
+
     /** Whether a game records GPS: only when the phone's setting is on, and never for an AR. */
     fun collectsPosition(isAssistantReferee: Boolean): Boolean =
         !isAssistantReferee && prefs.getBoolean(WearSyncConstants.KEY_COLLECT_POSITION_INFO, false)
@@ -62,23 +70,22 @@ class HealthServicesManager @Inject constructor(
     suspend fun startExercise(isAssistantReferee: Boolean = false) {
         Log.d(TAG, "Starting exercise (isAR: $isAssistantReferee)")
 
-        val requiredPermissions = mutableListOf(
+        // Location is needed only for GPS. Requiring it always meant a referee who declined
+        // location got no heart rate either.
+        val requiredPermissions = listOf(
             android.Manifest.permission.BODY_SENSORS,
-            android.Manifest.permission.ACCESS_FINE_LOCATION,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION,
             android.Manifest.permission.ACTIVITY_RECOGNITION
         )
 
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        }
+        val missingPermissions = requiredPermissions.filterNot { isGranted(it) }
 
         if (missingPermissions.isNotEmpty()) {
             Log.e(TAG, "Cannot start exercise. Missing permissions: $missingPermissions")
             return
         }
 
-        val collectPositionInfo = collectsPosition(isAssistantReferee)
+        val collectPositionInfo = collectsPosition(isAssistantReferee) &&
+                isGranted(android.Manifest.permission.ACCESS_FINE_LOCATION)
 
         val capabilities = exerciseClient.getCapabilitiesWithException()
         val exerciseCapabilities = capabilities.getExerciseTypeCapabilities(ExerciseType.SOCCER)
@@ -104,6 +111,7 @@ class HealthServicesManager @Inject constructor(
 
         try {
             exerciseClient.startExerciseWithException(config)
+            _isExerciseActive.value = true
             Log.d(TAG, "Exercise started successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start exercise", e)
@@ -122,8 +130,13 @@ class HealthServicesManager @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop exercise", e)
+        } finally {
+            _isExerciseActive.value = false
         }
     }
+
+    private fun isGranted(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     fun exerciseUpdateFlow(): Flow<ExerciseUpdate> = callbackFlow {
         val callback = object : ExerciseUpdateCallback {
