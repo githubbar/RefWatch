@@ -4,10 +4,16 @@ Design: `docs/superpowers/specs/2026-10-07-garmin-app-design.md`.
 
 ## One-time setup
 1. Free Garmin developer account; install the Connect IQ SDK Manager, the latest SDK, and the
-   devices fēnix 5X, fēnix 7S, fēnix 7, epix Pro 47mm, Forerunner 965.
-2. Developer key at `%USERPROFILE%\keys_for_garmin\developer_key.der` (generated with openssl,
-   see the plan). **Back it up** — store updates must be signed with the same key. Never put it
-   in the repo (`garmin/.gitignore` excludes `*.der` / `*.pem`).
+   devices fēnix 5X, fēnix 7S, fēnix 7, epix Pro 47mm, Forerunner 265.
+2. Developer key at `%USERPROFILE%\keys_for_garmin\developer_key.der`. Generate it once
+   (Git Bash has openssl at `/mingw64/bin/openssl`; do not overwrite an existing key):
+
+       mkdir -p ~/keys_for_garmin && cd ~/keys_for_garmin
+       openssl genrsa -out developer_key.pem 4096
+       openssl pkcs8 -topk8 -inform PEM -outform DER -in developer_key.pem -out developer_key.der -nocrypt
+
+   **Back it up** — store updates must be signed with the same key. Never put it in the repo
+   (`garmin/.gitignore` excludes `*.der` / `*.pem`).
 3. Java comes from Android Studio's bundled JBR; `build.ps1` sets it.
 
 ## Build, test, run
