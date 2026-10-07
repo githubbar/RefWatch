@@ -32,5 +32,14 @@ function archiveKeepsOnlyTheLatestFinishedMatches(logger as Logger) as Boolean {
     Test.assertEqual("game-2", finished[0]["id"]);
     Test.assertEqual("game-" + (MatchStore.MAX_FINISHED + 1), finished[finished.size() - 1]["id"]);
     Test.assert(MatchStore.load() == null);      // archiving clears the current match
+    Application.Storage.deleteValue(MatchStore.FINISHED_KEY);   // leave no test matches in storage
+    return true;
+}
+
+(:test)
+function loadDiscardsAMalformedStoredMatch(logger as Logger) as Boolean {
+    Application.Storage.setValue(MatchStore.CURRENT_KEY, {"id" => "x"});
+    Test.assert(MatchStore.load() == null);
+    Test.assert(Application.Storage.getValue(MatchStore.CURRENT_KEY) == null);
     return true;
 }

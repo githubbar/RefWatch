@@ -8,12 +8,23 @@ module MatchStore {
     const FINISHED_KEY = "finished";
     const MAX_FINISHED = 5;
 
+    // A malformed or older-format stored match must not crash the app on every launch: it is
+    // discarded and the app starts fresh. (Monkey C "as" casts are compile-time only, so the
+    // phase is checked explicitly and the conversion is wrapped in try/catch.)
     function load() as MatchState or Null {
         var d = Application.Storage.getValue(CURRENT_KEY);
         if (d == null) {
             return null;
         }
-        return MatchState.fromDict(d as Dictionary);
+        try {
+            if (d instanceof Dictionary && (d as Dictionary)["phase"] instanceof String) {
+                return MatchState.fromDict(d as Dictionary);
+            }
+        } catch (e) {
+            // fall through to discarding the stored match
+        }
+        clear();
+        return null;
     }
 
     function save(m as MatchState) as Void {
