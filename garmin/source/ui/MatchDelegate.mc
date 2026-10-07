@@ -30,6 +30,39 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    function onPreviousPage() as Boolean {
+        return openTeam(TEAM_HOME);
+    }
+
+    function onNextPage() as Boolean {
+        return openTeam(TEAM_AWAY);
+    }
+
+    // Touch watches: tap the left half for Home, the right half for Away. Every tap is consumed,
+    // so a stray tap never falls through to onSelect (which would pause the match or, at full
+    // time, save it).
+    function onTap(event as WatchUi.ClickEvent) as Boolean {
+        var x = event.getCoordinates()[0];
+        openTeam(x < System.getDeviceSettings().screenWidth / 2 ? TEAM_HOME : TEAM_AWAY);
+        return true;
+    }
+
+    function onMenu() as Boolean {
+        if (_match.phase.equals(PHASE_GAME_ENDED)) {
+            GameLogView.push(_match);
+        } else {
+            MatchMenu.push(_match);
+        }
+        return true;
+    }
+
+    hidden function openTeam(team as String) as Boolean {
+        if (_match.isPlaying() || _match.phase.equals(PHASE_HALF_TIME)) {
+            TeamActions.push(_match, team);
+        }
+        return true;
+    }
+
     function onBack() as Boolean {
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
             Ask.push(Rez.Strings.DiscardPrompt, method(:discard));

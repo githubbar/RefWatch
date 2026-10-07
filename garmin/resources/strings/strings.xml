@@ -34,4 +34,21 @@
     <string id="PickerHintOk">START: OK</string>
     <string id="PickerHintNext">START: next</string>
     <string id="MinutesFormat">$1$ min</string>
+    <string id="LogGoalScorerTitle">Log goal scorer</string>
+    <string id="Goal">Goal</string>
+    <string id="YellowCard">Yellow</string>
+    <string id="RedCard">Red</string>
+    <string id="PlayerNumber">Player #</string>
+    <string id="Scorer">Scorer #</string>
+    <string id="Menu">Match</string>
+    <string id="EndFirstHalf">End 1st half</string>
+    <string id="EndMatch">End match</string>
+    <string id="StartSecondHalf">Start 2nd half</string>
+    <string id="GameLog">Game log</string>
+    <string id="Undo">Undo last</string>
+    <string id="Abandon">Abandon match</string>
+    <string id="EndFirstHalfPrompt">End 1st half?</string>
+    <string id="EndMatchPrompt">End match?</string>
+    <string id="AbandonPrompt">Abandon match?</string>
+    <string id="NoEvents">No events yet</string>
 </strings>

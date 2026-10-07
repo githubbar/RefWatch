@@ -48,3 +48,8 @@ Build for that watch's device ID, connect it by USB, and copy `garmin\bin\RefWat
 to the watch's `GARMIN\APPS` folder. Eject; the app appears in the watch's app list.
 Sideloaded apps cannot be configured from Garmin Connect; test settings in the simulator
 (File → Edit Persistent Storage → Edit Application.Properties).
+
+## Hold UP (match menu) in the simulator
+The simulator does not turn a held mouse button posted by `sim.ps1` into a long press, so the
+match menu (`onMenu`) cannot be opened that way. Check it by temporarily mapping `onBack` to
+`onMenu()` in `MatchDelegate` (never commit that), or press the real button on a watch.
