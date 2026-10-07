@@ -1,0 +1,47 @@
+<#
+.SYNOPSIS
+  Build, unit-test or run the RefWatch Connect IQ app.
+.EXAMPLE
+  .\garmin\build.ps1                       # build for fenix5x
+  .\garmin\build.ps1 -Device fenix7 -Run   # build and open in the simulator
+  .\garmin\build.ps1 -Test                 # build with unit tests and run them in the simulator
+#>
+param(
+    [string]$Device = "fenix5x",
+    [switch]$Test,
+    [switch]$Run,
+    [string]$Key = "$env:USERPROFILE\keys_for_garmin\developer_key.der"
+)
+$ErrorActionPreference = "Stop"
+$root = $PSScriptRoot
+
+$sdkRoot = "$env:APPDATA\Garmin\ConnectIQ\Sdks"
+$sdk = Get-ChildItem $sdkRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name | Select-Object -Last 1
+if (-not $sdk) { throw "No Connect IQ SDK in $sdkRoot. Install one with the SDK Manager (see garmin/README.md)." }
+$bin = Join-Path $sdk.FullName "bin"
+if (-not (Test-Path $Key)) { throw "Developer key not found at $Key (see garmin/README.md)." }
+if (-not $env:JAVA_HOME) { $env:JAVA_HOME = "$env:LOCALAPPDATA\Programs\Android Studio\jbr" }
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+
+New-Item -ItemType Directory -Force "$root\bin" | Out-Null
+$out = "$root\bin\RefWatch-$Device.prg"
+$compileArgs = @("-o", $out, "-f", "$root\monkey.jungle", "-y", $Key, "-d", $Device, "-w")
+if ($Test) { $compileArgs += "-t" }
+& "$bin\monkeyc.bat" @compileArgs
+if ($LASTEXITCODE -ne 0) { throw "monkeyc failed" }
+
+if ($Test -or $Run) {
+    if (-not (Get-Process simulator -ErrorAction SilentlyContinue)) {
+        Start-Process "$bin\simulator.exe"
+        Start-Sleep -Seconds 6
+    }
+    $runArgs = @($out, $Device)
+    # monkeydo.bat on Windows takes /t, not -t.
+    if ($Test) { $runArgs += "/t" }
+    $output = & "$bin\monkeydo.bat" @runArgs 2>&1 | Out-String
+    Write-Output $output
+    # Case-sensitive: the summary line is "PASSED (passed=N, failed=0, errors=0)".
+    if ($Test -and (($output -cmatch "FAILED|ERROR") -or ($output -cnotmatch "PASSED"))) {
+        throw "Unit tests failed"
+    }
+}
