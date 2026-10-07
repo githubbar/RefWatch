@@ -20,6 +20,7 @@ Design: `docs/superpowers/specs/2026-10-07-garmin-app-design.md`.
     .\garmin\build.ps1                      # fenix5x .prg in garmin\bin
     .\garmin\build.ps1 -Device fenix7 -Run  # open in the simulator
     .\garmin\build.ps1 -Test                # unit tests in the simulator
+    .\garmin\build.ps1 -Release             # release build: leaves out (:debug) code such as test fixtures
 
 `-Run` starts the simulator if needed and then stays attached (monkeydo blocks until you
 press Ctrl+C or close the app). `-Test` returns when the tests finish.
@@ -38,7 +39,9 @@ this way too.
 
 Buttons are `START`, `BACK`, `UP`, `DOWN`; `-Wait` (ms, default 900) sets the pause after each
 click. Button positions are stored per device in the script (all five products).
-Do not minimize the window: a minimized window does not render.
+Do not minimize the window: a minimized window does not render. A touch tap is a click on the
+watch screen: pass `-Click @x,y` (window coordinates, as in a screenshot).
+
 ## Memory budget
 fēnix 5X watch-app limit: 1275.5 kB in the simulator. Keep use under 60% (about 765 kB)
 (simulator: File → View Memory, or the used/limit kB figure in its status bar).
@@ -78,4 +81,6 @@ uncommitted edits. Touch input on fr265 and epix2pro47mm was not exercised (butt
 
 **On-watch results (fenix5x): pending.** Checklist: launch from the app list; five buttons and
 hold UP; vibration at end of half and break; 10 minutes untouched; exit mid-match and resume;
-readability in sunlight.
+readability in sunlight; focused bottom menu row fully readable (set-up, match menu,
+game log); vibration timing while a menu is open; 10 minutes untouched with the screen off;
+tap input on a touch watch (for later).

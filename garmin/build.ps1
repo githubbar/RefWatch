@@ -5,11 +5,13 @@
   .\garmin\build.ps1                       # build for fenix5x
   .\garmin\build.ps1 -Device fenix7 -Run   # build and open in the simulator
   .\garmin\build.ps1 -Test                 # build with unit tests and run them in the simulator
+  .\garmin\build.ps1 -Release              # release build (no (:debug) code), as for the store
 #>
 param(
     [string]$Device = "fenix5x",
     [switch]$Test,
     [switch]$Run,
+    [switch]$Release,
     [string]$Key = "$env:USERPROFILE\keys_for_garmin\developer_key.der"
 )
 $ErrorActionPreference = "Stop"
@@ -27,6 +29,8 @@ New-Item -ItemType Directory -Force "$root\bin" | Out-Null
 $out = "$root\bin\RefWatch-$Device.prg"
 $compileArgs = @("-o", $out, "-f", "$root\monkey.jungle", "-y", $Key, "-d", $Device, "-w")
 if ($Test) { $compileArgs += "-t" }
+# A release build drops (:debug) code, which is where the test fixtures live.
+if ($Release) { $compileArgs += "-r" }
 # Show monkeyc's stdout and stderr (compiler diagnostics go to stderr). Under
 # $ErrorActionPreference = "Stop", Windows PowerShell turns redirected stderr into a
 # terminating error, so relax it for this one call and rely on the exit code.
@@ -45,8 +49,13 @@ if ($Test -or $Run) {
     $runArgs = @($out, $Device)
     # monkeydo.bat on Windows takes /t, not -t.
     if ($Test) { $runArgs += "/t" }
+    # Same as monkeyc: relax Stop so stderr from monkeydo is not a terminating error.
+    $ErrorActionPreference = "Continue"
     $output = & "$bin\monkeydo.bat" @runArgs 2>&1 | Out-String
+    $runExit = $LASTEXITCODE
+    $ErrorActionPreference = "Stop"
     Write-Output $output
+    if ($runExit -ne 0 -and -not $Test) { throw "monkeydo failed (exit $runExit)" }
     # Case-sensitive: the summary line is "PASSED (passed=N, failed=0, errors=0)".
     if ($Test -and (($output -cmatch "FAILED|ERROR") -or ($output -cnotmatch "PASSED"))) {
         throw "Unit tests failed"

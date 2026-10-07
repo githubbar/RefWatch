@@ -1561,6 +1561,8 @@ git commit -m "Add the Garmin match screen with pause, half time and resume`n`nC
 
 ### Task 5: Pre-match set-up
 
+Superseded: the WatchUi.Picker code below was replaced by our own picker in commit 30bc27d (fēnix 5X legibility).
+
 **Files:**
 - Create: `garmin/source/ui/Pickers.mc`, `garmin/source/ui/PreMatch.mc`
 - Modify: `garmin/source/ui/GameList.mc` (`GameListDelegate.onSelect`), `garmin/resources/strings/strings.xml` (add strings)

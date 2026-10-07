@@ -52,4 +52,9 @@
     <string id="AbandonPrompt">Abandon match?</string>
     <string id="NoEvents">No events yet</string>
     <string id="HalfTimeShort">HT</string>
+    <string id="StartSecondHalfPrompt">Start 2nd half?</string>
+    <string id="UndoGoalPrompt">Undo Goal $1$?</string>
+    <string id="UndoCardPrompt">Undo $1$ #$2$?</string>
+    <string id="CardSummary">Yellow $1$ · Red $2$</string>
+    <string id="PickerHintSkip">BACK: skip</string>
 </strings>

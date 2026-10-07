@@ -46,11 +46,30 @@ class MatchMenuDelegate extends WatchUi.Menu2InputDelegate {
             _match.kickOff(Clock.nowMs());
             MatchStore.save(_match);
         } else if (id == :undo) {
-            _match.undoLast();
-            MatchStore.save(_match);
+            var last = _match.lastUndoable();
+            if (last != null) {
+                Ask.pushText(undoPrompt(last as Dictionary), method(:undo));
+            }
         } else if (id == :abandon) {
             Ask.push(Rez.Strings.AbandonPrompt, method(:abandon));
         }
+    }
+
+    // "Undo Goal Hawks?" or "Undo Yellow #4?", so the referee sees what will be removed.
+    hidden function undoPrompt(event as Dictionary) as String {
+        var team = event["team"] as String;
+        if ((event["eventType"] as String).equals("GOAL")) {
+            var name = team.equals(TEAM_HOME) ? _match.homeName : _match.awayName;
+            return Lang.format(WatchUi.loadResource(Rez.Strings.UndoGoalPrompt) as String, [name]);
+        }
+        var card = WatchUi.loadResource((event["cardType"] as String).equals(CARD_RED) ? Rez.Strings.RedCard : Rez.Strings.YellowCard);
+        return Lang.format(WatchUi.loadResource(Rez.Strings.UndoCardPrompt) as String, [card, event["playerNumber"]]);
+    }
+
+    function undo() as Void {
+        _match.undoLast();
+        MatchStore.save(_match);
+        WatchUi.requestUpdate();
     }
 
     function endPeriod() as Void {

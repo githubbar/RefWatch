@@ -11,6 +11,7 @@
   .\garmin\tools\sim.ps1 -Hide                               # move an already visible simulator off-screen
   .\garmin\tools\sim.ps1 -Device fenix5x -Click DOWN,DOWN -Out C:\temp\a.png
   .\garmin\tools\sim.ps1 -Out C:\temp\now.png                # just capture
+  .\garmin\tools\sim.ps1 -Device fr265 -Click @300,250       # tap at window coordinates (touch watches)
 .NOTES
   Button positions are window coordinates for each device (see $layouts); add a device
   there when a new one is needed. Clicks are applied in order,
@@ -47,7 +48,6 @@ public class SimWin {
     }
     delegate bool EnumProc(IntPtr h, IntPtr l);
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc p, IntPtr l);
-    [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr h, EnumProc p, IntPtr l);
     [DllImport("user32.dll")] static extern int GetWindowThreadProcessId(IntPtr h, out int pid);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
@@ -60,7 +60,6 @@ public class SimWin {
     [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern IntPtr ChildWindowFromPointEx(IntPtr h, POINT p, uint flags);
-    [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
     [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr h);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool CreateProcess(string app, string cmd, IntPtr pa, IntPtr ta, bool inherit, uint flags,
@@ -90,20 +89,24 @@ public class SimWin {
         return pi.dwProcessId;
     }
 
-    // Restore (SW_SHOWNOACTIVATE = 4) and move far off-screen in a single atomic call.
-    public static void ParkOffScreen(IntPtr h) {
+    // Restore (SW_SHOWNOACTIVATE = 4) and move the window just left of the virtual screen (all
+    // monitors together, given as its left edge) in a single atomic call.
+    public static void ParkOffScreen(IntPtr h, int virtualLeft) {
         WINDOWPLACEMENT wp = new WINDOWPLACEMENT(); wp.length = Marshal.SizeOf(wp);
         GetWindowPlacement(h, ref wp);
         int w = wp.rcNormal.Right - wp.rcNormal.Left, ht = wp.rcNormal.Bottom - wp.rcNormal.Top;
-        wp.rcNormal.Left = -3000; wp.rcNormal.Top = 0; wp.rcNormal.Right = -3000 + w; wp.rcNormal.Bottom = ht;
+        int x = virtualLeft - w - 100;
+        wp.rcNormal.Left = x; wp.rcNormal.Top = 0; wp.rcNormal.Right = x + w; wp.rcNormal.Bottom = ht;
         wp.showCmd = 4;
         SetWindowPlacement(h, ref wp);
         // SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
-        SetWindowPos(h, IntPtr.Zero, -3000, 0, 0, 0, 0x0001 | 0x0004 | 0x0010);
+        SetWindowPos(h, IntPtr.Zero, x, 0, 0, 0, 0x0001 | 0x0004 | 0x0010);
     }
 }
 "@
-# Deliberately NOT DPI-aware: the simulator window is DPI-unaware, so its own coordinates are\n# "logical" pixels and a DPI-aware caller would see 1.5x sizes that do not match what it draws.
+# Deliberately NOT DPI-aware: the simulator window is DPI-unaware, so its own coordinates are
+# "logical" pixels and a DPI-aware caller would see 1.5x sizes that do not match what it draws.
+Add-Type -AssemblyName System.Windows.Forms
 
 function Get-SimProcess { Get-Process simulator -ErrorAction SilentlyContinue | Select-Object -First 1 }
 
@@ -123,7 +126,8 @@ function Get-SimWindow([int]$timeoutSec = 30) {
 function Move-SimOffScreen([IntPtr]$h) {
     $r = New-Object SimWin+RECT
     [SimWin]::GetWindowRect($h, [ref]$r) | Out-Null
-    if ($r.Left -gt -2000 -or [SimWin]::IsIconic($h)) { [SimWin]::ParkOffScreen($h) }
+    $left = [System.Windows.Forms.SystemInformation]::VirtualScreen.Left
+    if ($r.Right -gt $left -or [SimWin]::IsIconic($h)) { [SimWin]::ParkOffScreen($h, $left) }
 }
 
 # Button positions in window coordinates (the pixels of a -Out screenshot, which captures the
@@ -155,7 +159,11 @@ if ($Info -or $Click.Count -gt 0 -or $Out -ne "") {
         "hwnd=$h window=($($wr.Left),$($wr.Top),$($wr.Right),$($wr.Bottom)) client=$($cr.Right)x$($cr.Bottom) iconic=$([SimWin]::IsIconic($h))"
     }
     foreach ($name in $Click) {
-        $pos = $layouts[$Device][$name.ToUpper()]
+        if ($name -match "^@(\d+),(\d+)$") {
+            $pos = @([int]$Matches[1], [int]$Matches[2])   # a tap at these window coordinates
+        } else {
+            $pos = $layouts[$Device][$name.ToUpper()]
+        }
         if (-not $pos) { throw "Unknown button '$name' for device '$Device'." }
         # Window coordinates to client coordinates.
         $origin = New-Object SimWin+POINT

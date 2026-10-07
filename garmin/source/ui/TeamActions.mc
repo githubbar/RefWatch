@@ -37,14 +37,14 @@ class TeamActionsDelegate extends WatchUi.Menu2InputDelegate {
             _goalId = _match.addGoal(_team, null, now);
             MatchStore.save(_match);
             if (_goalId != null && Settings.logGoalScorer()) {
-                Pickers.switchToPlayerNumber(Rez.Strings.Scorer, method(:onScorer));
+                Pickers.switchToPlayerNumber(Rez.Strings.Scorer, method(:onScorer), true);
             } else {
                 WatchUi.popView(WatchUi.SLIDE_RIGHT);
             }
         } else {
             _cardType = id == :yellow ? CARD_YELLOW : CARD_RED;
             _cardAtMs = now;
-            Pickers.switchToPlayerNumber(Rez.Strings.PlayerNumber, method(:onCardPlayer));
+            Pickers.switchToPlayerNumber(Rez.Strings.PlayerNumber, method(:onCardPlayer), false);
         }
     }
 

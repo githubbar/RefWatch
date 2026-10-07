@@ -13,7 +13,21 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
         _match = match;
     }
 
+    // A BehaviorDelegate that handles the select behavior never sees onTap, because the system
+    // turns a screen tap into that same behavior. onSelect therefore declines, and the START
+    // key (onKey) and a tap (onTap) are handled separately.
     function onSelect() as Boolean {
+        return false;
+    }
+
+    function onKey(event as WatchUi.KeyEvent) as Boolean {
+        if (event.getKey() == WatchUi.KEY_ENTER) {
+            return start();
+        }
+        return false;
+    }
+
+    hidden function start() as Boolean {
         var now = Clock.nowMs();
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
             MatchStore.archive(_match);
@@ -21,13 +35,20 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (_match.phase.equals(PHASE_HALF_TIME)) {
-            _match.kickOff(now);
-        } else {
-            _match.togglePause(now);
+            // Starting the 2nd half cannot be undone, and START is also the pause button.
+            Ask.push(Rez.Strings.StartSecondHalfPrompt, method(:startSecondHalf));
+            return true;
         }
+        _match.togglePause(now);
         MatchStore.save(_match);
         WatchUi.requestUpdate();
         return true;
+    }
+
+    function startSecondHalf() as Void {
+        _match.kickOff(Clock.nowMs());
+        MatchStore.save(_match);
+        WatchUi.requestUpdate();
     }
 
     function onPreviousPage() as Boolean {
@@ -39,8 +60,7 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
     }
 
     // Touch watches: tap the left half for Home, the right half for Away. Every tap is consumed,
-    // so a stray tap never falls through to onSelect (which would pause the match or, at full
-    // time, save it).
+    // so a stray tap never pauses the match or, at full time, saves it.
     function onTap(event as WatchUi.ClickEvent) as Boolean {
         var x = event.getCoordinates()[0];
         openTeam(x < System.getDeviceSettings().screenWidth / 2 ? TEAM_HOME : TEAM_AWAY);

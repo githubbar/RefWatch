@@ -145,9 +145,26 @@ class MatchView extends WatchUi.View {
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         drawScore(dc, w, h * 0.42);
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.68, Graphics.FONT_XTINY, WatchUi.loadResource(Rez.Strings.SaveHint) as String,
+        var yellow = 0;
+        var red = 0;
+        for (var i = 0; i < _match.events.size(); i++) {
+            var e = _match.events[i];
+            if ((e["eventType"] as String).equals("CARD")) {
+                if ((e["cardType"] as String).equals(CARD_RED)) {
+                    red += 1;
+                } else {
+                    yellow += 1;
+                }
+            }
+        }
+        if (yellow + red > 0) {
+            dc.drawText(cx, h * 0.57, Graphics.FONT_XTINY,
+                Lang.format(WatchUi.loadResource(Rez.Strings.CardSummary) as String, [yellow, red]),
+                Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
+        dc.drawText(cx, h * 0.70, Graphics.FONT_XTINY, WatchUi.loadResource(Rez.Strings.SaveHint) as String,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(cx, h * 0.80, Graphics.FONT_XTINY, WatchUi.loadResource(Rez.Strings.DiscardHint) as String,
+        dc.drawText(cx, h * 0.82, Graphics.FONT_XTINY, WatchUi.loadResource(Rez.Strings.DiscardHint) as String,
             Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 }

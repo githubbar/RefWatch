@@ -1,5 +1,6 @@
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // Number entry drawn by us rather than WatchUi.Picker: the system picker paints its own
@@ -11,15 +12,17 @@ module Pickers {
     function pushNumber(titleId as ResourceId, min as Number, max as Number, step as Number,
                         current as Number, onPicked as Method(n as Number) as Void) as Void {
         var model = new NumberPickerModel(min, max, step, current, 1);
-        WatchUi.pushView(new NumberPickerView(titleId, model), new NumberPickerDelegate(model, onPicked),
+        WatchUi.pushView(new NumberPickerView(titleId, model, false), new NumberPickerDelegate(model, onPicked),
             WatchUi.SLIDE_IMMEDIATE);
     }
 
     // Tens and ones columns (0–99): two short scrolls instead of up to 99 button presses.
     // Replaces the current view, so accepting returns to the view underneath it.
-    function switchToPlayerNumber(titleId as ResourceId, onPicked as Method(n as Number) as Void) as Void {
+    // skipHint adds "BACK: skip" on the tens column, for pickers that are optional.
+    function switchToPlayerNumber(titleId as ResourceId, onPicked as Method(n as Number) as Void,
+                                  skipHint as Boolean) as Void {
         var model = new NumberPickerModel(0, 9, 1, 0, 2);
-        WatchUi.switchToView(new NumberPickerView(titleId, model), new NumberPickerDelegate(model, onPicked),
+        WatchUi.switchToView(new NumberPickerView(titleId, model, skipHint), new NumberPickerDelegate(model, onPicked),
             WatchUi.SLIDE_IMMEDIATE);
     }
 }
@@ -30,11 +33,13 @@ module Pickers {
 class NumberPickerView extends WatchUi.View {
     hidden var _titleId as ResourceId;
     hidden var _model as NumberPickerModel;
+    hidden var _skipHint as Boolean;
 
-    function initialize(titleId as ResourceId, model as NumberPickerModel) {
+    function initialize(titleId as ResourceId, model as NumberPickerModel, skipHint as Boolean) {
         View.initialize();
         _titleId = titleId;
         _model = model;
+        _skipHint = skipHint;
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -76,7 +81,11 @@ class NumberPickerView extends WatchUi.View {
 
         var hint = _model.isLastColumn() ? Rez.Strings.PickerHintOk : Rez.Strings.PickerHintNext;
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.84, Graphics.FONT_XTINY, WatchUi.loadResource(hint) as String, vcenter);
+        var skip = _skipHint && _model.column == 0;
+        dc.drawText(cx, h * (skip ? 0.80 : 0.84), Graphics.FONT_XTINY, WatchUi.loadResource(hint) as String, vcenter);
+        if (skip) {
+            dc.drawText(cx, h * 0.90, Graphics.FONT_XTINY, WatchUi.loadResource(Rez.Strings.PickerHintSkip) as String, vcenter);
+        }
     }
 }
 
@@ -105,7 +114,20 @@ class NumberPickerDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    // Declines so that a screen tap reaches onTap (see MatchDelegate.onSelect); START arrives
+    // as onKey.
     function onSelect() as Boolean {
+        return false;
+    }
+
+    function onKey(event as WatchUi.KeyEvent) as Boolean {
+        if (event.getKey() == WatchUi.KEY_ENTER) {
+            return advance();
+        }
+        return false;
+    }
+
+    hidden function advance() as Boolean {
         if (_model.advance()) {
             var n = _model.result();
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
@@ -114,6 +136,20 @@ class NumberPickerDelegate extends WatchUi.BehaviorDelegate {
             WatchUi.requestUpdate();
         }
         return true;
+    }
+
+    // Touch watches: a tap above the value raises the active digit, below it lowers it, and the
+    // middle does what START does. Every tap is consumed, so tapping an arrow never accepts the
+    // picker (recording player "00").
+    function onTap(event as WatchUi.ClickEvent) as Boolean {
+        var y = event.getCoordinates()[1];
+        var h = System.getDeviceSettings().screenHeight;
+        if (y < h * 0.38) {
+            return onPreviousPage();
+        } else if (y > h * 0.66) {
+            return onNextPage();
+        }
+        return advance();
     }
 
     function onBack() as Boolean {
