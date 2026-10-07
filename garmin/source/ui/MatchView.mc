@@ -110,7 +110,7 @@ class MatchView extends WatchUi.View {
         return WatchUi.loadResource(id) as String;
     }
 
-    // "[bar] 2 - 1 [bar]" centred on y; each bar is that team's colour.
+    // "[bar] 2 - 1 [bar]" centered on y; each bar is that team's color.
     hidden function drawScore(dc as Graphics.Dc, w as Number, y as Numeric) as Void {
         var cx = w / 2;
         var font = Graphics.FONT_NUMBER_MILD;
@@ -130,7 +130,7 @@ class MatchView extends WatchUi.View {
         drawTeamBar(dc, awayEdge, y - barH / 2, barW, barH, _match.awayColor);
     }
 
-    // A grey outline keeps a black kit visible on the black background.
+    // A gray outline keeps a black kit visible on the black background.
     hidden function drawTeamBar(dc as Graphics.Dc, x as Numeric, y as Numeric, bw as Numeric, bh as Numeric, color as Number) as Void {
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
         dc.fillRoundedRectangle(x, y, bw, bh, 3);
