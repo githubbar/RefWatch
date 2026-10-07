@@ -41,9 +41,9 @@ class PreMatchDelegate extends WatchUi.Menu2InputDelegate {
             _colorKey = id == :homeColor ? "homeColor" : "awayColor";
             pushColorMenu();
         } else if (id == :halfMinutes) {
-            Pickers.pushNumber(Rez.Strings.HalfLength, 5, 60, _setup["halfMinutes"] as Number, method(:onHalfMinutes));
+            Pickers.pushNumber(Rez.Strings.HalfLength, 5, 60, 5, _setup["halfMinutes"] as Number, method(:onHalfMinutes));
         } else if (id == :halftimeMinutes) {
-            Pickers.pushNumber(Rez.Strings.BreakLength, 1, 30, _setup["halftimeMinutes"] as Number, method(:onHalftimeMinutes));
+            Pickers.pushNumber(Rez.Strings.BreakLength, 5, 30, 5, _setup["halftimeMinutes"] as Number, method(:onHalftimeMinutes));
         } else if (id == :kickOffTeam) {
             _setup["kickOffTeam"] = (_setup["kickOffTeam"] as String).equals(TEAM_HOME) ? TEAM_AWAY : TEAM_HOME;
             refresh();

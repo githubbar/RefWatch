@@ -31,5 +31,7 @@
     <string id="HalfLength">Half length</string>
     <string id="BreakLength">Half-time break</string>
     <string id="KickOffTeam">Kick-off team</string>
+    <string id="PickerHintOk">START: OK</string>
+    <string id="PickerHintNext">START: next</string>
     <string id="MinutesFormat">$1$ min</string>
 </strings>
