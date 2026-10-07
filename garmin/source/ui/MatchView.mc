@@ -26,12 +26,17 @@ class MatchView extends WatchUi.View {
             GameList.show();
             return;
         }
+        stopTimer();
         var timer = new Timer.Timer();
         timer.start(method(:onTick), 1000, true);
         _timer = timer;
     }
 
     function onHide() as Void {
+        stopTimer();
+    }
+
+    hidden function stopTimer() as Void {
         if (_timer != null) {
             (_timer as Timer.Timer).stop();
             _timer = null;

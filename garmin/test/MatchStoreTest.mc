@@ -20,7 +20,7 @@ function storeSavesAndLoadsCurrentMatch(logger as Logger) as Boolean {
 
 (:test)
 function archiveKeepsOnlyTheLatestFinishedMatches(logger as Logger) as Boolean {
-    Application.Storage.deleteValue(MatchStore.FINISHED_KEY);
+    Application.Storage.deleteValue(MatchStore.FINISHED_KEY);   // start clean even if an earlier run failed
     for (var i = 0; i < MatchStore.MAX_FINISHED + 2; i++) {
         var m = testMatch();
         m.gameId = "game-" + i;
@@ -39,6 +39,18 @@ function archiveKeepsOnlyTheLatestFinishedMatches(logger as Logger) as Boolean {
 (:test)
 function loadDiscardsAMalformedStoredMatch(logger as Logger) as Boolean {
     Application.Storage.setValue(MatchStore.CURRENT_KEY, {"id" => "x"});
+    Test.assert(MatchStore.load() == null);
+    Test.assert(Application.Storage.getValue(MatchStore.CURRENT_KEY) == null);
+    return true;
+}
+
+(:test)
+function loadDiscardsAStoredMatchMissingRequiredKeys(logger as Logger) as Boolean {
+    var d = testMatch().toDict();
+    d.remove("homeScore");
+    d.remove("pausedTotalMs");
+    d.remove("regulationAlerted");
+    Application.Storage.setValue(MatchStore.CURRENT_KEY, d);
     Test.assert(MatchStore.load() == null);
     Test.assert(Application.Storage.getValue(MatchStore.CURRENT_KEY) == null);
     return true;
