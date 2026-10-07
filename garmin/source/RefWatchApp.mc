@@ -1,6 +1,7 @@
 import Toybox.Application;
-import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.Math;
+import Toybox.System;
 import Toybox.WatchUi;
 
 class RefWatchApp extends Application.AppBase {
@@ -8,21 +9,17 @@ class RefWatchApp extends Application.AppBase {
         AppBase.initialize();
     }
 
+    function onStart(state as Dictionary or Null) as Void {
+        Clock.init();
+        Math.srand(System.getTimer());
+    }
+
+    // A match left running (or unsaved at full time) reopens straight onto the match screen.
     function getInitialView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDelegates] {
-        return [new HelloView()];
-    }
-}
-
-class HelloView extends WatchUi.View {
-    function initialize() {
-        View.initialize();
-    }
-
-    function onUpdate(dc as Graphics.Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.clear();
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM,
-            WatchUi.loadResource(Rez.Strings.AppName) as String,
-            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var match = MatchStore.load();
+        if (match != null && !match.phase.equals(PHASE_PRE_GAME)) {
+            return [new MatchView(match), new MatchDelegate(match)];
+        }
+        return [GameList.build(), new GameListDelegate()];
     }
 }
