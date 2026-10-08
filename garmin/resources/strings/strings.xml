@@ -57,4 +57,6 @@
     <string id="UndoCardPrompt">Undo $1$ #$2$?</string>
     <string id="CardSummary">Yellow $1$ · Red $2$</string>
     <string id="PickerHintSkip">BACK: skip</string>
+    <string id="RecordActivity">Record activity</string>
+    <string id="ActivityName">Referee</string>
 </strings>

@@ -41,6 +41,7 @@ module MatchStore {
             && d["halftimeMinutes"] instanceof Number
             && d["kickOffTeam"] instanceof String
             && (d["scheduledStartMs"] == null || d["scheduledStartMs"] instanceof Long)
+            && (d["recordActivity"] == null || d["recordActivity"] instanceof Boolean)
             && d["phase"] instanceof String
             && d["homeScore"] instanceof Number
             && d["awayScore"] instanceof Number

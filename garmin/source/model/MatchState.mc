@@ -31,6 +31,7 @@ class MatchState {
     var halftimeMinutes as Number;
     var kickOffTeam as String;           // team kicking off the current (or next) half
     var scheduledStartMs as Long or Null;
+    var recordActivity as Boolean;       // save this match as a Garmin activity
 
     var phase as String;
     var homeScore as Number;
@@ -55,6 +56,7 @@ class MatchState {
         halftimeMinutes = setup["halftimeMinutes"] as Number;
         kickOffTeam = setup["kickOffTeam"] as String;
         scheduledStartMs = setup["scheduledStartMs"] as Long or Null;
+        recordActivity = setup["recordActivity"] == true;
         phase = PHASE_PRE_GAME;
         homeScore = 0;
         awayScore = 0;
@@ -258,6 +260,7 @@ class MatchState {
             "halftimeMinutes" => halftimeMinutes,
             "kickOffTeam" => kickOffTeam,
             "scheduledStartMs" => scheduledStartMs,
+            "recordActivity" => recordActivity,
             "phase" => phase,
             "homeScore" => homeScore,
             "awayScore" => awayScore,

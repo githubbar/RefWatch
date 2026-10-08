@@ -153,3 +153,41 @@ function loadDiscardsAStoredMatchMissingRequiredKeys(logger as Logger) as Boolea
     Test.assert(Application.Storage.getValue(MatchStore.CURRENT_KEY) == null);
     return true;
 }
+
+(:test)
+function recordActivityIsOffWhenTheSetupLeavesItOut(logger as Logger) as Boolean {
+    Test.assertEqual(false, testMatch().recordActivity);
+    return true;
+}
+
+(:test)
+function recordActivitySurvivesSaveAndLoad(logger as Logger) as Boolean {
+    var m = testMatch();
+    m.recordActivity = true;
+    MatchStore.save(m);
+    Test.assertEqual(true, (MatchStore.load() as MatchState).recordActivity);
+    MatchStore.clear();
+    return true;
+}
+
+// A match stored by phase 1 has no recordActivity key; it must still resume, without recording.
+(:test)
+function storedMatchWithoutRecordActivityLoadsWithRecordingOff(logger as Logger) as Boolean {
+    var d = testMatch().toDict();
+    d.remove("recordActivity");
+    Application.Storage.setValue(MatchStore.CURRENT_KEY, d);
+    var loaded = MatchStore.load();
+    Test.assert(loaded != null);
+    Test.assertEqual(false, (loaded as MatchState).recordActivity);
+    MatchStore.clear();
+    return true;
+}
+
+(:test)
+function storedMatchWithANonBooleanRecordActivityIsDiscarded(logger as Logger) as Boolean {
+    var d = testMatch().toDict();
+    d["recordActivity"] = "yes";
+    Application.Storage.setValue(MatchStore.CURRENT_KEY, d);
+    Test.assert(MatchStore.load() == null);
+    return true;
+}

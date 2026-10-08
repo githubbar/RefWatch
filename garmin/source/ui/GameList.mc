@@ -24,7 +24,8 @@ module GameList {
             "halfMinutes" => 45,
             "halftimeMinutes" => 15,
             "kickOffTeam" => TEAM_HOME,
-            "scheduledStartMs" => null
+            "scheduledStartMs" => null,
+            "recordActivity" => Settings.recordActivity()
         };
     }
 }
