@@ -49,6 +49,17 @@ fēnix 5X watch-app limit: 1275.5 kB in the simulator. Keep use under 60% (about
 ## Sideload to a watch
 Build for that watch's device ID, connect it by USB, and copy `garmin\bin\RefWatch-<device>.prg`
 to the watch's `GARMIN\APPS` folder. Eject; the app appears in the watch's app list.
+
+The fēnix 5X mounts as a removable drive labeled `GARMIN` (USB Mass Storage, built into
+Windows; no Garmin driver is needed). If it does not appear:
+- No USB device at all in Device Manager: the clip is charge-only or not seated. Use a
+  genuine Garmin cable, snap the clip in firmly, and clean the watch's contacts.
+- `Unknown USB Device (Device Descriptor Request Failed)`: the data pins only half connect.
+  Plug into a port on the PC itself rather than a hub, dock or monitor, and reseat the clip.
+
+`GARMIN\GarminDevice.xml` on the watch's drive names the model, firmware and Connect IQ version
+(`<VmVersion>`) of the connected watch. After a crash, `GARMIN\APPS\LOGS\CIQ_LOG.YML` holds
+the error; a debug build includes line numbers.
 Sideloaded apps cannot be configured from Garmin Connect; test settings in the simulator
 (File → Edit Persistent Storage → Edit Application.Properties).
 
@@ -79,8 +90,9 @@ at the bottom of round screens as a scroll hint; it is fully visible when focuse
 changes were needed. Hold UP (match menu) and short halves were simulated with temporary,
 uncommitted edits. Touch input on fr265 and epix2pro47mm was not exercised (buttons only).
 
-**On-watch results (fenix5x): pending.** Checklist: launch from the app list; five buttons and
-hold UP; vibration at end of half and break; 10 minutes untouched; exit mid-match and resume;
-readability in sunlight; focused bottom menu row fully readable (set-up, match menu,
-game log); vibration timing while a menu is open; 10 minutes untouched with the screen off;
-tap input on a touch watch (for later).
+**On-watch results (fenix5x, firmware 25.00, Connect IQ 3.1.9), 2026-10-08:** the user sideloaded
+the debug build and reported that everything works. Checklist: launch from the app list; five
+buttons and hold UP; vibration at end of half and break; 10 minutes untouched; exit mid-match and
+resume; readability in sunlight; focused bottom menu row fully readable (set-up, match menu,
+game log); vibration timing while a menu is open; 10 minutes untouched with the screen off.
+Tap input on a touch watch is still untested (no touch watch available).
