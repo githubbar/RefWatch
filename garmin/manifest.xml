@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+    <iq:application id="946fcc57eef840c1ad2df79b4f43f30e" type="watch-app" name="@Strings.AppName"
+                    entry="RefWatchApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.1.0">
+        <iq:products>
+            <iq:product id="fenix5x"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="epix2pro47mm"/>
+            <iq:product id="fr265"/>
+        </iq:products>
+        <iq:permissions/>
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+        <iq:barrels/>
+    </iq:application>
+</iq:manifest>
