@@ -30,6 +30,7 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
     hidden function start() as Boolean {
         var now = Clock.nowMs();
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
+            Recorder.save();
             MatchStore.archive(_match);
             GameList.show();
             return true;
@@ -48,6 +49,7 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
     function startSecondHalf() as Void {
         _match.kickOff(Clock.nowMs());
         MatchStore.save(_match);
+        Recorder.forKickOff(_match);
         WatchUi.requestUpdate();
     }
 
@@ -92,12 +94,16 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    // The match resumes on the next launch; the activity so far is saved now, and a new one
+    // starts when the app reopens.
     function leave() as Void {
+        Recorder.save();
         System.exit();
     }
 
     // MatchView.onShow sees PHASE_ABANDONED once the confirmation closes and shows the start menu.
     function discard() as Void {
+        Recorder.discard();
         MatchStore.clear();
         _match.phase = PHASE_ABANDONED;
     }

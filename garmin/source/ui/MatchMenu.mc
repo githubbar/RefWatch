@@ -45,6 +45,7 @@ class MatchMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :startSecondHalf) {
             _match.kickOff(Clock.nowMs());
             MatchStore.save(_match);
+            Recorder.forKickOff(_match);
         } else if (id == :undo) {
             var last = _match.lastUndoable();
             if (last != null) {
@@ -75,11 +76,13 @@ class MatchMenuDelegate extends WatchUi.Menu2InputDelegate {
     function endPeriod() as Void {
         _match.endPeriod(Clock.nowMs());
         MatchStore.save(_match);
+        Recorder.forPeriodEnd(_match);
         WatchUi.requestUpdate();
     }
 
     // MatchView.onShow sees PHASE_ABANDONED and returns to the start menu.
     function abandon() as Void {
+        Recorder.discard();
         MatchStore.clear();
         _match.phase = PHASE_ABANDONED;
     }

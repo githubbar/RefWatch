@@ -34,6 +34,7 @@ class PreMatchDelegate extends WatchUi.Menu2InputDelegate {
             var match = new MatchState(_setup);
             match.kickOff(Clock.nowMs());
             MatchStore.save(match);
+            Recorder.forKickOff(match);
             // Close set-up first so the match replaces the start menu and is the only view.
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             Nav.showMatch(match);
