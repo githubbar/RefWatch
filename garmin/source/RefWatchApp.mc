@@ -16,7 +16,7 @@ class RefWatchApp extends Application.AppBase {
 
     // Whatever closes the app (BACK → Leave, the system, a crash-free exit), the activity
     // recorded so far is kept. At full time this saves it before the referee chooses Save or
-    // Discard, so a later Discard cannot remove it.
+    // Discard, so a Discard after reopening the app cannot remove it.
     function onStop(state as Dictionary or Null) as Void {
         Recorder.save();
     }

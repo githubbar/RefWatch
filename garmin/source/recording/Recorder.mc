@@ -61,28 +61,36 @@ module Recorder {
             _session = session;
         } catch (e) {
             _session = null;
+            releaseGps();
         }
     }
 
     function lap() as Void {
-        var session = _session;
-        if (session != null && session.isRecording()) {
-            session.addLap();
+        try {
+            var session = _session;
+            if (session != null && session.isRecording()) {
+                session.addLap();
+            }
+        } catch (e) {
         }
     }
 
     function stop() as Void {
-        var session = _session;
-        if (session != null && session.isRecording()) {
-            session.stop();
+        try {
+            var session = _session;
+            if (session != null && session.isRecording()) {
+                session.stop();
+            }
+        } catch (e) {
         }
     }
 
+    // stop() cannot throw, so a failed stop never skips the save.
     function save() as Void {
         var session = _session;
         if (session != null) {
+            stop();
             try {
-                stop();
                 session.save();
             } catch (e) {
             }
@@ -94,8 +102,8 @@ module Recorder {
     function discard() as Void {
         var session = _session;
         if (session != null) {
+            stop();
             try {
-                stop();
                 session.discard();
             } catch (e) {
             }
@@ -110,19 +118,25 @@ module Recorder {
 
     // Turning GPS on during set-up gives it time to find a fix before kick-off.
     function warmUp() as Void {
-        if (!_gpsOn && (Toybox has :Position)) {
-            Position.enableLocationEvents(Position.LOCATION_CONTINUOUS, new RecorderGps().method(:onPosition));
-            _gpsOn = true;
+        if (!_gpsOn && (Toybox has :ActivityRecording) && (Toybox has :Position)) {
+            try {
+                Position.enableLocationEvents(Position.LOCATION_CONTINUOUS, new RecorderGps().method(:onPosition));
+                _gpsOn = true;
+            } catch (e) {
+            }
         }
     }
 
     function releaseGps() as Void {
         if (_gpsOn && _session == null) {
-            Position.enableLocationEvents(Position.LOCATION_DISABLE, null);
+            try {
+                Position.enableLocationEvents(Position.LOCATION_DISABLE, null);
+            } catch (e) {
+            }
+            // Cleared even if disabling threw, so a later warmUp can retry.
             _gpsOn = false;
         }
     }
-
     // Activity.SPORT_SOCCER needs API 3.2; the fēnix 5X has 3.1, where only the deprecated
     // ActivityRecording constant exists. Both are FIT sport 7.
     function sport() as Activity.Sport or ActivityRecording.Sport {
