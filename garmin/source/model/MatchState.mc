@@ -14,6 +14,11 @@ const TEAM_AWAY = "AWAY";
 const CARD_YELLOW = "YELLOW";
 const CARD_RED = "RED";
 
+// What takeAlert asks the watch to do.
+const ALERT_NONE = 0;
+const ALERT_PERIOD_END = 1;     // regulation reached: the strong period-end buzz
+const ALERT_REMINDER = 2;       // still in added time: a short reminder buzz
+const REMINDER_INTERVAL_MS = 30000l;
 
 // The rules of a match: periods, the clock, the score and the event log. It never reads the
 // clock and never touches storage or the screen; callers pass the current time in, so every
@@ -42,6 +47,7 @@ class MatchState {
     var pausedTotalMs as Long;
     var pausedAtMs as Long or Null;
     var regulationAlerted as Boolean;    // end-of-period vibration already given
+    var remindersGiven as Number;        // added-time reminders given in this half
 
     // Version of the stored dictionary shape, see MatchStore.isValid.
     static const SCHEMA_VERSION = 1;
@@ -66,6 +72,7 @@ class MatchState {
         pausedTotalMs = 0l;
         pausedAtMs = null;
         regulationAlerted = false;
+        remindersGiven = 0;
     }
 
     function isPlaying() as Boolean {
@@ -96,17 +103,36 @@ class MatchState {
         if (!isPlaying()) {
             return;
         }
-        var elapsed = elapsedMs(nowMs);
         if (phase.equals(PHASE_FIRST_HALF)) {
+            var elapsed = elapsedMs(nowMs);
             phase = PHASE_HALF_TIME;
             startPeriod(nowMs);
+            logPhase(nowMs, elapsed);
         } else {
-            phase = PHASE_GAME_ENDED;
-            periodStartMs = null;
-            pausedAtMs = null;
-            pausedTotalMs = 0l;
+            finishGame(nowMs);
         }
+    }
+
+    // Straight to full time from either half or the break; the score stands.
+    function finishGame(nowMs as Long) as Void {
+        if (!isPlaying() && !phase.equals(PHASE_HALF_TIME)) {
+            return;
+        }
+        var elapsed = elapsedMs(nowMs);
+        phase = PHASE_GAME_ENDED;
+        periodStartMs = null;
+        pausedAtMs = null;
+        pausedTotalMs = 0l;
         logPhase(nowMs, elapsed);
+    }
+
+    // Restarts the current half's clock at 0:00, paused, so START begins it again.
+    function resetPeriodClock(nowMs as Long) as Void {
+        if (!isPlaying()) {
+            return;
+        }
+        startPeriod(nowMs);
+        pausedAtMs = nowMs;
     }
 
     function pause(nowMs as Long) as Void {
@@ -169,13 +195,48 @@ class MatchState {
         return remaining > 0 ? remaining : 0l;
     }
 
-    // True exactly once per half or break, when regulation time is reached.
-    function takeRegulationAlert(nowMs as Long) as Boolean {
-        if (regulationAlerted || !isPastRegulation(nowMs)) {
-            return false;
+    // ALERT_PERIOD_END once per half or break when regulation time is reached; then, in a half,
+    // ALERT_REMINDER for every REMINDER_INTERVAL_MS of added time until the half is ended. Added
+    // time stops while paused, so reminders do too. Reminders a busy watch missed collapse into
+    // one.
+    function takeAlert(nowMs as Long) as Number {
+        if (!isPastRegulation(nowMs)) {
+            return ALERT_NONE;
         }
-        regulationAlerted = true;
-        return true;
+        if (!regulationAlerted) {
+            regulationAlerted = true;
+            return ALERT_PERIOD_END;
+        }
+        var due = (addedMs(nowMs) / REMINDER_INTERVAL_MS).toNumber();
+        if (isPlaying() && due > remindersGiven) {
+            remindersGiven = due;
+            return ALERT_REMINDER;
+        }
+        return ALERT_NONE;
+    }
+
+    // The set-up this match started from, for Reset game: same teams, colors and lengths, and
+    // the team that kicked off the 1st half (kickOffTeam flips at the 2nd half).
+    function replaySetup() as Dictionary {
+        var firstKickOff = kickOffTeam;
+        for (var i = 0; i < events.size(); i++) {
+            var e = events[i];
+            if ((e["eventType"] as String).equals("PHASE_CHANGE") && PHASE_SECOND_HALF.equals(e["newPhase"])) {
+                firstKickOff = kickOffTeam.equals(TEAM_HOME) ? TEAM_AWAY : TEAM_HOME;
+            }
+        }
+        return {
+            "id" => gameId,
+            "homeName" => homeName,
+            "awayName" => awayName,
+            "homeColor" => homeColor,
+            "awayColor" => awayColor,
+            "halfMinutes" => halfMinutes,
+            "halftimeMinutes" => halftimeMinutes,
+            "kickOffTeam" => firstKickOff,
+            "scheduledStartMs" => scheduledStartMs,
+            "recordActivity" => recordActivity
+        };
     }
 
     // Returns the goal's event id, or null outside a half. The scorer can be added afterwards
@@ -269,7 +330,8 @@ class MatchState {
             "periodStartMs" => periodStartMs,
             "pausedTotalMs" => pausedTotalMs,
             "pausedAtMs" => pausedAtMs,
-            "regulationAlerted" => regulationAlerted
+            "regulationAlerted" => regulationAlerted,
+            "remindersGiven" => remindersGiven
         };
     }
 
@@ -284,6 +346,9 @@ class MatchState {
         m.pausedTotalMs = d["pausedTotalMs"] as Long;
         m.pausedAtMs = d["pausedAtMs"] as Long or Null;
         m.regulationAlerted = d["regulationAlerted"] as Boolean;
+        // Matches stored before reminders existed have no count.
+        var reminders = d["remindersGiven"];
+        m.remindersGiven = reminders instanceof Number ? reminders as Number : 0;
         return m;
     }
 
@@ -301,6 +366,7 @@ class MatchState {
         pausedTotalMs = 0l;
         pausedAtMs = null;
         regulationAlerted = false;
+        remindersGiven = 0;
     }
 
     hidden function logPhase(nowMs as Long, gameTimeMs as Long) as Void {

@@ -187,7 +187,7 @@ Server behaviour:
 | UP | Home team actions | previous |
 | DOWN | Away team actions | next |
 | hold UP (menu) | match menu | — |
-| BACK | "Leave match?" confirm | back |
+| BACK | match menu (full time: "Discard match?") | back |
 
 Touch watches map taps onto the same behaviours (tap a team's half of the screen = that team's
 actions). The Light button is reserved by the system.
@@ -199,13 +199,18 @@ actions). The Light button is reserved by the system.
 2. **Pre-match** — teams with color dots, half and halftime lengths, kick-off team, Record
    activity on/off. Each line is editable from a `Menu2`. START kicks off.
 3. **Match** — large clock (elapsed in period), period name, score beside each team's color
-   bar, time of day. Past regulation the watch vibrates once and the clock continues with added
-   time shown as `+2:14` in a distinct color. Pause icon while stopped.
+   bar, time of day. Past regulation the watch vibrates, then repeats a short reminder buzz every
+   30 s of added time until the half is ended (none while paused; the Wear OS app repeats every
+   5 s). The clock continues with added time shown as `+2:14` in a distinct color. Pause icon
+   while stopped. The alerts run on an app-level timer, so they also fire while a menu is open.
 4. **Team actions** — Goal, Yellow, Red. Cards open a two-column (tens/ones) number picker;
    goals log immediately unless "Log goal scorer" is on, in which case the picker opens with a
    Skip option.
-5. **Match menu** — End half (first item once regulation has passed), Game log, Undo last event,
-   Abandon match.
+5. **Match menu** (BACK or hold UP), following the Wear OS game menu — End half (first item once
+   regulation has passed; Start 2nd half at half time), Pause / Resume, Game log, Undo last event,
+   Finish game (1st half and break), Reset timer (current half to 0:00, paused), Reset game (back
+   to set-up with the same teams; score, events and recording discarded), Abandon match, Leave
+   match. Every destructive item asks first. Analytics is left for later.
 6. **Halftime** — break countdown with vibration at its end; START starts the 2nd half;
    kick-off flips to the other team.
 7. **Full time** — score and card summary; Save (queue upload, save activity) or Discard

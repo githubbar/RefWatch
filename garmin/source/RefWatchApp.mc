@@ -26,6 +26,7 @@ class RefWatchApp extends Application.AppBase {
         var match = MatchStore.load();
         if (match != null && !match.phase.equals(PHASE_PRE_GAME)) {
             Recorder.forResume(match);
+            Nav.startTicker(match);
             return [new MatchView(match), new MatchDelegate(match)];
         }
         return [GameList.build(), new GameListDelegate()];

@@ -57,6 +57,15 @@
     <string id="UndoCardPrompt">Undo $1$ #$2$?</string>
     <string id="CardSummary">Yellow $1$ · Red $2$</string>
     <string id="PickerHintSkip">BACK: skip</string>
+    <string id="PauseClock">Pause</string>
+    <string id="ResumeClock">Resume</string>
+    <string id="FinishGame">Finish game</string>
+    <string id="FinishGamePrompt">Finish game?</string>
+    <string id="ResetTimer">Reset timer</string>
+    <string id="ResetTimerPrompt">Reset timer to 0:00?</string>
+    <string id="ResetGame">Reset game</string>
+    <string id="ResetGamePrompt">Reset game?</string>
+    <string id="LeaveMatch">Leave match</string>
     <string id="RecordActivity">Record activity</string>
     <string id="ActivityName">Referee</string>
 </strings>

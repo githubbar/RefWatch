@@ -1,20 +1,50 @@
 import Toybox.Graphics;
 import Toybox.Lang;
-import Toybox.Timer;
 import Toybox.WatchUi;
 
 module Nav {
+    var _ticker as MatchTicker or Null = null;
+    var _replaySetup as Dictionary or Null = null;
+
     // The match screen always replaces whatever is showing, so it is the only view on the stack.
     function showMatch(match as MatchState) as Void {
+        startTicker(match);
         WatchUi.switchToView(new MatchView(match), new MatchDelegate(match), WatchUi.SLIDE_LEFT);
+    }
+
+    function startTicker(match as MatchState) as Void {
+        stopTicker();
+        _ticker = new MatchTicker(match);
+    }
+
+    function stopTicker() as Void {
+        if (_ticker != null) {
+            (_ticker as MatchTicker).stop();
+            _ticker = null;
+        }
+    }
+
+    // Reset game: the match screen closes, then set-up reopens with this match's teams.
+    function replayAfterClose(setup as Dictionary) as Void {
+        _replaySetup = setup;
+    }
+
+    // Leaves the match for the start menu, or for set-up after Reset game.
+    function closeMatch() as Void {
+        GameList.show();
+        var setup = _replaySetup;
+        _replaySetup = null;
+        if (setup != null) {
+            PreMatch.push(setup);
+        }
     }
 }
 
 // One screen for the whole match; what it draws depends on the phase. Layout positions are
 // fractions of the screen so the same code fits 240 px and 416 px round screens.
+// MatchTicker redraws it every second.
 class MatchView extends WatchUi.View {
     hidden var _match as MatchState;
-    hidden var _timer as Timer.Timer or Null;
 
     function initialize(match as MatchState) {
         View.initialize();
@@ -23,32 +53,8 @@ class MatchView extends WatchUi.View {
 
     function onShow() as Void {
         if (_match.phase.equals(PHASE_ABANDONED)) {
-            GameList.show();
-            return;
+            Nav.closeMatch();
         }
-        stopTimer();
-        var timer = new Timer.Timer();
-        timer.start(method(:onTick), 1000, true);
-        _timer = timer;
-    }
-
-    function onHide() as Void {
-        stopTimer();
-    }
-
-    hidden function stopTimer() as Void {
-        if (_timer != null) {
-            (_timer as Timer.Timer).stop();
-            _timer = null;
-        }
-    }
-
-    function onTick() as Void {
-        if (_match.takeRegulationAlert(Clock.nowMs())) {
-            Alerts.periodEnd();
-            MatchStore.save(_match);
-        }
-        WatchUi.requestUpdate();
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {

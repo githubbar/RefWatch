@@ -54,14 +54,14 @@ function addedTimeCountsPastRegulation(logger as Logger) as Boolean {
 }
 
 (:test)
-function regulationAlertFiresOncePerPeriod(logger as Logger) as Boolean {
+function periodEndAlertFiresOncePerPeriod(logger as Logger) as Boolean {
     var m = testMatch();
     m.kickOff(T0);
-    Test.assert(!m.takeRegulationAlert(T0 + 29 * MIN));
-    Test.assert(m.takeRegulationAlert(T0 + 30 * MIN));
-    Test.assert(!m.takeRegulationAlert(T0 + 31 * MIN));
+    Test.assertEqual(ALERT_NONE, m.takeAlert(T0 + 29 * MIN));
+    Test.assertEqual(ALERT_PERIOD_END, m.takeAlert(T0 + 30 * MIN));
+    Test.assertEqual(ALERT_NONE, m.takeAlert(T0 + 30 * MIN + 10 * SEC));
     m.endPeriod(T0 + 32 * MIN);
-    Test.assert(m.takeRegulationAlert(T0 + 37 * MIN)); // end of the 5-minute break
+    Test.assertEqual(ALERT_PERIOD_END, m.takeAlert(T0 + 37 * MIN)); // end of the 5-minute break
     return true;
 }
 
@@ -103,7 +103,7 @@ function endSecondHalfEndsGame(logger as Logger) as Boolean {
     m.endPeriod(T0 + 66 * MIN);
     Test.assertEqual(PHASE_GAME_ENDED, m.phase);
     Test.assert(!m.isPlaying());
-    Test.assert(!m.takeRegulationAlert(T0 + 70 * MIN));
+    Test.assertEqual(ALERT_NONE, m.takeAlert(T0 + 70 * MIN));
     return true;
 }
 

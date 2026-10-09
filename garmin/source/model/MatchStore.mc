@@ -50,7 +50,8 @@ module MatchStore {
             && (d["periodStartMs"] == null || d["periodStartMs"] instanceof Long)
             && d["pausedTotalMs"] instanceof Long
             && (d["pausedAtMs"] == null || d["pausedAtMs"] instanceof Long)
-            && d["regulationAlerted"] instanceof Boolean;
+            && d["regulationAlerted"] instanceof Boolean
+            && (d["remindersGiven"] == null || d["remindersGiven"] instanceof Number);
     }
 
     // Writes can fail (storage full, value too large); the caller keeps playing with the
