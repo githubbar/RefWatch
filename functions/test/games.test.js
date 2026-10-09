@@ -205,3 +205,164 @@ test("12 games with every field at its longest stay under 3.6 KB", async () => {
   const bytes = Buffer.byteLength(JSON.stringify({games: list}));
   assert.ok(bytes < 3600, `response is ${bytes} bytes`);
 });
+
+const upload = (fields) => Object.assign({
+  id: "3f2c9a10-0b1e-4c7d-9a55-6e2f1d0c8b7a",
+  homeTeamName: "Home",
+  awayTeamName: "Away",
+  homeTeamColorArgb: -65536,
+  awayTeamColorArgb: -16755201,
+  halfDurationMinutes: 30,
+  halftimeDurationMinutes: 5,
+  kickOffTeam: "AWAY",
+  currentPhase: "GAME_ENDED",
+  homeScore: 1,
+  awayScore: 0,
+  gameDateTimeEpochMillis: T0 + 0.25,
+  events: [
+    {eventType: "PHASE_CHANGE", id: "e1", newPhase: "FIRST_HALF",
+      timestamp: T0, gameTimeMillis: 0},
+    {eventType: "GOAL", id: "e2", team: "HOME", timestamp: T0 + 754000.5,
+      gameTimeMillis: 754000.5, homeScoreAtTime: 1, awayScoreAtTime: 0,
+      playerNumber: 9},
+    {eventType: "CARD", id: "e3", team: "AWAY", playerNumber: 4,
+      cardType: "YELLOW", timestamp: T0 + 900000, gameTimeMillis: 900000},
+    {eventType: "GOAL", id: "e4", team: "HOME", timestamp: T0 + 950000,
+      gameTimeMillis: 950000, homeScoreAtTime: 2, awayScoreAtTime: 0},
+    {eventType: "PHASE_CHANGE", id: "e5", newPhase: "GAME_ENDED",
+      timestamp: T0 + 1800000, gameTimeMillis: 1800000},
+  ],
+}, fields);
+
+test("a quick match creates a game", async () => {
+  const body = upload({});
+  assert.deepEqual(
+      await games.uploadGame(db, "alice", body, T0 + DAY), {status: 200});
+  const doc = await games.gamesOf(db, "alice").doc(body.id).get();
+  assert.deepEqual(doc.data(), {
+    id: body.id,
+    userId: "alice",
+    homeTeamName: "Home",
+    awayTeamName: "Away",
+    gameDateTimeEpochMillis: T0,
+    homeTeamColorArgb: -65536,
+    awayTeamColorArgb: -16755201,
+    halfDurationMinutes: 30,
+    halftimeDurationMinutes: 5,
+    kickOffTeam: "AWAY",
+    currentPhase: "GAME_ENDED",
+    homeScore: 1,
+    awayScore: 0,
+    events: body.events,
+    lastUpdated: T0 + DAY,
+  });
+});
+
+test("a result keeps the game's schedule fields", async () => {
+  await addGame("alice", "sched", {
+    venue: "West Park",
+    notes: "Bring flags",
+    gameNumber: "1234",
+    ageGroup: "U12",
+    fieldNumber: "3",
+  });
+  const body = upload({id: "sched", homeTeamName: "Renamed",
+    gameDateTimeEpochMillis: T0 + 5 * HOUR});
+  assert.deepEqual(
+      await games.uploadGame(db, "alice", body, T0 + DAY), {status: 200});
+  const doc = (await games.gamesOf(db, "alice").doc("sched").get()).data();
+  assert.equal(doc.venue, "West Park");
+  assert.equal(doc.notes, "Bring flags");
+  assert.equal(doc.gameNumber, "1234");
+  assert.equal(doc.ageGroup, "U12");
+  assert.equal(doc.fieldNumber, "3");
+  assert.equal(doc.homeTeamName, "Eagles U12");
+  assert.equal(doc.gameDateTimeEpochMillis, T0 + DAY);
+  assert.equal(doc.currentPhase, "GAME_ENDED");
+  assert.equal(doc.homeScore, 1);
+  assert.equal(doc.kickOffTeam, "AWAY");
+  assert.equal(doc.events.length, 5);
+  assert.equal(doc.lastUpdated, T0 + DAY);
+});
+
+test("uploading the same match again is idempotent", async () => {
+  const body = upload({});
+  await games.uploadGame(db, "alice", body, T0 + DAY);
+  await games.uploadGame(db, "alice", body, T0 + DAY + MIN);
+  const all = await games.gamesOf(db, "alice").get();
+  assert.equal(all.size, 1);
+  assert.equal(all.docs[0].get("events").length, 5);
+  assert.equal(all.docs[0].get("lastUpdated"), T0 + DAY + MIN);
+});
+
+test("a goal without a scorer is stored without playerNumber", async () => {
+  const body = upload({});
+  await games.uploadGame(db, "alice", body, T0);
+  const doc = await games.gamesOf(db, "alice").doc(body.id).get();
+  assert.equal("playerNumber" in doc.get("events")[3], false);
+});
+
+test("unknown keys are dropped from the game and its events", async () => {
+  const body = upload({source: "garmin", notes: "x"});
+  body.events[0].extra = "y";
+  await games.uploadGame(db, "alice", body, T0);
+  const doc = (await games.gamesOf(db, "alice").doc(body.id).get()).data();
+  assert.equal("source" in doc, false);
+  assert.equal("notes" in doc, false);
+  assert.equal("extra" in doc.events[0], false);
+});
+
+test("malformed uploads are refused", async () => {
+  const goal = (fields) => upload({events: [Object.assign({
+    eventType: "GOAL", id: "g", team: "HOME", timestamp: T0,
+    gameTimeMillis: 0, homeScoreAtTime: 1, awayScoreAtTime: 0,
+  }, fields)]});
+  const bad = [
+    null,
+    "text",
+    [],
+    upload({id: "a/b"}),
+    upload({id: ""}),
+    upload({id: "x".repeat(129)}),
+    upload({homeTeamName: ""}),
+    upload({awayTeamName: 7}),
+    upload({homeTeamColorArgb: 1.5}),
+    upload({halfDurationMinutes: 0}),
+    upload({halftimeDurationMinutes: 121}),
+    upload({kickOffTeam: "NOBODY"}),
+    upload({currentPhase: "FIRST_HALF"}),
+    upload({homeScore: -1}),
+    upload({gameDateTimeEpochMillis: "soon"}),
+    upload({events: "none"}),
+    upload({events: new Array(201).fill(upload({}).events[0])}),
+    goal({eventType: "PENALTY"}),
+    goal({team: "away"}),
+    goal({timestamp: "now"}),
+    goal({gameTimeMillis: -1}),
+    goal({id: 5}),
+    goal({playerNumber: "9"}),
+    goal({homeScoreAtTime: null}),
+    upload({events: [{eventType: "CARD", id: "c", team: "HOME",
+      cardType: "GREEN", playerNumber: 4, timestamp: T0, gameTimeMillis: 0}]}),
+    upload({events: [{eventType: "CARD", id: "c", team: "HOME",
+      cardType: "RED", timestamp: T0, gameTimeMillis: 0}]}),
+    upload({events: [{eventType: "PHASE_CHANGE", id: "p",
+      newPhase: "OVERTIME", timestamp: T0, gameTimeMillis: 0}]}),
+  ];
+  for (const body of bad) {
+    assert.deepEqual(await games.uploadGame(db, "alice", body, T0),
+        {status: 400}, JSON.stringify(body).slice(0, 120));
+  }
+  assert.equal((await games.gamesOf(db, "alice").get()).size, 0);
+});
+
+test("the largest allowed match is accepted", async () => {
+  const events = [];
+  for (let i = 0; i < games.MAX_EVENTS; i++) {
+    events.push({eventType: "CARD", id: `c${i}`, team: "HOME",
+      playerNumber: i % 100, cardType: "YELLOW", timestamp: T0 + i,
+      gameTimeMillis: i});
+  }
+  assert.deepEqual(await games.uploadGame(db, "alice", upload({events}), T0),
+      {status: 200});
+});

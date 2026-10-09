@@ -109,7 +109,227 @@ async function listGamesForWatch(db, uid, nowMs) {
       .map(toWatchGame);
 }
 
+const MAX_EVENTS = 200;
+const MAX_NAME = 64;
+const MAX_ID = 128;
+const MAX_SCORE = 999;
+// Firestore document ids may not contain "/"; the watch sends UUIDs and the
+// phone's ids are UUIDs or "ics-<hex>".
+const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+const TEAMS = new Set(["HOME", "AWAY"]);
+const CARD_TYPES = new Set(["YELLOW", "RED"]);
+// GamePhase in common/.../DataModels.kt.
+const PHASES = new Set([
+  "NOT_STARTED", "PRE_GAME", "KICK_OFF_SELECTION_FIRST_HALF", "FIRST_HALF",
+  "HALF_TIME", "SECOND_HALF", "KICK_OFF_SELECTION_EXTRA_TIME",
+  "EXTRA_TIME_FIRST_HALF", "EXTRA_TIME_HALF_TIME", "EXTRA_TIME_SECOND_HALF",
+  "KICK_OFF_SELECTION_PENALTIES", "PENALTIES", "GAME_ENDED",
+]);
+
+/**
+ * True for a plain object (not null, not an array).
+ * @param {*} value anything from the request body
+ * @return {boolean} whether it is an object
+ */
+function isObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * True for a whole number within a range.
+ * @param {*} value anything from the request body
+ * @param {number} min smallest allowed
+ * @param {number} max largest allowed
+ * @return {boolean} whether it is in range
+ */
+function isInt(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max;
+}
+
+/**
+ * True for a finite, non-negative number (a time in ms; fractions allowed).
+ * @param {*} value anything from the request body
+ * @return {boolean} whether it is a usable time
+ */
+function isTime(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * True for an id usable as a Firestore document id.
+ * @param {*} value anything from the request body
+ * @return {boolean} whether it is a usable id
+ */
+function isId(value) {
+  return typeof value === "string" && value.length >= 1 &&
+    value.length <= MAX_ID && ID_PATTERN.test(value);
+}
+
+/**
+ * One event, checked against the phone's GameEvent shape and stripped to
+ * the keys the phone reads.
+ * @param {*} event one entry of the upload's events
+ * @return {?object} the clean event, or null if it is malformed
+ */
+function cleanEvent(event) {
+  if (!isObject(event) || typeof event.id !== "string" ||
+    event.id === "" || event.id.length > MAX_ID ||
+    !isTime(event.timestamp) || !isTime(event.gameTimeMillis)) {
+    return null;
+  }
+  const clean = {
+    eventType: event.eventType,
+    id: event.id,
+    timestamp: event.timestamp,
+    gameTimeMillis: event.gameTimeMillis,
+  };
+  if (event.eventType === "GOAL") {
+    if (!TEAMS.has(event.team) ||
+      !isInt(event.homeScoreAtTime, 0, MAX_SCORE) ||
+      !isInt(event.awayScoreAtTime, 0, MAX_SCORE)) {
+      return null;
+    }
+    const scorer = event.playerNumber;
+    if (scorer !== undefined && scorer !== null &&
+      !isInt(scorer, 0, MAX_SCORE)) {
+      return null;
+    }
+    clean.team = event.team;
+    clean.homeScoreAtTime = event.homeScoreAtTime;
+    clean.awayScoreAtTime = event.awayScoreAtTime;
+    if (isInt(scorer, 0, MAX_SCORE)) {
+      clean.playerNumber = scorer;
+    }
+    return clean;
+  }
+  if (event.eventType === "CARD") {
+    if (!TEAMS.has(event.team) || !CARD_TYPES.has(event.cardType) ||
+      !isInt(event.playerNumber, 0, MAX_SCORE)) {
+      return null;
+    }
+    clean.team = event.team;
+    clean.playerNumber = event.playerNumber;
+    clean.cardType = event.cardType;
+    return clean;
+  }
+  if (event.eventType === "PHASE_CHANGE") {
+    if (!PHASES.has(event.newPhase)) {
+      return null;
+    }
+    clean.newPhase = event.newPhase;
+    return clean;
+  }
+  return null;
+}
+
+/**
+ * A team name from the watch: trimmed, capped, never empty.
+ * @param {*} value what the watch sent
+ * @return {?string} the name, or null if it is not usable
+ */
+function cleanName(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  return Array.from(value.trim()).slice(0, MAX_NAME).join("");
+}
+
+/**
+ * The upload body checked and reduced to the fields the server writes.
+ * Only finished matches are uploaded, so currentPhase must be GAME_ENDED.
+ * @param {*} body the parsed JSON body
+ * @return {?object} the clean game, or null if anything is malformed
+ */
+function cleanUpload(body) {
+  if (!isObject(body) || !isId(body.id) ||
+    !isInt(body.homeTeamColorArgb, -2147483648, 2147483647) ||
+    !isInt(body.awayTeamColorArgb, -2147483648, 2147483647) ||
+    !isInt(body.halfDurationMinutes, 1, MAX_MINUTES) ||
+    !isInt(body.halftimeDurationMinutes, 1, MAX_MINUTES) ||
+    !TEAMS.has(body.kickOffTeam) ||
+    body.currentPhase !== "GAME_ENDED" ||
+    !isInt(body.homeScore, 0, MAX_SCORE) ||
+    !isInt(body.awayScore, 0, MAX_SCORE) ||
+    !isTime(body.gameDateTimeEpochMillis) ||
+    !Array.isArray(body.events) || body.events.length > MAX_EVENTS) {
+    return null;
+  }
+  const homeTeamName = cleanName(body.homeTeamName);
+  const awayTeamName = cleanName(body.awayTeamName);
+  const events = body.events.map(cleanEvent);
+  if (homeTeamName === null || awayTeamName === null ||
+    events.some((event) => event === null)) {
+    return null;
+  }
+  return {
+    id: body.id,
+    homeTeamName,
+    awayTeamName,
+    // The watch sends it as a double; the phone reads a whole Long.
+    gameDateTimeEpochMillis: Math.floor(body.gameDateTimeEpochMillis),
+    homeTeamColorArgb: body.homeTeamColorArgb,
+    awayTeamColorArgb: body.awayTeamColorArgb,
+    halfDurationMinutes: body.halfDurationMinutes,
+    halftimeDurationMinutes: body.halftimeDurationMinutes,
+    kickOffTeam: body.kickOffTeam,
+    currentPhase: body.currentPhase,
+    homeScore: body.homeScore,
+    awayScore: body.awayScore,
+    events,
+  };
+}
+
+/**
+ * Saves a finished match from a watch into the account's games. An existing
+ * game (one from the phone's schedule, or an earlier upload) gets only the
+ * match result; a new one (a quick match) is created with its teams and
+ * kick-off time as well. Uploading the same match again rewrites the same
+ * fields.
+ * @param {FirebaseFirestore.Firestore} db Firestore
+ * @param {string} uid the watch's account
+ * @param {*} body the parsed JSON body
+ * @param {number} nowMs current time, epoch ms
+ * @return {Promise<object>} {status: 200} or {status: 400}
+ */
+async function uploadGame(db, uid, body, nowMs) {
+  const game = cleanUpload(body);
+  if (game === null) {
+    return {status: 400};
+  }
+  const result = {
+    homeTeamColorArgb: game.homeTeamColorArgb,
+    awayTeamColorArgb: game.awayTeamColorArgb,
+    halfDurationMinutes: game.halfDurationMinutes,
+    halftimeDurationMinutes: game.halftimeDurationMinutes,
+    kickOffTeam: game.kickOffTeam,
+    currentPhase: game.currentPhase,
+    homeScore: game.homeScore,
+    awayScore: game.awayScore,
+    events: game.events,
+    lastUpdated: nowMs,
+  };
+  const ref = gamesOf(db, uid).doc(game.id);
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (existing.exists) {
+      tx.update(ref, result);
+    } else {
+      tx.set(ref, Object.assign({
+        id: game.id,
+        userId: uid,
+        homeTeamName: game.homeTeamName,
+        awayTeamName: game.awayTeamName,
+        gameDateTimeEpochMillis: game.gameDateTimeEpochMillis,
+      }, result));
+    }
+  });
+  return {status: 200};
+}
+
 module.exports = {
+  MAX_EVENTS,
+  cleanUpload,
+  uploadGame,
   MAX_GAMES,
   PAST_WINDOW_MS,
   AHEAD_WINDOW_MS,
