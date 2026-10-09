@@ -272,3 +272,32 @@ test("unlinkDevice deletes only the caller's own device", async () => {
   assert.equal(
       (await db.collection(pairing.DEVICES).doc("h1").get()).exists, false);
 });
+
+test("deleteUserGarminData removes only that user's watches and codes",
+    async () => {
+      const device = (uid) => ({
+        uid,
+        deviceName: "w",
+        createdAt: Timestamp.fromMillis(T0),
+        lastSeenAt: Timestamp.fromMillis(T0),
+      });
+      for (let i = 0; i < 3; i++) {
+        await db.collection(pairing.DEVICES).doc(`alice${i}`)
+            .set(device("alice"));
+      }
+      await db.collection(pairing.DEVICES).doc("bob0").set(device("bob"));
+      await pairing.createPairingCode(db, "alice", T0, () => "111111");
+      await pairing.createPairingCode(db, "bob", T0, () => "222222");
+
+      await pairing.deleteUserGarminData(db, "alice");
+
+      const devices = await db.collection(pairing.DEVICES).get();
+      assert.deepEqual(devices.docs.map((d) => d.id), ["bob0"]);
+      const codes = await db.collection(pairing.CODES).get();
+      assert.deepEqual(codes.docs.map((d) => d.id), ["222222"]);
+    });
+
+test("deleteUserGarminData copes with a user with nothing to delete",
+    async () => {
+      await pairing.deleteUserGarminData(db, "nobody");
+    });

@@ -13,6 +13,7 @@ const ATTEMPT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_CODE_TRIES = 10;
 const MAX_DEVICE_NAME = 64;
 const DEFAULT_DEVICE_NAME = "Garmin watch";
+const MAX_BATCH_WRITES = 500;
 
 /**
  * Gives the user a fresh pairing code, replacing any code they already had.
@@ -258,6 +259,27 @@ async function unlinkDevice(db, uid, tokenHash) {
   return true;
 }
 
+/**
+ * Removes everything Garmin-related a user owns: their linked watches (so
+ * the tokens stop working) and any pending pairing code. Used when the
+ * account is deleted.
+ * @param {FirebaseFirestore.Firestore} db Firestore
+ * @param {string} uid the deleted user
+ * @return {Promise<number>} how many documents were deleted
+ */
+async function deleteUserGarminData(db, uid) {
+  const snapshots = await Promise.all([DEVICES, CODES].map(
+      (name) => db.collection(name).where("uid", "==", uid).get()));
+  const refs = snapshots.flatMap((snapshot) => snapshot.docs)
+      .map((doc) => doc.ref);
+  for (let i = 0; i < refs.length; i += MAX_BATCH_WRITES) {
+    const batch = db.batch();
+    refs.slice(i, i + MAX_BATCH_WRITES).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+  return refs.length;
+}
+
 module.exports = {
   CODES,
   DEVICES,
@@ -270,4 +292,5 @@ module.exports = {
   pairDevice,
   listDevices,
   unlinkDevice,
+  deleteUserGarminData,
 };

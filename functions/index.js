@@ -1,6 +1,7 @@
 const {onCall, onRequest, HttpsError} =
   require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2");
+const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const {getFirestore} = require("firebase-admin/firestore");
 const pairing = require("./garmin/pairing");
@@ -72,3 +73,8 @@ exports.unlinkGarminDevice = onCall(async (request) => {
   }
   return {ok: true};
 });
+
+// Deleting an account (from the app or the console) also removes its Garmin
+// watches and any pending pairing code.
+exports.deleteGarminDataOnAccountDelete = functionsV1.auth.user()
+    .onDelete((user) => pairing.deleteUserGarminData(getFirestore(), user.uid));
