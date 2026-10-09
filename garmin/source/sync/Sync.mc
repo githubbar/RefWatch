@@ -13,9 +13,14 @@ const SYNC_FAILED = 3;      // the server refused or answered something unreadab
 module Sync {
     var _job as SyncJob or Null = null;
     var lastStatus as Number or Null = null;
+    var _runAgain as Boolean = false;   // run() was asked for while a pass was underway
 
     function run() as Void {
-        if (_job != null || !Pairing.isLinked()) {
+        if (!Pairing.isLinked()) {
+            return;
+        }
+        if (_job != null) {
+            _runAgain = true;
             return;
         }
         var job = new SyncJob(Pairing.token() as String);
@@ -52,6 +57,10 @@ module Sync {
             Pairing.forget();
         }
         GameList.onSyncFinished();
+        if (_runAgain) {
+            _runAgain = false;
+            run();
+        }
     }
 }
 
@@ -60,23 +69,46 @@ class SyncJob {
     hidden var _token as String;
     hidden var _pending as Array<String> = [] as Array<String>;   // finished match ids to send
     hidden var _rejected as Boolean = false;                       // a match was refused (400)
+    hidden var _done as Boolean = false;                           // Sync.finished was called
 
     function initialize(token as String) {
         _token = token;
     }
 
+    // Ends the pass once, whichever path reaches it first, so a failure inside a callback
+    // can never leave Sync running for the rest of the session.
+    hidden function finish(status as Number) as Void {
+        if (_done) {
+            return;
+        }
+        _done = true;
+        Sync.finished(status);
+    }
+
     function start() as Void {
-        Api.getJson("garminGames", _token, method(:onGames));
+        try {
+            Api.getJson("garminGames", _token, method(:onGames));
+        } catch (ex) {
+            finish(SYNC_FAILED);
+        }
     }
 
     function onGames(responseCode as Number, data as Dictionary or String or Null) as Void {
+        try {
+            handleGames(responseCode, data);
+        } catch (ex) {
+            finish(SYNC_FAILED);
+        }
+    }
+
+    hidden function handleGames(responseCode as Number, data as Dictionary or String or Null) as Void {
         var status = Sync.statusFor(responseCode);
         var games = status == SYNC_OK ? GameCache.parse(data) : null;
         if (status == SYNC_OK && games == null) {
             status = SYNC_FAILED;
         }
         if (status != SYNC_OK) {
-            Sync.finished(status);
+            finish(status);
             return;
         }
         GameCache.store(games as Array<Dictionary>, Time.now().value());
@@ -87,17 +119,25 @@ class SyncJob {
     // 200: the server has it. 400: it never will (a malformed match); it stays stored but the
     // rest are still sent. Anything else ends the pass; everything unsent stays queued.
     function onUploaded(responseCode as Number, data as Dictionary or String or Null) as Void {
-        var id = _pending[0];
-        _pending = _pending.slice(1, null);
-        if (responseCode == 200) {
-            MatchStore.removeFinished(id);
-        } else if (responseCode == 400) {
-            _rejected = true;
-        } else {
-            Sync.finished(Sync.statusFor(responseCode));
-            return;
+        try {
+            if (_pending.size() == 0) {
+                finish(SYNC_FAILED);
+                return;
+            }
+            var id = _pending[0];
+            _pending = _pending.slice(1, null);
+            if (responseCode == 200) {
+                MatchStore.removeFinished(id);
+            } else if (responseCode == 400) {
+                _rejected = true;
+            } else {
+                finish(Sync.statusFor(responseCode));
+                return;
+            }
+            uploadNext();
+        } catch (ex) {
+            finish(SYNC_FAILED);
         }
-        uploadNext();
     }
 
     // Matches are read one at a time to keep memory low on older watches.
@@ -110,7 +150,7 @@ class SyncJob {
             }
             _pending = _pending.slice(1, null);
         }
-        Sync.finished(_rejected ? SYNC_FAILED : SYNC_OK);
+        finish(_rejected ? SYNC_FAILED : SYNC_OK);
     }
 
     (:debug)

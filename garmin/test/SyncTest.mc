@@ -33,6 +33,7 @@ function runDoesNothingWhenNotLinked(logger as Logger) as Boolean {
 
 (:test)
 function onGamesStoresTheListAndFinishesWithNothingToUpload(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
     wipeGameCache();
     wipeFinished();
     Application.Storage.setValue(Pairing.TOKEN_KEY, "tok");
@@ -65,6 +66,7 @@ function onGamesWith401ForgetsTheTokenAndKeepsGames(logger as Logger) as Boolean
 
 (:test)
 function onGamesOfflineOrUnreadableKeepsTheCache(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
     wipeGameCache();
     GameCache.store([syncedGame("kept", 1791500400)], 1791500000);
     new SyncJob("tok").onGames(-104, null);
@@ -79,6 +81,7 @@ function onGamesOfflineOrUnreadableKeepsTheCache(logger as Logger) as Boolean {
 
 (:test)
 function anAcceptedUploadLeavesTheQueue(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
     wipeFinished();
     archivedMatch("m1");
     var job = new SyncJob("tok");
@@ -113,5 +116,17 @@ function aRefusedOrFailedUploadStaysQueued(logger as Logger) as Boolean {
     Test.assert(!Pairing.isLinked());
     Test.assertEqual(1, MatchStore.finishedIndex().size());
     wipeFinished();
+    return true;
+}
+
+(:test)
+function finishedClearsTheRunningStateAndAStrayUploadReplyFinishesWithAStatus(logger as Logger) as Boolean {
+    Sync.finished(SYNC_OFFLINE);
+    Test.assert(!Sync.isRunning());
+    Test.assertEqual(SYNC_OFFLINE, Sync.lastStatus);
+    Sync.lastStatus = null;
+    new SyncJob("tok").onUploaded(200, null);       // nothing pending: must not throw
+    Test.assertEqual(SYNC_FAILED, Sync.lastStatus);
+    Test.assert(!Sync.isRunning());
     return true;
 }
