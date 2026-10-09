@@ -67,6 +67,8 @@ class MessageDelegate extends WatchUi.BehaviorDelegate {
 
     hidden function close() as Boolean {
         if (_closes) {
+            // Remove the result first, so the start menu it covers is the one replaced.
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             GameList.show();
         }
         return true;

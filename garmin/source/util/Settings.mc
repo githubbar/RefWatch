@@ -12,7 +12,7 @@ module Settings {
         return Application.Properties.getValue("recordActivity") != false;
     }
 
-    // The code typed in Garmin Connect, trimmed; empty when none.
+    // The code typed in Garmin Connect; empty when none. Pairing.isCode decides whether it is usable.
     function pairingCode() as String {
         var value = Application.Properties.getValue("pairingCode");
         return value instanceof String ? (value as String) : "";

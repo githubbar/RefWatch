@@ -29,13 +29,13 @@ class RefWatchApp extends Application.AppBase {
         }
     }
 
-    // A refused code is cleared too, so it is not retried at every start; an offline attempt
-    // keeps it for the next start.
+    // A used or refused code is cleared, so it is not retried at every start. An offline or
+    // failed attempt keeps it for the next start: a transient error must not discard a valid code.
     function onSettingsPaired(status as Number) as Void {
-        if (status != PAIR_OFFLINE) {
+        if (status == PAIR_LINKED || status == PAIR_BAD_CODE || status == PAIR_TOO_MANY) {
             Settings.clearPairingCode();
         }
-        WatchUi.requestUpdate();
+        GameList.refreshLinkStatus();
     }
 
     // Whatever closes the app (BACK → Leave, the system, a crash-free exit), the activity

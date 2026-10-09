@@ -3,12 +3,30 @@ import Toybox.WatchUi;
 
 // The start menu. Synced games are added here in the sync phase.
 module GameList {
+    // The start menu most recently built, kept so its link status can be refreshed.
+    var _menu as WatchUi.Menu2 or Null = null;
+
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => Rez.Strings.AppName});
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.QuickMatch, null, :quickMatch, null));
         var status = Pairing.isLinked() ? Rez.Strings.Linked : Rez.Strings.NotLinked;
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.LinkAccount, status, :link, null));
+        _menu = menu;
         return menu;
+    }
+
+    // Re-reads the link status into the start menu's "Link account" item, if the menu exists.
+    function refreshLinkStatus() as Void {
+        var menu = _menu;
+        if (menu == null) {
+            return;
+        }
+        var index = menu.findItemById(:link);
+        if (index >= 0) {
+            var status = Pairing.isLinked() ? Rez.Strings.Linked : Rez.Strings.NotLinked;
+            (menu.getItem(index) as WatchUi.MenuItem).setSubLabel(WatchUi.loadResource(status) as String);
+        }
+        WatchUi.requestUpdate();
     }
 
     // Makes the start menu the only view on the stack; the match, if any, is over.
