@@ -6,6 +6,8 @@ module GameList {
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => Rez.Strings.AppName});
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.QuickMatch, null, :quickMatch, null));
+        var status = Pairing.isLinked() ? Rez.Strings.Linked : Rez.Strings.NotLinked;
+        menu.addItem(new WatchUi.MenuItem(Rez.Strings.LinkAccount, status, :link, null));
         return menu;
     }
 
@@ -39,6 +41,8 @@ class GameListDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         if (item.getId() == :quickMatch) {
             PreMatch.push(GameList.quickMatchSetup());
+        } else if (item.getId() == :link) {
+            LinkFlow.start();
         }
     }
 }

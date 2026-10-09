@@ -16,6 +16,13 @@ module Pickers {
             WatchUi.SLIDE_IMMEDIATE);
     }
 
+    // Six digit columns for the pairing code, each 0-9; onPicked gets the digits as text.
+    function pushCode(titleId as ResourceId, onPicked as Method(code as String) as Void) as Void {
+        var model = new NumberPickerModel(0, 9, 1, 0, 6);
+        WatchUi.pushView(new NumberPickerView(titleId, model, false), new CodePickerDelegate(model, onPicked),
+            WatchUi.SLIDE_IMMEDIATE);
+    }
+
     // Tens and ones columns (0–99): two short scrolls instead of up to 99 button presses.
     // Replaces the current view, so accepting returns to the view underneath it.
     // skipHint adds "BACK: skip" on the tens column, for pickers that are optional.
@@ -53,7 +60,8 @@ class NumberPickerView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         dc.drawText(cx, h * 0.20, Graphics.FONT_TINY, WatchUi.loadResource(_titleId) as String, vcenter);
 
-        var font = Graphics.FONT_NUMBER_HOT;
+        // Six code digits do not fit a small round screen at the size used for one or two.
+        var font = _model.values.size() > 2 ? Graphics.FONT_NUMBER_MILD : Graphics.FONT_NUMBER_HOT;
         var y = h * 0.52;
         var columns = _model.values.size();
         var digitW = dc.getTextWidthInPixels("0", font);
@@ -129,13 +137,16 @@ class NumberPickerDelegate extends WatchUi.BehaviorDelegate {
 
     hidden function advance() as Boolean {
         if (_model.advance()) {
-            var n = _model.result();
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            _onPicked.invoke(n);
+            deliver();
         } else {
             WatchUi.requestUpdate();
         }
         return true;
+    }
+
+    hidden function deliver() as Void {
+        _onPicked.invoke(_model.result());
     }
 
     // Touch watches: a tap above the value raises the active digit, below it lowers it, and the
@@ -159,5 +170,22 @@ class NumberPickerDelegate extends WatchUi.BehaviorDelegate {
             WatchUi.requestUpdate();
         }
         return true;
+    }
+}
+
+// The same picker, delivering the digits as text so a code keeps its leading zeros.
+class CodePickerDelegate extends NumberPickerDelegate {
+    hidden var _onCode as Method(code as String) as Void;
+
+    function initialize(model as NumberPickerModel, onCode as Method(code as String) as Void) {
+        NumberPickerDelegate.initialize(model, method(:ignore));
+        _onCode = onCode;
+    }
+
+    function ignore(n as Number) as Void {
+    }
+
+    hidden function deliver() as Void {
+        _onCode.invoke(_model.digits());
     }
 }
