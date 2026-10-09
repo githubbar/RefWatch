@@ -16,6 +16,12 @@ module GameList {
         WatchUi.switchToView(build(), new GameListDelegate(), WatchUi.SLIDE_IMMEDIATE);
     }
 
+    // Filled in with the start menu's sync status (Task 7).
+    function refreshSyncItem() as Void {
+    }
+
+    function onSyncFinished() as Void {
+    }
     function quickMatchSetup() as Dictionary {
         return {
             "id" => Ids.newId(),
