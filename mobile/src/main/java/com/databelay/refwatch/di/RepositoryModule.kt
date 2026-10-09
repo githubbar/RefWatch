@@ -1,5 +1,7 @@
 package com.databelay.refwatch.di
 import com.databelay.refwatch.data.GameStorageMobile
+import com.databelay.refwatch.data.garmin.FirebaseGarminLinkRepository
+import com.databelay.refwatch.data.garmin.GarminLinkRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
@@ -17,6 +19,10 @@ object RepositoryModule {
         // from FirebaseModule because it knows how to create it.
         return GameStorageMobile(firestore)
     }
+
+    @Provides
+    @Singleton
+    fun provideGarminLinkRepository(): GarminLinkRepository = FirebaseGarminLinkRepository()
 
 /*    @Provides
     @Singleton
