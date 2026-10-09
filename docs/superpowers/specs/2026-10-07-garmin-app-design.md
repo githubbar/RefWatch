@@ -91,11 +91,13 @@ Game documents under `users/{uid}/games/{id}` keep their current shape.
 1. **Phone → `createGarminPairingCode`** (callable, requires Firebase auth). In a transaction:
    delete any existing code for this uid, pick a random 6-digit code not currently in use,
    write it with a 10-minute expiry. Returns `{code, expiresAt}`.
-2. Phone Settings shows the code large, with a countdown and "Open Garmin Connect → RefWatch →
-   Settings and enter this code". On expiry it offers a new code.
+2. Phone Settings shows the code large, with a countdown and instructions to enter it on the
+   watch (start menu → Link account, a 6-digit picker) or in Garmin Connect (RefWatch → Settings).
+   On expiry it offers a new code. (On-watch entry added 2026-10-09: a sideloaded watch cannot be
+   configured from Garmin Connect, and it saves typing on the phone.)
 3. **Watch → `garminPair`** (`POST`, JSON `{code, deviceName, appVersion}`). The watch sends it
-   when the `pairingCode` app setting changes (`onSettingsChanged`) or at start when a code is set
-   and no token is stored.
+   when the referee enters a code on the watch, when the `pairingCode` app setting changes
+   (`onSettingsChanged`), or at start when a code is set and no token is stored.
    - Rate limit: at most 10 failed attempts per caller IP per hour → `429`.
    - Unknown or expired code → `404`. Valid code: delete it, create a 32-byte random token
      (base64url), write `garminDevices/{sha256(token)}`, return `{token}`.
@@ -194,8 +196,11 @@ actions). The Light button is reserved by the system.
 
 ### Screens
 
-1. **Game list** — "Quick match" first, then synced games (time, teams). Status line:
-   "Linked · synced 2 min ago" / "Not linked" / "Not synced".
+1. **Game list** — "Quick match" first, then synced games (time, teams), then **Settings**.
+   Settings holds Link account (with "Linked" / "Not linked"), the Record activity and Log goal
+   scorer switches, and the app version (resources/strings/version.xml, bumped at each release).
+   (Moved off the start menu 2026-10-09. Hold UP cannot open it: Connect IQ's Menu2InputDelegate
+   has no onMenu.)
 2. **Pre-match** — teams with color dots, half and halftime lengths, kick-off team, Record
    activity on/off. Each line is editable from a `Menu2`. START kicks off.
 3. **Match** — large clock (elapsed in period), period name, score beside each team's color
@@ -234,7 +239,7 @@ Discard/Abandon). Sport is soccer where the device defines it, otherwise a gener
 Controlled by the "Record activity" setting (default on); the pre-match screen can override it
 for one match. Requires the `Fit` and `Positioning` permissions in the manifest.
 
-### App settings (edited in the Garmin Connect phone app)
+### App settings (edited in the watch's Settings menu or in the Garmin Connect phone app)
 
 | Key | Type | Default |
 |---|---|---|
@@ -282,7 +287,8 @@ the fēnix 5X watch-app memory limit** (exact figure read from the SDK's device
 - Calls the callables through the existing Firebase Functions client used for
   `generateCustomToken` (`AuthRepository.kt`).
 - No new Android permissions. Ships as a phone-only update.
-- `PRIVACY POLICY.html` and `docs/privacy-policy.md`: add that linking a Garmin watch stores a
+- `docs/privacy-policy.md` (the live policy; the stale root `PRIVACY POLICY.html` was removed on
+  2026-10-09): add that linking a Garmin watch stores a
   record of the watch and sends game data to it through Garmin Connect.
 - Play: no listing change needed. If the listing later mentions Garmin, only in the description
   ("Works with Garmin watches"), never the title or icon. Review the Data safety form before the

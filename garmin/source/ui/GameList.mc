@@ -1,11 +1,12 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// The start menu. Synced games are added here in the sync phase.
+// The start menu: matches first (synced games are added here in the sync phase), Settings last.
 module GameList {
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => Rez.Strings.AppName});
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.QuickMatch, null, :quickMatch, null));
+        menu.addItem(new WatchUi.MenuItem(Rez.Strings.Settings, null, :settings, null));
         return menu;
     }
 
@@ -39,6 +40,8 @@ class GameListDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         if (item.getId() == :quickMatch) {
             PreMatch.push(GameList.quickMatchSetup());
+        } else if (item.getId() == :settings) {
+            SettingsMenu.push();
         }
     }
 }

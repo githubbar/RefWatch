@@ -119,3 +119,42 @@ recording, the menu, and the reminders.
 exits at full time before choosing Save or Discard, the activity is already saved, and a later
 Discard leaves it in the watch history and Garmin Connect, to delete by hand. Exiting mid-match
 splits the match into two activities.
+
+## Phase 3 results (pairing), 2026-10-09
+
+**Deployed** to `refwatchapp` (us-central1): `createGarminPairingCode`, `listGarminDevices`,
+`unlinkGarminDevice` (callables), `garminPair` (HTTP,
+`https://us-central1-refwatchapp.cloudfunctions.net/garminPair`) and
+`deleteGarminDataOnAccountDelete` (1st-gen auth trigger). Firestore TTL policies are ACTIVE on
+`garminPairingCodes.expiresAt` and `garminPairAttempts.expiresAt`.
+
+**Tests.** Functions: 31 pass against the Firestore emulator (`npm --prefix functions test`, needs
+Java on PATH). Phone: 14 Garmin tests pass. Watch: 75 unit tests pass; five products build.
+
+**Live checks.**
+- `garminPair` answers a malformed code with `400 {"error":"bad_request"}` and a GET with `405`.
+- Rate limiting counts the real client IP: a request with a forged `X-Forwarded-For: 1.1.1.1`
+  created no bucket for that address and incremented this PC's own (the trusted value is the last
+  `X-Forwarded-For` entry, which Google's front end appends).
+- End to end, simulator: the phone (OnePlus 13) showed a code, the simulator entered it and showed
+  "Linked", the phone cleared the code and listed the watch within seconds, and the menu read
+  "Link account / Linked". Unlink on the phone removed the device record.
+- End to end, fēnix 5X (through Garmin Connect on the phone): "Linked"; the server lists it as
+  `006-B2604-00` (the watch's `partNumber`).
+
+**Known limits until phase 4.**
+- The watch's token has no expiry; Unlink on the phone is the only revocation. Nothing on the watch
+  uses the token yet, and the watch does not notice an unlink until phase 4 handles `401` (a
+  Garmin Connect code is ignored while the watch still thinks it is linked; relink from the start
+  menu).
+- Relinking an already-linked watch leaves its old record in the phone's list until it is unlinked.
+- Running the watch unit tests in the simulator clears the simulator's stored token
+  (`Pairing.forget()`).
+- The global ceiling (1000 failed pairing attempts an hour, all users) trades availability for
+  safety: a large attack can block pairing for everyone for up to an hour.
+
+**Settings menu (2026-10-09).** Link account moved from the start menu to Start → Settings, next
+to the Record activity and Log goal scorer switches (they write the same properties Garmin Connect
+edits) and the app version (`resources/strings/version.xml`, bump it at each release; it is also
+sent as `appVersion` when pairing). Hold UP cannot open Settings: Connect IQ's `Menu2InputDelegate`
+has no `onMenu`, so the start menu's Settings item is the way in.

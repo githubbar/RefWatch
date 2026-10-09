@@ -3,7 +3,9 @@ rules_version = '2';
 // Matches the ruleset deployed on 2025-05-16. Each user can read and write only their
 // own user document and games. The watch signs in with a custom token minted for the
 // same uid (functions/index.js), so it passes the same check. Cloud Functions use the
-// Admin SDK, which bypasses these rules. Every other path is denied.
+// Admin SDK, which bypasses these rules; only they read and write the Garmin pairing
+// collections (garminPairingCodes, garminDevices, garminPairAttempts). Every other path,
+// those included, is denied to clients.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {

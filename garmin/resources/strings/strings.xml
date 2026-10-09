@@ -68,4 +68,17 @@
     <string id="LeaveMatch">Exit (keep match)</string>
     <string id="RecordActivity">Record activity</string>
     <string id="ActivityName">Referee</string>
+    <string id="Settings">Settings</string>
+    <string id="Version">Version</string>
+    <string id="LinkAccount">Link account</string>
+    <string id="Linked">Linked</string>
+    <string id="NotLinked">Not linked</string>
+    <string id="PairingCode">Pairing code</string>
+    <string id="PairingCodeTitle">Pairing code (from the RefWatch phone app)</string>
+    <string id="Linking">Linking…</string>
+    <string id="LinkedMessage">Linked</string>
+    <string id="BadCodeMessage">Wrong code</string>
+    <string id="TooManyMessage">Too many tries</string>
+    <string id="OfflineMessage">No phone</string>
+    <string id="PairFailedMessage">Link failed</string>
 </strings>

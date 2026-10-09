@@ -157,6 +157,7 @@ dependencies {
     debugImplementation(libs.mockito.core)
     testImplementation(libs.junit)
     testImplementation(libs.google.truth) // Or a newer version
+    testImplementation(libs.kotlinx.coroutines.test)
     // For Android Instrumented tests (like yours in androidTest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -1,6 +1,6 @@
 # RefWatch Privacy Policy
 
-**Effective date:** October 6, 2026
+**Effective date:** October 9, 2026
 
 RefWatch is a soccer referee app for Wear OS watches with a companion phone app. It is
 developed by Alex Leykin ("we", "us"). This policy explains what data RefWatch collects,
@@ -47,6 +47,18 @@ When you import a calendar file (.ics) of your assignments, the event titles,
 descriptions, times and locations in it are processed to create games (see "AI
 processing" below).
 
+### Garmin watches
+If you link a Garmin watch, we store a record of it under your account: the watch's model
+or part number, when it was linked and when it last contacted us, and a hashed form of the
+access key we gave it. While you are linking, the 6-digit code is stored with your account
+and is valid for 10 minutes; it is deleted when it is used or replaced, and otherwise
+automatically within about a day after it expires. To stop code guessing, we also store a
+hashed form of the IP address that tries a code, with a count of failed tries; it is not
+linked to your account and is deleted automatically within about a day after the hour it
+covers. Your games travel between our servers and the watch through Garmin's Connect app,
+which Garmin operates under its own privacy policy. You can unlink a watch at any time in
+the phone app's Settings, which deletes its record and stops its access.
+
 ## How we use your data
 
 | Purpose | Data | Legal basis (EU / UK GDPR) |
@@ -54,6 +66,8 @@ processing" below).
 | Run the app: time and record games, sync them between phone and watch | Account, game data | Performance of a contract (providing the service you signed up for) |
 | Show your heart-rate, distance and movement statistics | Heart rate, steps, distance, location | Your **explicit consent**, given by granting the permission or turning on the setting. You can withdraw it at any time. |
 | Read team, age-group and venue details from imported schedules | Imported calendar events | Performance of a contract |
+| Link a Garmin watch and send your games to it | Garmin watch record, pairing code | Performance of a contract |
+| Stop pairing codes being guessed | Hashed IP address and a count of failed tries | Legitimate interests (keeping your account secure) |
 | Understand how the app is used and fix problems | Usage and device data | Legitimate interests (improving the app) |
 
 We do **not** sell your data, use it for advertising, or build advertising profiles.
@@ -80,13 +94,16 @@ processor for:
 Data sent between your phone and watch travels over the Wear OS connection. Data is
 also cached on the devices themselves.
 
+If you link a Garmin watch, **Garmin Ltd.** carries data between our servers and the watch
+through its Garmin Connect app and service, under Garmin's own privacy policy.
+
 **International transfers:** if you are in the EU, EEA, UK or Switzerland, your data is
 transferred to the United States. Google LLC is certified under the EU–US Data Privacy
 Framework and its UK and Swiss extensions, and Google's data processing terms include
 the European Commission's Standard Contractual Clauses.
 
-We share data with no one else, except where required by law, for example to comply
-with a court order.
+We share data with no one else, except Garmin as described above when you link a Garmin
+watch, and where required by law, for example to comply with a court order.
 
 ## How long we keep your data
 
@@ -102,7 +119,8 @@ with a court order.
   game timer still works without it.
 - **Delete a game:** delete it in the phone app.
 - **Delete your account:** use **Settings → Delete account** in the phone app. This
-  permanently erases your account and every game stored with it. You can also ask us
+  permanently erases your account, every game stored with it, and any linked Garmin
+  watches and pending pairing codes. You can also ask us
   by email to delete it.
 
 If you are in the EU, EEA or UK, you have the right to access, correct, delete, restrict

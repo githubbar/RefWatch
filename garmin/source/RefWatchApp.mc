@@ -12,6 +12,30 @@ class RefWatchApp extends Application.AppBase {
     function onStart(state as Dictionary or Null) as Void {
         Clock.init();
         Math.srand(System.getTimer());
+        pairFromSettings();
+    }
+
+    // A code entered in Garmin Connect is used once: when the settings change, or at start if
+    // the watch is not linked yet.
+    function onSettingsChanged() as Void {
+        pairFromSettings();
+        WatchUi.requestUpdate();
+    }
+
+    hidden function pairFromSettings() as Void {
+        var code = Settings.pairingCode();
+        if (Pairing.isCode(code) && !Pairing.isLinked()) {
+            Pairing.pair(code, method(:onSettingsPaired));
+        }
+    }
+
+    // A used or refused code is cleared, so it is not retried at every start. An offline or
+    // failed attempt keeps it for the next start: a transient error must not discard a valid code.
+    function onSettingsPaired(status as Number) as Void {
+        if (status == PAIR_LINKED || status == PAIR_BAD_CODE || status == PAIR_TOO_MANY) {
+            Settings.clearPairingCode();
+        }
+        SettingsMenu.refreshLinkStatus();
     }
 
     // Whatever closes the app (BACK → Leave, the system, a crash-free exit), the activity

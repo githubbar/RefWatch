@@ -1,6 +1,11 @@
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {onCall, onRequest, HttpsError} =
+  require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2");
+const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
+const {getFirestore} = require("firebase-admin/firestore");
+const pairing = require("./garmin/pairing");
+const {handlePairRequest} = require("./garmin/http");
 
 // Set global options for all v2 functions in this file
 setGlobalOptions({maxInstances: 10});
@@ -16,15 +21,6 @@ exports.generateCustomToken = onCall(async (request) => {
     );
   }
   const uid = request.auth.uid;
-  //  admin.auth()
-  //      .createCustomToken(uid)
-  //      .then((customToken) => {
-  //        console.log("Custom token with claims:", customToken);
-  //        return {"customToken": customToken}; // !!! this returns null
-  //      })
-  //      .catch((error) => {
-  //        console.log("Error creating custom token:", error);
-  //      });
   try {
     const customToken = await admin.auth().createCustomToken(uid);
     console.log(`Successfully created custom token for UID: ${uid}`);
@@ -39,3 +35,46 @@ exports.generateCustomToken = onCall(async (request) => {
     );
   }
 });
+
+/**
+ * The caller's uid, or an unauthenticated error.
+ * @param {object} request the callable request
+ * @return {string} uid
+ */
+function requireUid(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in first.");
+  }
+  return request.auth.uid;
+}
+
+// Phone: a 6-digit code the referee enters on the Garmin watch.
+exports.createGarminPairingCode = onCall(async (request) => {
+  const uid = requireUid(request);
+  return pairing.createPairingCode(getFirestore(), uid, Date.now());
+});
+
+// Watch (through Garmin Connect): exchanges the code for a device token.
+exports.garminPair = onRequest((req, res) =>
+  handlePairRequest(getFirestore(), req, res, Date.now()));
+
+// Phone: the user's linked Garmin watches.
+exports.listGarminDevices = onCall(async (request) => {
+  const uid = requireUid(request);
+  return {devices: await pairing.listDevices(getFirestore(), uid)};
+});
+
+// Phone: unlinks one of the user's watches; its token stops working.
+exports.unlinkGarminDevice = onCall(async (request) => {
+  const uid = requireUid(request);
+  const tokenHash = request.data ? request.data.tokenHash : undefined;
+  if (!await pairing.unlinkDevice(getFirestore(), uid, tokenHash)) {
+    throw new HttpsError("not-found", "No such watch.");
+  }
+  return {ok: true};
+});
+
+// Deleting an account (from the app or the console) also removes its Garmin
+// watches and any pending pairing code.
+exports.deleteGarminDataOnAccountDelete = functionsV1.auth.user()
+    .onDelete((user) => pairing.deleteUserGarminData(getFirestore(), user.uid));
