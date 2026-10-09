@@ -57,8 +57,16 @@ async function handlePairRequest(db, req, res, nowMs,
   }
   const body = req.body !== null && typeof req.body === "object" ?
     req.body : {};
-  const result = await pairDevice(db,
-      {code: body.code, deviceName: body.deviceName, ip}, nowMs);
+  let result;
+  try {
+    result = await pairDevice(db,
+        {code: body.code, deviceName: body.deviceName, ip}, nowMs);
+  } catch (err) {
+    // Never log the request body: it holds the pairing code.
+    console.error("garminPair failed", err);
+    res.status(500).json({error: "internal"});
+    return;
+  }
   if (result.status === 200) {
     res.status(200).json({token: result.token});
   } else {

@@ -123,3 +123,23 @@ test("clientIp falls back to the socket address, else null", () => {
   assert.equal(clientIp({headers: {}, socket: {remoteAddress: " "}}), null);
   assert.equal(clientIp({ip: "1.2.3.4"}), null);
 });
+
+test("a pairing error is a logged 500 that never logs the body",
+    async (t) => {
+      const logged = [];
+      t.mock.method(console, "error", (...args) => logged.push(args));
+      const res = fakeResponse();
+      const failure = new Error("firestore down");
+      const pairDevice = async () => {
+        throw failure;
+      };
+      await handlePairRequest("db", {
+        method: "POST",
+        headers: fromIp("1.2.3.4"),
+        body: {code: "987654", deviceName: "w"},
+      }, res, 5, pairDevice);
+      assert.equal(res.statusCode, 500);
+      assert.deepEqual(res.body, {error: "internal"});
+      assert.deepEqual(logged, [["garminPair failed", failure]]);
+      assert.equal(JSON.stringify(logged).includes("987654"), false);
+    });
