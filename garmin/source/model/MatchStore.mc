@@ -2,12 +2,12 @@ import Toybox.Application;
 import Toybox.Lang;
 
 // Persists the match in progress after every change, so a crash or reboot resumes it, and keeps
-// the last few finished matches (they become the upload queue in the sync phase).
+// finished matches until they are uploaded (see Sync): the finished list is the upload queue.
 module MatchStore {
     const CURRENT_KEY = "match";
     const FINISHED_KEY = "finished";        // array of finished match ids, oldest first
     const FINISHED_PREFIX = "fin_";         // each finished match lives under FINISHED_PREFIX + id
-    const MAX_FINISHED = 5;
+    const MAX_FINISHED = 10;
 
     // A malformed or older-format stored match must not crash the app on every launch: it is
     // discarded and the app starts fresh. Monkey C "as" casts are compile-time only, so
@@ -80,10 +80,28 @@ module MatchStore {
         return result;
     }
 
-    // Moves the match to the finished list and clears the current one. Each finished match
-    // has its own storage key because one value is limited to about 32 KB and a long match
-    // with many events can exceed that. The oldest are dropped past MAX_FINISHED; the sync
-    // phase will change these eviction rules (matches must stay until they are uploaded).
+    // One finished match, or null when it is not stored.
+    function finishedMatch(id as String) as Dictionary or Null {
+        var d = Application.Storage.getValue(FINISHED_PREFIX + id);
+        return d instanceof Dictionary ? d as Dictionary : null;
+    }
+
+    // Called once the server has the match.
+    function removeFinished(id as String) as Void {
+        try {
+            var index = finishedIndex();
+            index.remove(id);
+            Application.Storage.deleteValue(FINISHED_PREFIX + id);
+            Application.Storage.setValue(FINISHED_KEY, index);
+        } catch (e) {
+        }
+    }
+
+    // Moves the match to the finished list (the upload queue) and clears the current one. Each
+    // finished match has its own storage key because one value is limited to about 32 KB and a
+    // long match with many events can exceed that. Past MAX_FINISHED the oldest is dropped even
+    // if it was never uploaded: storage is small, and ten matches without the phone in reach is
+    // far beyond normal use.
     // A storage failure must never trap the referee on the full-time screen, so the current
     // match is cleared even when the archive write fails.
     function archive(m as MatchState) as Void {

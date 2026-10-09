@@ -191,3 +191,34 @@ function storedMatchWithANonBooleanRecordActivityIsDiscarded(logger as Logger) a
     Test.assert(MatchStore.load() == null);
     return true;
 }
+
+(:test)
+function finishedMatchReadsOneStoredMatch(logger as Logger) as Boolean {
+    wipeFinished();
+    var m = testMatch();
+    m.gameId = "one";
+    MatchStore.archive(m);
+    Test.assertEqual("one", (MatchStore.finishedMatch("one") as Dictionary)["id"]);
+    Test.assert(MatchStore.finishedMatch("other") == null);
+    wipeFinished();
+    return true;
+}
+
+(:test)
+function removeFinishedDropsTheMatchAndItsKey(logger as Logger) as Boolean {
+    wipeFinished();
+    var a = testMatch();
+    a.gameId = "a";
+    MatchStore.archive(a);
+    var b = testMatch();
+    b.gameId = "b";
+    MatchStore.archive(b);
+    MatchStore.removeFinished("a");
+    Test.assertEqual(1, MatchStore.finishedIndex().size());
+    Test.assertEqual("b", MatchStore.finishedIndex()[0]);
+    Test.assert(Application.Storage.getValue(MatchStore.FINISHED_PREFIX + "a") == null);
+    MatchStore.removeFinished("missing");
+    Test.assertEqual(1, MatchStore.finishedIndex().size());
+    wipeFinished();
+    return true;
+}
