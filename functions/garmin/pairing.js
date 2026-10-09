@@ -76,10 +76,13 @@ async function pairDevice(db, input, nowMs,
     const valid = codeDoc !== null && codeDoc.exists &&
       codeDoc.get("expiresAt").toMillis() > nowMs;
     if (!valid) {
+      const windowStart = inWindow ?
+        attempt.get("windowStart") : Timestamp.fromMillis(nowMs);
       tx.set(attemptRef, {
         count: failures + 1,
-        windowStart: inWindow ?
-          attempt.get("windowStart") : Timestamp.fromMillis(nowMs),
+        windowStart,
+        expiresAt: Timestamp.fromMillis(
+            windowStart.toMillis() + ATTEMPT_WINDOW_MS),
       });
       return {status: wellFormed ? 404 : 400};
     }

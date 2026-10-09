@@ -131,6 +131,7 @@ test("the attempt record is keyed by a hash of the IP, not the IP",
       const hashed = await db.collection(pairing.ATTEMPTS)
           .doc(sha256Hex("9.9.9.9")).get();
       assert.equal(hashed.get("count"), 1);
+      assert.equal(hashed.get("expiresAt").toMillis(), T0 + 60 * MIN);
     });
 
 test("the device name is trimmed, capped at 64 and defaulted", async () => {

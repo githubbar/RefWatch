@@ -48,13 +48,16 @@ descriptions, times and locations in it are processed to create games (see "AI
 processing" below).
 
 ### Garmin watches
-If you link a Garmin watch, we store a record of it: the watch's model or part number,
-when it was linked and when it last contacted us, and a hashed form of the access key we
-gave it. While you are linking, we also keep the 6-digit code for up to 10 minutes and,
-to stop code guessing, a hashed form of the IP address that tries a code. Your games
-travel between our servers and the watch through Garmin's Connect app, which Garmin
-operates under its own privacy policy. You can unlink a watch at any time in the phone
-app's Settings, which deletes its record and stops its access.
+If you link a Garmin watch, we store a record of it under your account: the watch's model
+or part number, when it was linked and when it last contacted us, and a hashed form of the
+access key we gave it. While you are linking, the 6-digit code is stored with your account
+and is valid for 10 minutes; it is deleted when it is used or replaced, and otherwise
+automatically within about a day after it expires. To stop code guessing, we also store a
+hashed form of the IP address that tries a code, with a count of failed tries; it is not
+linked to your account and is deleted automatically within about a day after the hour it
+covers. Your games travel between our servers and the watch through Garmin's Connect app,
+which Garmin operates under its own privacy policy. You can unlink a watch at any time in
+the phone app's Settings, which deletes its record and stops its access.
 
 ## How we use your data
 
@@ -85,19 +88,20 @@ processor for:
 - **Firebase AI Logic / Vertex AI**: schedule extraction
 - **Google Analytics for Firebase**: usage statistics
 - **Google Play services**: Wear OS phone–watch communication and maps
-- **Garmin Connect** (Garmin Ltd.): carries data between our servers and a linked Garmin
-  watch
 
 Data sent between your phone and watch travels over the Wear OS connection. Data is
 also cached on the devices themselves.
+
+If you link a Garmin watch, **Garmin Ltd.** carries data between our servers and the watch
+through its Garmin Connect app and service, under Garmin's own privacy policy.
 
 **International transfers:** if you are in the EU, EEA, UK or Switzerland, your data is
 transferred to the United States. Google LLC is certified under the EU–US Data Privacy
 Framework and its UK and Swiss extensions, and Google's data processing terms include
 the European Commission's Standard Contractual Clauses.
 
-We share data with no one else, except where required by law, for example to comply
-with a court order.
+We share data with no one else, except Garmin as described above when you link a Garmin
+watch, and where required by law, for example to comply with a court order.
 
 ## How long we keep your data
 
