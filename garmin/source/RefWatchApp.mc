@@ -35,7 +35,7 @@ class RefWatchApp extends Application.AppBase {
         if (status == PAIR_LINKED || status == PAIR_BAD_CODE || status == PAIR_TOO_MANY) {
             Settings.clearPairingCode();
         }
-        GameList.refreshLinkStatus();
+        SettingsMenu.refreshLinkStatus();
     }
 
     // Whatever closes the app (BACK → Leave, the system, a crash-free exit), the activity

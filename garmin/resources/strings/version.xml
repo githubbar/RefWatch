@@ -1,0 +1,4 @@
+<strings>
+    <!-- The watch app's version, shown in Settings and sent when pairing. Bump at each release. -->
+    <string id="AppVersion">0.3.0</string>
+</strings>

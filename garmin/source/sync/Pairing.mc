@@ -13,7 +13,6 @@ const PAIR_FAILED = 4;
 // token the watch already has.
 module Pairing {
     const TOKEN_KEY = "deviceToken";
-    const APP_VERSION = "1";
 
     function isLinked() as Boolean {
         return token() != null;
@@ -45,11 +44,15 @@ module Pairing {
     // Sends the code; onDone gets one of the PAIR_* statuses.
     function pair(code as String, onDone as Method(status as Number) as Void) as Void {
         var request = new PairRequest(onDone);
-        Api.postJson("garminPair", {
+        Api.postJson("garminPair", requestBody(code), request.method(:onResponse));
+    }
+
+    function requestBody(code as String) as Dictionary {
+        return {
             "code" => code,
             "deviceName" => deviceName(),
-            "appVersion" => APP_VERSION
-        }, request.method(:onResponse));
+            "appVersion" => Settings.appVersion()
+        };
     }
 
     // The garminPair reply as a PAIR_* status; a token in a 200 reply is stored.

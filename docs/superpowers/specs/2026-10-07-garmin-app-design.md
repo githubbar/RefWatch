@@ -196,8 +196,11 @@ actions). The Light button is reserved by the system.
 
 ### Screens
 
-1. **Game list** — "Quick match" first, then synced games (time, teams). Status line:
-   "Linked · synced 2 min ago" / "Not linked" / "Not synced".
+1. **Game list** — "Quick match" first, then synced games (time, teams), then **Settings**.
+   Settings holds Link account (with "Linked" / "Not linked"), the Record activity and Log goal
+   scorer switches, and the app version (resources/strings/version.xml, bumped at each release).
+   (Moved off the start menu 2026-10-09. Hold UP cannot open it: Connect IQ's Menu2InputDelegate
+   has no onMenu.)
 2. **Pre-match** — teams with color dots, half and halftime lengths, kick-off team, Record
    activity on/off. Each line is editable from a `Menu2`. START kicks off.
 3. **Match** — large clock (elapsed in period), period name, score beside each team's color
@@ -236,7 +239,7 @@ Discard/Abandon). Sport is soccer where the device defines it, otherwise a gener
 Controlled by the "Record activity" setting (default on); the pre-match screen can override it
 for one match. Requires the `Fit` and `Positioning` permissions in the manifest.
 
-### App settings (edited in the Garmin Connect phone app)
+### App settings (edited in the watch's Settings menu or in the Garmin Connect phone app)
 
 | Key | Type | Default |
 |---|---|---|

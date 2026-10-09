@@ -63,3 +63,12 @@ function onlySixDigitsAreACode(logger as Logger) as Boolean {
     Test.assert(!Pairing.isCode(""));
     return true;
 }
+
+(:test)
+function thePairRequestCarriesTheCodeAndTheAppVersion(logger as Logger) as Boolean {
+    var body = Pairing.requestBody("012345");
+    Test.assertEqual("012345", body["code"]);
+    Test.assertEqual(Settings.appVersion(), body["appVersion"]);
+    Test.assert(body["deviceName"] instanceof String);
+    return true;
+}

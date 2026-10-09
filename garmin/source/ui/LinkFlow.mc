@@ -2,8 +2,8 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// Start menu → Link account: enter the code, see "Linking…", then the result. Any button on
-// the result returns to the start menu, which shows the new status.
+// Settings → Link account: enter the code, see "Linking…", then the result. Any button on the
+// result returns to Settings, which shows the new status.
 module LinkFlow {
     function start() as Void {
         Pickers.pushCode(Rez.Strings.PairingCode, new LinkFlowSteps().method(:onCode));
@@ -44,7 +44,7 @@ class MessageView extends WatchUi.View {
 }
 
 // While linking, buttons are ignored (the reply replaces the screen). On the result, any
-// button or tap returns to the start menu.
+// button or tap returns to Settings.
 class MessageDelegate extends WatchUi.BehaviorDelegate {
     hidden var _closes as Boolean;
 
@@ -67,9 +67,8 @@ class MessageDelegate extends WatchUi.BehaviorDelegate {
 
     hidden function close() as Boolean {
         if (_closes) {
-            // Remove the result first, so the start menu it covers is the one replaced.
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            GameList.show();
+            SettingsMenu.refreshLinkStatus();
         }
         return true;
     }

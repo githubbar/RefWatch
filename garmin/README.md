@@ -137,7 +137,7 @@ Java on PATH). Phone: 14 Garmin tests pass. Watch: 75 unit tests pass; five prod
   created no bucket for that address and incremented this PC's own (the trusted value is the last
   `X-Forwarded-For` entry, which Google's front end appends).
 - End to end, simulator: the phone (OnePlus 13) showed a code, the simulator entered it and showed
-  "Linked", the phone cleared the code and listed the watch within seconds, and the start menu read
+  "Linked", the phone cleared the code and listed the watch within seconds, and the menu read
   "Link account / Linked". Unlink on the phone removed the device record.
 - End to end, fēnix 5X (through Garmin Connect on the phone): "Linked"; the server lists it as
   `006-B2604-00` (the watch's `partNumber`).
@@ -152,3 +152,9 @@ Java on PATH). Phone: 14 Garmin tests pass. Watch: 75 unit tests pass; five prod
   (`Pairing.forget()`).
 - The global ceiling (1000 failed pairing attempts an hour, all users) trades availability for
   safety: a large attack can block pairing for everyone for up to an hour.
+
+**Settings menu (2026-10-09).** Link account moved from the start menu to Start → Settings, next
+to the Record activity and Log goal scorer switches (they write the same properties Garmin Connect
+edits) and the app version (`resources/strings/version.xml`, bump it at each release; it is also
+sent as `appVersion` when pairing). Hold UP cannot open Settings: Connect IQ's `Menu2InputDelegate`
+has no `onMenu`, so the start menu's Settings item is the way in.

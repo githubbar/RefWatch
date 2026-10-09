@@ -68,6 +68,8 @@
     <string id="LeaveMatch">Exit (keep match)</string>
     <string id="RecordActivity">Record activity</string>
     <string id="ActivityName">Referee</string>
+    <string id="Settings">Settings</string>
+    <string id="Version">Version</string>
     <string id="LinkAccount">Link account</string>
     <string id="Linked">Linked</string>
     <string id="NotLinked">Not linked</string>

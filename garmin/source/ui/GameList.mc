@@ -1,32 +1,13 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-// The start menu. Synced games are added here in the sync phase.
+// The start menu: matches first (synced games are added here in the sync phase), Settings last.
 module GameList {
-    // The start menu most recently built, kept so its link status can be refreshed.
-    var _menu as WatchUi.Menu2 or Null = null;
-
     function build() as WatchUi.Menu2 {
         var menu = new WatchUi.Menu2({:title => Rez.Strings.AppName});
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.QuickMatch, null, :quickMatch, null));
-        var status = Pairing.isLinked() ? Rez.Strings.Linked : Rez.Strings.NotLinked;
-        menu.addItem(new WatchUi.MenuItem(Rez.Strings.LinkAccount, status, :link, null));
-        _menu = menu;
+        menu.addItem(new WatchUi.MenuItem(Rez.Strings.Settings, null, :settings, null));
         return menu;
-    }
-
-    // Re-reads the link status into the start menu's "Link account" item, if the menu exists.
-    function refreshLinkStatus() as Void {
-        var menu = _menu;
-        if (menu == null) {
-            return;
-        }
-        var index = menu.findItemById(:link);
-        if (index >= 0) {
-            var status = Pairing.isLinked() ? Rez.Strings.Linked : Rez.Strings.NotLinked;
-            (menu.getItem(index) as WatchUi.MenuItem).setSubLabel(WatchUi.loadResource(status) as String);
-        }
-        WatchUi.requestUpdate();
     }
 
     // Makes the start menu the only view on the stack; the match, if any, is over.
@@ -59,8 +40,8 @@ class GameListDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         if (item.getId() == :quickMatch) {
             PreMatch.push(GameList.quickMatchSetup());
-        } else if (item.getId() == :link) {
-            LinkFlow.start();
+        } else if (item.getId() == :settings) {
+            SettingsMenu.push();
         }
     }
 }
