@@ -46,12 +46,19 @@ class GarminLinkViewModel @Inject constructor(
     }
 
     fun requestCode() {
+        // Set busy before launching, so a second tap cannot request a second code.
+        if (_state.value.busy) return
+        _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
-            _state.update { it.copy(busy = true, error = null) }
             repository.createPairingCode()
                 .onSuccess { code ->
-                    _state.update { it.copy(code = code, busy = false) }
-                    startCountdown(code)
+                    // The watches linked before this code, fetched fresh: the list loaded at start
+                    // may have failed, and an old watch must not look like the new one.
+                    val known = repository.listDevices().getOrNull()
+                    _state.update {
+                        it.copy(code = code, busy = false, devices = known ?: it.devices)
+                    }
+                    startCountdown(code, known?.map { it.id }?.toSet())
                 }
                 .onFailure {
                     _state.update {
@@ -69,9 +76,12 @@ class GarminLinkViewModel @Inject constructor(
         }
     }
 
-    private fun startCountdown(code: PairingCode) {
+    /**
+     * [knownIds] are the watches linked before [code]; a poll that finds another one clears the
+     * code. When null (the list couldn't be fetched) a poll never clears it, only expiry does.
+     */
+    private fun startCountdown(code: PairingCode, knownIds: Set<String>?) {
         countdown?.cancel()
-        val knownIds = _state.value.devices.map { it.id }.toSet()
         countdown = viewModelScope.launch {
             var sincePoll = 0L
             while (true) {
@@ -85,7 +95,7 @@ class GarminLinkViewModel @Inject constructor(
                 if (sincePoll >= POLL_INTERVAL_MS) {
                     sincePoll = 0
                     loadDevices()
-                    if (_state.value.devices.any { it.id !in knownIds }) {
+                    if (knownIds != null && _state.value.devices.any { it.id !in knownIds }) {
                         _state.update { it.copy(code = null) }
                         return@launch
                     }

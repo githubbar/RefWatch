@@ -23,9 +23,21 @@ class GarminLinkViewModelTest {
         var codeResult: Result<PairingCode> = Result.success(PairingCode("123456", 600_000))
         var devices = mutableListOf<LinkedGarminDevice>()
         var unlinked = mutableListOf<String>()
+        var codeRequests = 0
+        var listFailuresLeft = 0
 
-        override suspend fun createPairingCode() = codeResult
-        override suspend fun listDevices() = Result.success(devices.toList())
+        override suspend fun createPairingCode(): Result<PairingCode> {
+            codeRequests++
+            return codeResult
+        }
+
+        override suspend fun listDevices(): Result<List<LinkedGarminDevice>> {
+            if (listFailuresLeft > 0) {
+                listFailuresLeft--
+                return Result.failure(RuntimeException("offline"))
+            }
+            return Result.success(devices.toList())
+        }
         override suspend fun unlink(deviceId: String): Result<Unit> {
             unlinked += deviceId
             devices.removeAll { it.id == deviceId }
@@ -77,6 +89,55 @@ class GarminLinkViewModelTest {
         runCurrent()
         assertThat(vm.state.value.code).isNull()
         assertThat(vm.state.value.devices.map { it.id }).containsExactly("h9")
+    }
+
+    @Test
+    fun aWatchMissedByAFailedFirstLoadDoesNotClearTheCode() = runTest(dispatcher) {
+        val repo = FakeRepository().apply {
+            devices += LinkedGarminDevice("h1", "fenix", 1)
+            listFailuresLeft = 1
+        }
+        val vm = viewModel(repo)
+        runCurrent()
+        assertThat(vm.state.value.devices).isEmpty()
+        vm.requestCode()
+        runCurrent()
+        assertThat(vm.state.value.devices.map { it.id }).containsExactly("h1")
+        advanceTimeBy(GarminLinkViewModel.POLL_INTERVAL_MS + 1)
+        runCurrent()
+        assertThat(vm.state.value.code?.code).isEqualTo("123456")
+    }
+
+    @Test
+    fun withoutAWatchListTheCodeOnlyGoesAtExpiry() = runTest(dispatcher) {
+        val repo = FakeRepository().apply {
+            devices += LinkedGarminDevice("h1", "fenix", 1)
+            listFailuresLeft = 2
+        }
+        val vm = viewModel(repo)
+        runCurrent()
+        vm.requestCode()
+        runCurrent()
+        repo.devices += LinkedGarminDevice("h9", "fenix", 2)
+        advanceTimeBy(GarminLinkViewModel.POLL_INTERVAL_MS * 3)
+        runCurrent()
+        assertThat(vm.state.value.code?.code).isEqualTo("123456")
+        assertThat(vm.state.value.devices.map { it.id }).containsExactly("h1", "h9")
+        advanceTimeBy(600_000)
+        runCurrent()
+        assertThat(vm.state.value.code).isNull()
+    }
+
+    @Test
+    fun aSecondRequestWhileBusyIsIgnored() = runTest(dispatcher) {
+        val repo = FakeRepository()
+        val vm = viewModel(repo)
+        vm.requestCode()
+        vm.requestCode()
+        advanceTimeBy(1)
+        runCurrent()
+        assertThat(repo.codeRequests).isEqualTo(1)
+        assertThat(vm.state.value.busy).isFalse()
     }
 
     @Test
