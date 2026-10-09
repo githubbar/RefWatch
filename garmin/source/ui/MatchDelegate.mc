@@ -3,8 +3,7 @@ import Toybox.System;
 import Toybox.WatchUi;
 
 // START pauses/resumes, starts the 2nd half at half time, and saves at full time.
-// BACK asks before leaving (the match keeps running and resumes on the next launch) or, at full
-// time, before discarding.
+// BACK and hold UP open the match menu; at full time BACK asks before discarding.
 class MatchDelegate extends WatchUi.BehaviorDelegate {
     hidden var _match as MatchState;
 
@@ -30,6 +29,7 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
     hidden function start() as Boolean {
         var now = Clock.nowMs();
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
+            Recorder.save();
             MatchStore.archive(_match);
             GameList.show();
             return true;
@@ -48,6 +48,7 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
     function startSecondHalf() as Void {
         _match.kickOff(Clock.nowMs());
         MatchStore.save(_match);
+        Recorder.forKickOff(_match);
         WatchUi.requestUpdate();
     }
 
@@ -83,21 +84,20 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    // BACK is the easy way into the match menu (holding UP also works); leaving the match is an
+    // item there. At full time BACK still offers to discard.
     function onBack() as Boolean {
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
             Ask.push(Rez.Strings.DiscardPrompt, method(:discard));
         } else {
-            Ask.push(Rez.Strings.LeavePrompt, method(:leave));
+            MatchMenu.push(_match);
         }
         return true;
     }
 
-    function leave() as Void {
-        System.exit();
-    }
-
     // MatchView.onShow sees PHASE_ABANDONED once the confirmation closes and shows the start menu.
     function discard() as Void {
+        Recorder.discard();
         MatchStore.clear();
         _match.phase = PHASE_ABANDONED;
     }

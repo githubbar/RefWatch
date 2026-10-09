@@ -14,4 +14,15 @@ module Alerts {
             ]);
         }
     }
+
+    // Two short pulses, repeated while a half runs into added time (as the Wear OS app does).
+    function reminder() as Void {
+        if (Attention has :vibrate) {
+            Attention.vibrate([
+                new Attention.VibeProfile(100, 150),
+                new Attention.VibeProfile(0, 50),
+                new Attention.VibeProfile(100, 150)
+            ]);
+        }
+    }
 }

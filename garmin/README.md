@@ -63,10 +63,9 @@ the error; a debug build includes line numbers.
 Sideloaded apps cannot be configured from Garmin Connect; test settings in the simulator
 (File → Edit Persistent Storage → Edit Application.Properties).
 
-## Hold UP (match menu) in the simulator
-The simulator does not turn a held mouse button posted by `sim.ps1` into a long press, so the
-match menu (`onMenu`) cannot be opened that way. Check it by temporarily mapping `onBack` to
-`onMenu()` in `MatchDelegate` (never commit that), or press the real button on a watch.
+## The match menu in the simulator
+BACK opens the match menu, so `-Click BACK` reaches it. Hold UP opens the same menu on a watch,
+but the simulator does not turn a held mouse button posted by `sim.ps1` into a long press.
 
 ## Phase 1 results
 
@@ -96,3 +95,27 @@ buttons and hold UP; vibration at end of half and break; 10 minutes untouched; e
 resume; readability in sunlight; focused bottom menu row fully readable (set-up, match menu,
 game log); vibration timing while a menu is open; 10 minutes untouched with the screen off.
 Tap input on a touch watch is still untested (no touch watch available).
+
+## Phase 2 results (activity recording, match menu, added-time reminders)
+
+**Builds and tests.** fenix5x, fenix7s, fenix7, epix2pro47mm and fr265 build; the only warnings are
+the scaled launcher icon and the deprecated `ActivityRecording.SPORT_SOCCER` (used on purpose: the
+fēnix 5X's Connect IQ 3.1 lacks `Activity.SPORT_SOCCER`). 68 unit tests pass in the simulator.
+
+**Memory (fenix5x).** About 37 kB on the set-up menu and 41 kB with the match menu open, against
+the 1275.5 kB limit.
+
+**Simulator.** The set-up toggle, every match-menu item ("Exit (keep match)" is the widest) and
+the confirmations fit the fēnix 5X without clipping. Reset game returns to set-up with the same
+teams. The period-end alert was traced firing at regulation (`Attention has :vibrate` true).
+
+**On-watch (fenix5x), 2026-10-09.** The first on-watch test found no way to end the half (the menu
+was only behind hold UP) and no buzz at regulation (a single pulse, only while the match screen
+showed). BACK now opens the match menu, and a half past regulation buzzes every 30 s of added
+time from an app-level ticker. After that change the user reported that everything works:
+recording, the menu, and the reminders.
+
+**Behavior worth knowing.** Closing the app saves the activity recorded so far. If the referee
+exits at full time before choosing Save or Discard, the activity is already saved, and a later
+Discard leaves it in the watch history and Garmin Connect, to delete by hand. Exiting mid-match
+splits the match into two activities.

@@ -9,8 +9,9 @@ module GameList {
         return menu;
     }
 
-    // Makes the start menu the only view on the stack.
+    // Makes the start menu the only view on the stack; the match, if any, is over.
     function show() as Void {
+        Nav.stopTicker();
         WatchUi.switchToView(build(), new GameListDelegate(), WatchUi.SLIDE_IMMEDIATE);
     }
 
@@ -24,7 +25,8 @@ module GameList {
             "halfMinutes" => 45,
             "halftimeMinutes" => 15,
             "kickOffTeam" => TEAM_HOME,
-            "scheduledStartMs" => null
+            "scheduledStartMs" => null,
+            "recordActivity" => Settings.recordActivity()
         };
     }
 }

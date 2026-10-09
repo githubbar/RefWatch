@@ -11,6 +11,10 @@ module PreMatch {
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.HalfLength, null, :halfMinutes, null));
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.BreakLength, null, :halftimeMinutes, null));
         menu.addItem(new WatchUi.MenuItem(Rez.Strings.KickOffTeam, null, :kickOffTeam, null));
+        menu.addItem(new WatchUi.ToggleMenuItem(Rez.Strings.RecordActivity, null, :recordActivity, setup["recordActivity"] == true, null));
+        if (setup["recordActivity"] == true) {
+            Recorder.warmUp();
+        }
         var delegate = new PreMatchDelegate(menu, setup);
         delegate.refresh();
         WatchUi.pushView(menu, delegate, WatchUi.SLIDE_LEFT);
@@ -34,6 +38,7 @@ class PreMatchDelegate extends WatchUi.Menu2InputDelegate {
             var match = new MatchState(_setup);
             match.kickOff(Clock.nowMs());
             MatchStore.save(match);
+            Recorder.forKickOff(match);
             // Close set-up first so the match replaces the start menu and is the only view.
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             Nav.showMatch(match);
@@ -47,7 +52,20 @@ class PreMatchDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :kickOffTeam) {
             _setup["kickOffTeam"] = (_setup["kickOffTeam"] as String).equals(TEAM_HOME) ? TEAM_AWAY : TEAM_HOME;
             refresh();
+        } else if (id == :recordActivity) {
+            var on = (item as WatchUi.ToggleMenuItem).isEnabled();
+            _setup["recordActivity"] = on;
+            if (on) {
+                Recorder.warmUp();
+            } else {
+                Recorder.releaseGps();
+            }
         }
+    }
+
+    function onBack() as Void {
+        Recorder.releaseGps();
+        WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 
     function onHalfMinutes(n as Number) as Void {
