@@ -62,4 +62,13 @@ class NumberPickerModel {
     function result() as Number {
         return values.size() == 2 ? values[0] * 10 + values[1] : values[0];
     }
+
+    // Every column's digit in order, as text, so a code keeps its leading zeros.
+    function digits() as String {
+        var text = "";
+        for (var i = 0; i < values.size(); i++) {
+            text += values[i].format("%d");
+        }
+        return text;
+    }
 }

@@ -122,3 +122,16 @@ function pickerChangesOnlyTheActiveColumn(logger as Logger) as Boolean {
     Test.assertEqual(2, m.values[1]);
     return true;
 }
+
+(:test)
+function sixColumnsReadAsADigitStringWithLeadingZeros(logger as Logger) as Boolean {
+    var m = new NumberPickerModel(0, 9, 1, 0, 6);
+    m.advance();
+    m.increment();          // 0 1 0 0 0 0
+    for (var i = 0; i < 5; i++) {
+        m.advance();
+    }
+    m.decrement();          // last digit wraps to 9
+    Test.assertEqual("010009", m.digits());
+    return true;
+}
