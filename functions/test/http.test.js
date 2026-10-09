@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {handlePairRequest} = require("../garmin/http");
+const {handlePairRequest, clientIp} = require("../garmin/http");
 
 const fakeResponse = () => {
   const res = {statusCode: null, body: null};
@@ -24,6 +24,8 @@ const fakePairing = (result) => {
   return {calls, pairDevice};
 };
 
+const fromIp = (ip) => ({"x-forwarded-for": ip});
+
 test("only POST is accepted", async () => {
   const res = fakeResponse();
   const pairing = fakePairing({status: 200, token: "t"});
@@ -38,7 +40,7 @@ test("a good request returns the token", async () => {
   const pairing = fakePairing({status: 200, token: "t"});
   const req = {
     method: "POST",
-    ip: "1.2.3.4",
+    headers: fromIp("1.2.3.4"),
     body: {code: "123456", deviceName: "fenix", appVersion: "1"},
   };
   await handlePairRequest("db", req, res, 5, pairing.pairDevice);
@@ -60,7 +62,8 @@ test("failures map to named errors", async () => {
     const res = fakeResponse();
     const pairing = fakePairing({status});
     await handlePairRequest("db",
-        {method: "POST", ip: "x", body: {}}, res, 5, pairing.pairDevice);
+        {method: "POST", headers: fromIp("x"), body: {}},
+        res, 5, pairing.pairDevice);
     assert.equal(res.statusCode, status);
     assert.deepEqual(res.body, {error: name});
   }
@@ -70,7 +73,53 @@ test("a body that is not an object is treated as empty", async () => {
   const res = fakeResponse();
   const pairing = fakePairing({status: 400});
   await handlePairRequest("db",
-      {method: "POST", ip: "x", body: "junk"}, res, 5, pairing.pairDevice);
+      {method: "POST", headers: fromIp("x"), body: "junk"},
+      res, 5, pairing.pairDevice);
   assert.deepEqual(pairing.calls[0].input,
       {code: undefined, deviceName: undefined, ip: "x"});
+});
+
+test("a request with no usable client IP is a bad request", async () => {
+  const res = fakeResponse();
+  const pairing = fakePairing({status: 200, token: "t"});
+  await handlePairRequest("db",
+      {method: "POST", ip: "1.2.3.4", headers: {}, body: {code: "123456"}},
+      res, 5, pairing.pairDevice);
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.body, {error: "bad_request"});
+  assert.equal(pairing.calls.length, 0);
+});
+
+test("the IP passed on is the last X-Forwarded-For entry, not req.ip",
+    async () => {
+      const res = fakeResponse();
+      const pairing = fakePairing({status: 404});
+      await handlePairRequest("db", {
+        method: "POST",
+        ip: "6.6.6.6",
+        headers: fromIp("6.6.6.6, 203.0.113.7"),
+        body: {code: "123456"},
+      }, res, 5, pairing.pairDevice);
+      assert.equal(pairing.calls[0].input.ip, "203.0.113.7");
+    });
+
+test("clientIp takes the last non-empty, trimmed X-Forwarded-For entry",
+    () => {
+      const req = (xff) => ({headers: fromIp(xff)});
+      assert.equal(clientIp(req("1.1.1.1")), "1.1.1.1");
+      assert.equal(clientIp(req("1.1.1.1, 2.2.2.2")), "2.2.2.2");
+      assert.equal(clientIp(req("1.1.1.1,  2.2.2.2  ")), "2.2.2.2");
+      assert.equal(clientIp(req("1.1.1.1, 2.2.2.2, ,")), "2.2.2.2");
+      assert.equal(clientIp(req("spoofed,2001:db8::1")), "2001:db8::1");
+    });
+
+test("clientIp falls back to the socket address, else null", () => {
+  const socket = {remoteAddress: "10.0.0.1"};
+  assert.equal(clientIp({headers: {}, socket}), "10.0.0.1");
+  assert.equal(clientIp({socket}), "10.0.0.1");
+  assert.equal(clientIp({headers: fromIp(" , "), socket}), "10.0.0.1");
+  assert.equal(clientIp({headers: {}}), null);
+  assert.equal(clientIp({headers: {}, socket: {}}), null);
+  assert.equal(clientIp({headers: {}, socket: {remoteAddress: " "}}), null);
+  assert.equal(clientIp({ip: "1.2.3.4"}), null);
 });

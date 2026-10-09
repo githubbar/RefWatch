@@ -5,6 +5,10 @@ const CODES = "garminPairingCodes";
 const DEVICES = "garminDevices";
 const ATTEMPTS = "garminPairAttempts";
 const MAX_FAILED_ATTEMPTS = 10;
+// One counter for all callers, so spreading guesses over many IPs (or many
+// IPv6 /64s) still runs into a ceiling.
+const GLOBAL_ATTEMPTS_ID = "_global";
+const MAX_GLOBAL_FAILED_ATTEMPTS = 1000;
 const ATTEMPT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_CODE_TRIES = 10;
 const MAX_DEVICE_NAME = 64;
@@ -49,25 +53,135 @@ async function createPairingCode(db, uid, nowMs,
 }
 
 /**
+ * Parses one side of an IPv6 address (split at "::") into 16-bit numbers.
+ * @param {string} part colon-separated groups, possibly empty
+ * @param {boolean} dottedTail whether the last group may be dotted IPv4
+ * @return {?Array<number>} the hextets, or null if malformed
+ */
+function parseHextets(part, dottedTail) {
+  if (part === "") {
+    return [];
+  }
+  const groups = part.split(":");
+  const hextets = [];
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    if (dottedTail && i === groups.length - 1 && group.includes(".")) {
+      const octets = group.split(".");
+      if (octets.length !== 4 ||
+        !octets.every((o) => /^\d{1,3}$/.test(o) && Number(o) <= 255)) {
+        return null;
+      }
+      const n = octets.map(Number);
+      hextets.push(n[0] * 256 + n[1], n[2] * 256 + n[3]);
+    } else if (/^[0-9a-f]{1,4}$/.test(group)) {
+      hextets.push(parseInt(group, 16));
+    } else {
+      return null;
+    }
+  }
+  return hextets;
+}
+
+/**
+ * Expands an IPv6 address (with "::" compression, a zone id or a dotted
+ * IPv4 tail) into its eight 16-bit numbers.
+ * @param {string} ip an IPv6 address
+ * @return {?Array<number>} eight hextets, or null if malformed
+ */
+function expandIpv6(ip) {
+  const text = ip.toLowerCase().split("%")[0];
+  const halves = text.split("::");
+  if (halves.length > 2) {
+    return null;
+  }
+  if (halves.length === 1) {
+    const all = parseHextets(text, true);
+    return all !== null && all.length === 8 ? all : null;
+  }
+  const head = parseHextets(halves[0], false);
+  const tail = parseHextets(halves[1], true);
+  if (head === null || tail === null || head.length + tail.length > 7) {
+    return null;
+  }
+  const zeros = new Array(8 - head.length - tail.length).fill(0);
+  return head.concat(zeros, tail);
+}
+
+/**
+ * What failed attempts are counted against: an IPv4 address as is, an IPv6
+ * address by its /64 (one subscriber usually holds a whole /64), and an
+ * IPv4-mapped IPv6 address as its IPv4 address.
+ * @param {string} ip the caller's IP (non-empty)
+ * @return {string} the rate-limit key, before hashing
+ */
+function rateLimitKey(ip) {
+  if (!ip.includes(":")) {
+    return ip;
+  }
+  const h = expandIpv6(ip);
+  if (h === null) {
+    return ip.toLowerCase();
+  }
+  if (h.slice(0, 5).every((x) => x === 0) && h[5] === 0xffff) {
+    return [h[6] >> 8, h[6] & 255, h[7] >> 8, h[7] & 255].join(".");
+  }
+  return h.slice(0, 4).map((x) => x.toString(16)).join(":") + "::/64";
+}
+
+/**
+ * A failure counter's state at nowMs: its count in the current window, and
+ * when that window started (a fresh window when the old one has ended).
+ * @param {FirebaseFirestore.DocumentSnapshot} doc the counter document
+ * @param {number} nowMs current time, epoch ms
+ * @return {{count: number, windowStart: Timestamp}} the live window
+ */
+function failureWindow(doc, nowMs) {
+  const inWindow = doc.exists &&
+    nowMs - doc.get("windowStart").toMillis() < ATTEMPT_WINDOW_MS;
+  return inWindow ?
+    {count: doc.get("count"), windowStart: doc.get("windowStart")} :
+    {count: 0, windowStart: Timestamp.fromMillis(nowMs)};
+}
+
+/**
+ * Records one more failure in a counter's window.
+ * @param {FirebaseFirestore.Transaction} tx the transaction
+ * @param {FirebaseFirestore.DocumentReference} ref the counter document
+ * @param {{count: number, windowStart: Timestamp}} window from failureWindow
+ */
+function countFailure(tx, ref, window) {
+  tx.set(ref, {
+    count: window.count + 1,
+    windowStart: window.windowStart,
+    expiresAt: Timestamp.fromMillis(
+        window.windowStart.toMillis() + ATTEMPT_WINDOW_MS),
+  });
+}
+
+/**
  * Exchanges a pairing code for a device token. Failed attempts are counted
- * per caller IP (hashed); after MAX_FAILED_ATTEMPTS in an hour the caller is
- * refused even with a good code.
+ * per caller (hashed rateLimitKey of the IP) and across all callers; after
+ * MAX_FAILED_ATTEMPTS from one caller, or MAX_GLOBAL_FAILED_ATTEMPTS in all,
+ * within an hour, callers are refused even with a good code.
  * @param {FirebaseFirestore.Firestore} db Firestore
- * @param {{code: *, deviceName: *, ip: *}} input the watch's request
+ * @param {{code: *, deviceName: *, ip: string}} input the watch's request;
+ *     ip is a non-empty string
  * @param {number} nowMs current time, epoch ms
  * @param {function(): string} makeToken token generator (tests pass their own)
  * @return {Promise<object>} {status: 200, token} or {status: 400|404|429}
  */
 async function pairDevice(db, input, nowMs,
     makeToken = tokens.newDeviceToken) {
-  const ipKey = tokens.sha256Hex(String(input.ip || "unknown"));
+  const ipKey = tokens.sha256Hex(rateLimitKey(input.ip));
   const attemptRef = db.collection(ATTEMPTS).doc(ipKey);
+  const globalRef = db.collection(ATTEMPTS).doc(GLOBAL_ATTEMPTS_ID);
   return db.runTransaction(async (tx) => {
-    const attempt = await tx.get(attemptRef);
-    const inWindow = attempt.exists &&
-      nowMs - attempt.get("windowStart").toMillis() < ATTEMPT_WINDOW_MS;
-    const failures = inWindow ? attempt.get("count") : 0;
-    if (failures >= MAX_FAILED_ATTEMPTS) {
+    const [attempt, globalDoc] = await tx.getAll(attemptRef, globalRef);
+    const callerWindow = failureWindow(attempt, nowMs);
+    const globalWindow = failureWindow(globalDoc, nowMs);
+    if (callerWindow.count >= MAX_FAILED_ATTEMPTS ||
+      globalWindow.count >= MAX_GLOBAL_FAILED_ATTEMPTS) {
       return {status: 429};
     }
     const wellFormed = tokens.isPairingCode(input.code);
@@ -76,14 +190,8 @@ async function pairDevice(db, input, nowMs,
     const valid = codeDoc !== null && codeDoc.exists &&
       codeDoc.get("expiresAt").toMillis() > nowMs;
     if (!valid) {
-      const windowStart = inWindow ?
-        attempt.get("windowStart") : Timestamp.fromMillis(nowMs);
-      tx.set(attemptRef, {
-        count: failures + 1,
-        windowStart,
-        expiresAt: Timestamp.fromMillis(
-            windowStart.toMillis() + ATTEMPT_WINDOW_MS),
-      });
+      countFailure(tx, attemptRef, callerWindow);
+      countFailure(tx, globalRef, globalWindow);
       return {status: wellFormed ? 404 : 400};
     }
     const token = makeToken();
@@ -155,6 +263,9 @@ module.exports = {
   DEVICES,
   ATTEMPTS,
   MAX_FAILED_ATTEMPTS,
+  GLOBAL_ATTEMPTS_ID,
+  MAX_GLOBAL_FAILED_ATTEMPTS,
+  rateLimitKey,
   createPairingCode,
   pairDevice,
   listDevices,

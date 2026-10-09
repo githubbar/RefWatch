@@ -134,6 +134,94 @@ test("the attempt record is keyed by a hash of the IP, not the IP",
       assert.equal(hashed.get("expiresAt").toMillis(), T0 + 60 * MIN);
     });
 
+test("rateLimitKey keeps IPv4 and cuts IPv6 to its /64", () => {
+  const key = pairing.rateLimitKey;
+  assert.equal(key("9.9.9.9"), "9.9.9.9");
+  assert.equal(key("2001:db8:1:2:3:4:5:6"), "2001:db8:1:2::/64");
+  assert.equal(key("2001:0DB8:0001:0002::1"), "2001:db8:1:2::/64");
+  assert.equal(key("2001:db8::1"), "2001:db8:0:0::/64");
+  assert.equal(key("2001:db8:1:2::"), "2001:db8:1:2::/64");
+  assert.equal(key("::1"), "0:0:0:0::/64");
+  assert.equal(key("fe80::1%eth0"), "fe80:0:0:0::/64");
+  assert.equal(key("::ffff:1.2.3.4"), "1.2.3.4");
+  assert.equal(key("::FFFF:102:304"), "1.2.3.4");
+  assert.equal(key("0:0:0:0:0:ffff:1.2.3.4"), "1.2.3.4");
+});
+
+test("IPv6 addresses in one /64 share a failure count", async () => {
+  await pairing.createPairingCode(db, "alice", T0, () => "123456");
+  for (let i = 0; i < pairing.MAX_FAILED_ATTEMPTS; i++) {
+    await pairing.pairDevice(db,
+        {code: "000000", deviceName: "w", ip: `2001:db8:1:2::${i + 1}`},
+        T0 + i);
+  }
+  const sameSlash64 = await pairing.pairDevice(db,
+      {code: "123456", deviceName: "w", ip: "2001:db8:1:2:ffff::9"},
+      T0 + MIN);
+  assert.deepEqual(sameSlash64, {status: 429});
+  const otherSlash64 = await pairing.pairDevice(db,
+      {code: "123456", deviceName: "w", ip: "2001:db8:1:3::1"}, T0 + MIN);
+  assert.equal(otherSlash64.status, 200);
+});
+
+test("an IPv4-mapped IPv6 address counts against the IPv4 address",
+    async () => {
+      await pairing.pairDevice(db,
+          {code: "000000", deviceName: "w", ip: "::ffff:9.9.9.9"}, T0);
+      const ipv4 = await db.collection(pairing.ATTEMPTS)
+          .doc(sha256Hex("9.9.9.9")).get();
+      assert.equal(ipv4.get("count"), 1);
+    });
+
+test("every failure also counts toward the global ceiling", async () => {
+  await pairing.createPairingCode(db, "alice", T0, () => "123456");
+  await pairing.pairDevice(db,
+      {code: "000000", deviceName: "w", ip: "9.9.9.9"}, T0);
+  await pairing.pairDevice(db,
+      {code: "000001", deviceName: "w", ip: "8.8.8.8"}, T0 + MIN);
+  await pairing.pairDevice(db,
+      {code: "123456", deviceName: "w", ip: "7.7.7.7"}, T0 + MIN);
+  const global = await db.collection(pairing.ATTEMPTS)
+      .doc(pairing.GLOBAL_ATTEMPTS_ID).get();
+  assert.equal(global.get("count"), 2);
+  assert.equal(global.get("windowStart").toMillis(), T0);
+  assert.equal(global.get("expiresAt").toMillis(), T0 + 60 * MIN);
+});
+
+test("the global ceiling blocks a fresh IP, and resets after an hour",
+    async () => {
+      assert.equal(pairing.MAX_GLOBAL_FAILED_ATTEMPTS, 1000);
+      await db.collection(pairing.ATTEMPTS)
+          .doc(pairing.GLOBAL_ATTEMPTS_ID).set({
+            count: pairing.MAX_GLOBAL_FAILED_ATTEMPTS,
+            windowStart: Timestamp.fromMillis(T0),
+            expiresAt: Timestamp.fromMillis(T0 + 60 * MIN),
+          });
+      await pairing.createPairingCode(db, "alice", T0, () => "123456");
+      const blocked = await pairing.pairDevice(db,
+          {code: "123456", deviceName: "w", ip: "5.5.5.5"}, T0 + MIN);
+      assert.deepEqual(blocked, {status: 429});
+      await pairing.createPairingCode(
+          db, "alice", T0 + 61 * MIN, () => "123456");
+      const later = await pairing.pairDevice(db,
+          {code: "123456", deviceName: "w", ip: "5.5.5.5"}, T0 + 61 * MIN);
+      assert.equal(later.status, 200);
+    });
+
+test("one below the global ceiling still lets a good code through",
+    async () => {
+      await db.collection(pairing.ATTEMPTS)
+          .doc(pairing.GLOBAL_ATTEMPTS_ID).set({
+            count: pairing.MAX_GLOBAL_FAILED_ATTEMPTS - 1,
+            windowStart: Timestamp.fromMillis(T0),
+            expiresAt: Timestamp.fromMillis(T0 + 60 * MIN),
+          });
+      await pairing.createPairingCode(db, "alice", T0, () => "123456");
+      const result = await pairing.pairDevice(db,
+          {code: "123456", deviceName: "w", ip: "5.5.5.5"}, T0 + MIN);
+      assert.equal(result.status, 200);
+    });
+
 test("the device name is trimmed, capped at 64 and defaulted", async () => {
   const names = ["  fenix  ", "x".repeat(100), "", undefined];
   const expected = ["fenix", "x".repeat(64), "Garmin watch", "Garmin watch"];
