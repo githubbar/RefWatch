@@ -1,6 +1,6 @@
 # RefWatch Privacy Policy
 
-**Effective date:** October 6, 2026
+**Effective date:** October 9, 2026
 
 RefWatch is a soccer referee app for Wear OS watches with a companion phone app. It is
 developed by Alex Leykin ("we", "us"). This policy explains what data RefWatch collects,
@@ -47,6 +47,15 @@ When you import a calendar file (.ics) of your assignments, the event titles,
 descriptions, times and locations in it are processed to create games (see "AI
 processing" below).
 
+### Garmin watches
+If you link a Garmin watch, we store a record of it: the watch's model or part number,
+when it was linked and when it last contacted us, and a hashed form of the access key we
+gave it. While you are linking, we also keep the 6-digit code for up to 10 minutes and,
+to stop code guessing, a hashed form of the IP address that tries a code. Your games
+travel between our servers and the watch through Garmin's Connect app, which Garmin
+operates under its own privacy policy. You can unlink a watch at any time in the phone
+app's Settings, which deletes its record and stops its access.
+
 ## How we use your data
 
 | Purpose | Data | Legal basis (EU / UK GDPR) |
@@ -76,6 +85,8 @@ processor for:
 - **Firebase AI Logic / Vertex AI**: schedule extraction
 - **Google Analytics for Firebase**: usage statistics
 - **Google Play services**: Wear OS phone–watch communication and maps
+- **Garmin Connect** (Garmin Ltd.): carries data between our servers and a linked Garmin
+  watch
 
 Data sent between your phone and watch travels over the Wear OS connection. Data is
 also cached on the devices themselves.

@@ -228,6 +228,10 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            GarminLinkSection()
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             ExtractionPromptSection(
                 prompt = extractionPrompt,
                 defaultPrompt = settingsViewModel.defaultPrompt,
