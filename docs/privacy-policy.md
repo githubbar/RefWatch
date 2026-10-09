@@ -66,6 +66,8 @@ the phone app's Settings, which deletes its record and stops its access.
 | Run the app: time and record games, sync them between phone and watch | Account, game data | Performance of a contract (providing the service you signed up for) |
 | Show your heart-rate, distance and movement statistics | Heart rate, steps, distance, location | Your **explicit consent**, given by granting the permission or turning on the setting. You can withdraw it at any time. |
 | Read team, age-group and venue details from imported schedules | Imported calendar events | Performance of a contract |
+| Link a Garmin watch and send your games to it | Garmin watch record, pairing code | Performance of a contract |
+| Stop pairing codes being guessed | Hashed IP address and a count of failed tries | Legitimate interests (keeping your account secure) |
 | Understand how the app is used and fix problems | Usage and device data | Legitimate interests (improving the app) |
 
 We do **not** sell your data, use it for advertising, or build advertising profiles.
