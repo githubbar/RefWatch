@@ -119,7 +119,8 @@ watch, and where required by law, for example to comply with a court order.
   game timer still works without it.
 - **Delete a game:** delete it in the phone app.
 - **Delete your account:** use **Settings → Delete account** in the phone app. This
-  permanently erases your account and every game stored with it. You can also ask us
+  permanently erases your account, every game stored with it, and any linked Garmin
+  watches and pending pairing codes. You can also ask us
   by email to delete it.
 
 If you are in the EU, EEA or UK, you have the right to access, correct, delete, restrict

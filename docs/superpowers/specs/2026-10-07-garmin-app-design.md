@@ -284,7 +284,8 @@ the fēnix 5X watch-app memory limit** (exact figure read from the SDK's device
 - Calls the callables through the existing Firebase Functions client used for
   `generateCustomToken` (`AuthRepository.kt`).
 - No new Android permissions. Ships as a phone-only update.
-- `PRIVACY POLICY.html` and `docs/privacy-policy.md`: add that linking a Garmin watch stores a
+- `docs/privacy-policy.md` (the live policy; the stale root `PRIVACY POLICY.html` was removed on
+  2026-10-09): add that linking a Garmin watch stores a
   record of the watch and sends game data to it through Garmin Connect.
 - Play: no listing change needed. If the listing later mentions Garmin, only in the description
   ("Works with Garmin watches"), never the title or icon. Review the Data safety form before the
