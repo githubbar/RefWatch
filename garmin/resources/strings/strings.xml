@@ -11,7 +11,7 @@
     <string id="StartSecondHalfHint">START: 2nd half</string>
     <string id="SaveHint">START: save</string>
     <string id="DiscardHint">BACK: discard</string>
-    <string id="LeavePrompt">Leave match?</string>
+    <string id="LeavePrompt">Exit, keep match?</string>
     <string id="DiscardPrompt">Discard match?</string>
     <string id="Red">Red</string>
     <string id="Blue">Blue</string>
@@ -65,7 +65,7 @@
     <string id="ResetTimerPrompt">Reset timer to 0:00?</string>
     <string id="ResetGame">Reset game</string>
     <string id="ResetGamePrompt">Reset game?</string>
-    <string id="LeaveMatch">Leave match</string>
+    <string id="LeaveMatch">Exit (keep match)</string>
     <string id="RecordActivity">Record activity</string>
     <string id="ActivityName">Referee</string>
 </strings>

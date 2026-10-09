@@ -209,8 +209,8 @@ actions). The Light button is reserved by the system.
 5. **Match menu** (BACK or hold UP), following the Wear OS game menu — End half (first item once
    regulation has passed; Start 2nd half at half time), Pause / Resume, Game log, Undo last event,
    Finish game (1st half and break), Reset timer (current half to 0:00, paused), Reset game (back
-   to set-up with the same teams; score, events and recording discarded), Abandon match, Leave
-   match. Every destructive item asks first. Analytics is left for later.
+   to set-up with the same teams; score, events and recording discarded), Abandon match, Exit
+   (keep match). Every destructive item asks first. Analytics is left for later.
 6. **Halftime** — break countdown with vibration at its end; START starts the 2nd half;
    kick-off flips to the other team.
 7. **Full time** — score and card summary; Save (queue upload, save activity) or Discard
