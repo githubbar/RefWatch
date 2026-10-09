@@ -91,11 +91,13 @@ Game documents under `users/{uid}/games/{id}` keep their current shape.
 1. **Phone → `createGarminPairingCode`** (callable, requires Firebase auth). In a transaction:
    delete any existing code for this uid, pick a random 6-digit code not currently in use,
    write it with a 10-minute expiry. Returns `{code, expiresAt}`.
-2. Phone Settings shows the code large, with a countdown and "Open Garmin Connect → RefWatch →
-   Settings and enter this code". On expiry it offers a new code.
+2. Phone Settings shows the code large, with a countdown and instructions to enter it on the
+   watch (start menu → Link account, a 6-digit picker) or in Garmin Connect (RefWatch → Settings).
+   On expiry it offers a new code. (On-watch entry added 2026-10-09: a sideloaded watch cannot be
+   configured from Garmin Connect, and it saves typing on the phone.)
 3. **Watch → `garminPair`** (`POST`, JSON `{code, deviceName, appVersion}`). The watch sends it
-   when the `pairingCode` app setting changes (`onSettingsChanged`) or at start when a code is set
-   and no token is stored.
+   when the referee enters a code on the watch, when the `pairingCode` app setting changes
+   (`onSettingsChanged`), or at start when a code is set and no token is stored.
    - Rate limit: at most 10 failed attempts per caller IP per hour → `429`.
    - Unknown or expired code → `404`. Valid code: delete it, create a 32-byte random token
      (base64url), write `garminDevices/{sha256(token)}`, return `{token}`.
