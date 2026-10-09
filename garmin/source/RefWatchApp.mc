@@ -13,6 +13,7 @@ class RefWatchApp extends Application.AppBase {
         Clock.init();
         Math.srand(System.getTimer());
         pairFromSettings();
+        Sync.run();
     }
 
     // A code entered in Garmin Connect is used once: when the settings change, or at start if
@@ -34,6 +35,9 @@ class RefWatchApp extends Application.AppBase {
     function onSettingsPaired(status as Number) as Void {
         if (status == PAIR_LINKED || status == PAIR_BAD_CODE || status == PAIR_TOO_MANY) {
             Settings.clearPairingCode();
+        }
+        if (status == PAIR_LINKED) {
+            Sync.run();
         }
         SettingsMenu.refreshLinkStatus();
     }

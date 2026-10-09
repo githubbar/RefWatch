@@ -81,4 +81,12 @@
     <string id="TooManyMessage">Too many tries</string>
     <string id="OfflineMessage">No phone</string>
     <string id="PairFailedMessage">Link failed</string>
+    <string id="Sync">Sync</string>
+    <string id="Syncing">Syncing…</string>
+    <string id="SyncedAt">Synced $1$</string>
+    <string id="NotSynced">Not synced</string>
+    <string id="ToUpload">$1$ to upload</string>
+    <string id="SyncFailed">Sync failed</string>
+    <string id="LinkAgain">Link again</string>
+    <string id="TeamsFormat">$1$ v $2$</string>
 </strings>

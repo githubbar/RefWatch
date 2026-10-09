@@ -20,6 +20,9 @@ class LinkFlowSteps {
     }
 
     function onPaired(status as Number) as Void {
+        if (status == PAIR_LINKED) {
+            Sync.run();
+        }
         WatchUi.switchToView(new MessageView(Pairing.messageId(status)), new MessageDelegate(true),
             WatchUi.SLIDE_IMMEDIATE);
     }
