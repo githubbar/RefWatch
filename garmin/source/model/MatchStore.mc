@@ -83,7 +83,7 @@ module MatchStore {
     // One finished match, or null when it is not stored.
     function finishedMatch(id as String) as Dictionary or Null {
         var d = Application.Storage.getValue(FINISHED_PREFIX + id);
-        return d instanceof Dictionary ? d as Dictionary : null;
+        return (d instanceof Dictionary && isValid(d as Dictionary)) ? d as Dictionary : null;
     }
 
     // Called once the server has the match.
@@ -91,8 +91,8 @@ module MatchStore {
         try {
             var index = finishedIndex();
             index.remove(id);
-            Application.Storage.deleteValue(FINISHED_PREFIX + id);
             Application.Storage.setValue(FINISHED_KEY, index);
+            Application.Storage.deleteValue(FINISHED_PREFIX + id);
         } catch (e) {
         }
     }

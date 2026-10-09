@@ -222,3 +222,17 @@ function removeFinishedDropsTheMatchAndItsKey(logger as Logger) as Boolean {
     wipeFinished();
     return true;
 }
+
+(:test)
+function finishedMatchIgnoresAMalformedStoredMatch(logger as Logger) as Boolean {
+    wipeFinished();
+    var m = testMatch();
+    m.gameId = "good";
+    MatchStore.archive(m);
+    Application.Storage.setValue(MatchStore.FINISHED_PREFIX + "bad", {"id" => "bad"});
+    Test.assert(MatchStore.finishedMatch("bad") == null);
+    Test.assertEqual("good", (MatchStore.finishedMatch("good") as Dictionary)["id"]);
+    Application.Storage.deleteValue(MatchStore.FINISHED_PREFIX + "bad");
+    wipeFinished();
+    return true;
+}
