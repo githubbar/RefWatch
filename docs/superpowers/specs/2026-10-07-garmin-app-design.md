@@ -143,7 +143,7 @@ caches the list in `Application.Storage` so it works offline at the field.
 Header `Authorization: Bearer <token>`. Body:
 
 ```json
-{"id":"…", "source":"garmin",
+{"id":"…",
  "homeTeamName":"…", "awayTeamName":"…",
  "homeTeamColorArgb":-65536, "awayTeamColorArgb":-16776961,
  "halfDurationMinutes":30, "halftimeDurationMinutes":5,
@@ -153,7 +153,8 @@ Header `Authorization: Bearer <token>`. Body:
  "events":[ … ]}
 ```
 
-`id` is the synced game's id, or a watch-generated UUID for a quick match.
+`id` is the synced game's id, or a watch-generated UUID for a quick match. The `source` field
+is not sent or stored; nothing reads it (2026-10-10).
 
 `events` use the existing `GameEvent` JSON (discriminator `eventType`), exactly as the phone
 parses them (`JSONHelpers.kt`, `AppJsonConfiguration`):
@@ -196,7 +197,8 @@ actions). The Light button is reserved by the system.
 
 ### Screens
 
-1. **Game list** — "Quick match" first, then synced games (time, teams), then **Settings**.
+1. **Game list** — the start menu order is Quick match, synced games (time, teams), Sync, then
+   **Settings** (2026-10-10).
    Settings holds Link account (with "Linked" / "Not linked"), the Record activity and Log goal
    scorer switches, and the app version (resources/strings/version.xml, bumped at each release).
    (Moved off the start menu 2026-10-09. Hold UP cannot open it: Connect IQ's Menu2InputDelegate
@@ -251,9 +253,15 @@ for one match. Requires the `Fit` and `Positioning` permissions in the manifest.
 
 - Upload queue in `Application.Storage`: finished games stay queued until a `200`. Retried at
   app start, after each match, and on manual sync.
-- `401` → drop the token, keep the queue, show "Pair again in Garmin Connect".
+- `401` → drop the token, keep the queue; the start menu's Sync item says "Link again", and
+  linking is done in Settings → Link account (on the watch or in Garmin Connect) (2026-10-10).
 - Bluetooth/network errors (negative Connect IQ response codes) → keep the queue, show a small
-  "not synced" indicator. A match never depends on connectivity.
+  "not synced" indicator. A match never depends on connectivity. The indicator is the Sync item's
+  status line (2026-10-10): "Syncing…", "No phone", "Sync failed", "N to upload",
+  "Synced <day time>", "Not synced".
+- The queue holds up to 10 finished matches and drops the oldest past that, uploaded or not.
+  A sync downloads, then uploads; a download leaves out games whose match is still waiting to
+  upload (2026-10-10).
 
 ### Code layout (`garmin/`)
 
@@ -319,7 +327,7 @@ the fēnix 5X watch-app memory limit** (exact figure read from the SDK's device
 2. **Activity recording** and its setting.
 3. **Pairing** — functions, phone Settings section, watch pairing.
 4. **Game sync** — `garminGames`, upload queue, `garminUploadGame`, phone history shows Garmin
-   matches.
+   matches. Done (2026-10-10).
 5. **Release** — Garmin developer account, Connect IQ store listing and review; phone release
    with the Garmin section and privacy policy update.
 
