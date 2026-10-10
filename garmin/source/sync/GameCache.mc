@@ -56,6 +56,19 @@ module GameCache {
         }
     }
 
+    // A finished match waiting to upload is a game already played on this watch, and the server
+    // still lists it until the upload lands, so a download must not bring it back.
+    function withoutPlayed(games as Array<Dictionary>) as Array<Dictionary> {
+        var played = MatchStore.finishedIndex();
+        var kept = [] as Array<Dictionary>;
+        for (var i = 0; i < games.size(); i++) {
+            if (played.indexOf(games[i]["id"] as String) < 0) {
+                kept.add(games[i]);
+            }
+        }
+        return kept;
+    }
+
     // Cached games that have not been over for long, in the server's order (soonest first).
     function games(nowSec as Number) as Array<Dictionary> {
         var result = [] as Array<Dictionary>;

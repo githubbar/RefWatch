@@ -80,6 +80,20 @@ function onGamesOfflineOrUnreadableKeepsTheCache(logger as Logger) as Boolean {
 }
 
 (:test)
+function aDownloadDoesNotBringBackAGamePlayedHere(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
+    wipeGameCache();
+    wipeFinished();
+    archivedMatch("g1");
+    new SyncJob("tok").onGames(200, {"games" => [syncedGame("g1", 1791500400), syncedGame("g2", 1791500400)]});
+    Test.assert(GameCache.find("g1") == null);
+    Test.assert(GameCache.find("g2") != null);
+    wipeGameCache();
+    wipeFinished();
+    return true;
+}
+
+(:test)
 function anAcceptedUploadLeavesTheQueue(logger as Logger) as Boolean {
     Sync.lastStatus = null;
     wipeFinished();

@@ -111,7 +111,7 @@ class SyncJob {
             finish(status);
             return;
         }
-        GameCache.store(games as Array<Dictionary>, Time.now().value());
+        GameCache.store(GameCache.withoutPlayed(games as Array<Dictionary>), Time.now().value());
         _pending = MatchStore.finishedIndex();
         uploadNext();
     }
