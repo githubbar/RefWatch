@@ -94,7 +94,7 @@ android {
 
     defaultConfig {
         applicationId = "com.databelay.refwatch"
-        minSdk = 34
+        minSdk = 33
         targetSdk = 36
 //        Version code scheme explained here:  https://developer.android.com/training/wearables/packaging
         versionCode = appVersionCode
