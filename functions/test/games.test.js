@@ -51,6 +51,23 @@ test("a linked token gives its uid", async () => {
   assert.equal(await devices.authenticateDevice(db, "tok", T0), "alice");
 });
 
+test("a device document without a uid gives null", async () => {
+  await db.collection(DEVICES).doc(sha256Hex("tok")).set({
+    deviceName: "006-B2604-00",
+    createdAt: Timestamp.fromMillis(T0 - DAY),
+    lastSeenAt: Timestamp.fromMillis(T0),
+  });
+  assert.equal(await devices.authenticateDevice(db, "tok", T0), null);
+});
+
+test("games whose id the upload would refuse are not listed", async () => {
+  await addGame("alice", "bad.id");
+  await addGame("alice", "bad id");
+  await addGame("alice", "good-id_1");
+  const list = await games.listGamesForWatch(db, "alice", T0);
+  assert.deepEqual(list.map((g) => g.id), ["good-id_1"]);
+});
+
 test("unknown, empty and non-string tokens give null", async () => {
   await linkDevice("tok", "alice", T0);
   assert.equal(await devices.authenticateDevice(db, "other", T0), null);

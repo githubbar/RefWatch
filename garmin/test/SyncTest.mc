@@ -13,13 +13,16 @@ function archivedMatch(id as String) as Void {
 
 (:test)
 function statusForMapsReplyCodes(logger as Logger) as Boolean {
-    Test.assertEqual(SYNC_OK, Sync.statusFor(200));
-    Test.assertEqual(SYNC_UNLINKED, Sync.statusFor(401));
-    Test.assertEqual(SYNC_OFFLINE, Sync.statusFor(-104));      // BLE not connected
-    Test.assertEqual(SYNC_OFFLINE, Sync.statusFor(-2));
-    Test.assertEqual(SYNC_FAILED, Sync.statusFor(-400));       // reply could not be read
-    Test.assertEqual(SYNC_FAILED, Sync.statusFor(500));
-    Test.assertEqual(SYNC_FAILED, Sync.statusFor(404));
+    Test.assertEqual(SYNC_OK, Sync.statusFor(200, null));
+    Test.assertEqual(SYNC_UNLINKED, Sync.statusFor(401, {"error" => "unauthorized"}));
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(401, null));
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(401, "<html>"));
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(401, {"error" => "other"}));
+    Test.assertEqual(SYNC_OFFLINE, Sync.statusFor(-104, null));      // BLE not connected
+    Test.assertEqual(SYNC_OFFLINE, Sync.statusFor(-2, null));
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(-400, null));       // reply could not be read
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(500, null));
+    Test.assertEqual(SYNC_FAILED, Sync.statusFor(404, null));
     return true;
 }
 
@@ -125,7 +128,7 @@ function aRefusedOrFailedUploadStaysQueued(logger as Logger) as Boolean {
     Application.Storage.setValue(Pairing.TOKEN_KEY, "tok");
     job = new SyncJob("tok");
     job.setPending(["m1"]);
-    job.onUploaded(401, null);
+    job.onUploaded(401, {"error" => "unauthorized"});
     Test.assertEqual(SYNC_UNLINKED, Sync.lastStatus);
     Test.assert(!Pairing.isLinked());
     Test.assertEqual(1, MatchStore.finishedIndex().size());
@@ -135,12 +138,36 @@ function aRefusedOrFailedUploadStaysQueued(logger as Logger) as Boolean {
 
 (:test)
 function finishedClearsTheRunningStateAndAStrayUploadReplyFinishesWithAStatus(logger as Logger) as Boolean {
-    Sync.finished(SYNC_OFFLINE);
+    Sync.finished(SYNC_OFFLINE, "tok");
     Test.assert(!Sync.isRunning());
     Test.assertEqual(SYNC_OFFLINE, Sync.lastStatus);
     Sync.lastStatus = null;
     new SyncJob("tok").onUploaded(200, null);       // nothing pending: must not throw
     Test.assertEqual(SYNC_FAILED, Sync.lastStatus);
     Test.assert(!Sync.isRunning());
+    return true;
+}
+
+(:test)
+function aForeign401KeepsTheToken(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
+    Application.Storage.setValue(Pairing.TOKEN_KEY, "tok");
+    new SyncJob("tok").onGames(401, "<html>");
+    Test.assertEqual(SYNC_FAILED, Sync.lastStatus);
+    Test.assert(Pairing.isLinked());
+    new SyncJob("tok").onGames(401, null);
+    Test.assertEqual(SYNC_FAILED, Sync.lastStatus);
+    Test.assert(Pairing.isLinked());
+    return true;
+}
+
+(:test)
+function aStaleUnlinkedPassKeepsTheNewToken(logger as Logger) as Boolean {
+    Sync.lastStatus = null;
+    Application.Storage.setValue(Pairing.TOKEN_KEY, "new");
+    new SyncJob("old").onGames(401, {"error" => "unauthorized"});
+    Test.assertEqual(SYNC_UNLINKED, Sync.lastStatus);
+    Test.assertEqual("new", Pairing.token());
+    Pairing.forget();
     return true;
 }

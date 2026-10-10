@@ -35,12 +35,17 @@ module Sync {
 
     // Down to -399 Connect IQ could not reach the phone or the network; -400 and below a reply
     // arrived but could not be read.
-    function statusFor(responseCode as Number) as Number {
+    // Only the server's own 401 ({"error": "unauthorized"}) means unlinked: Google's front end
+    // can answer with an HTML 401 of its own (seen right after a deploy).
+    function statusFor(responseCode as Number, data as Dictionary or String or Null) as Number {
         if (responseCode == 200) {
             return SYNC_OK;
         }
         if (responseCode == 401) {
-            return SYNC_UNLINKED;
+            if (data instanceof Dictionary && "unauthorized".equals(data["error"])) {
+                return SYNC_UNLINKED;
+            }
+            return SYNC_FAILED;
         }
         if (responseCode < 0 && responseCode > -400) {
             return SYNC_OFFLINE;
@@ -50,10 +55,12 @@ module Sync {
 
     // A refused token is dropped, so Settings shows "Not linked"; queued matches stay and are
     // uploaded once the watch is linked again (to whichever account that is).
-    function finished(status as Number) as Void {
+    // Only if the pass's own token is still the stored one: the watch may have been linked
+    // again while a pass on the old token was in flight, and the new token must survive.
+    function finished(status as Number, token as String) as Void {
         _job = null;
         lastStatus = status;
-        if (status == SYNC_UNLINKED) {
+        if (status == SYNC_UNLINKED && token.equals(Pairing.token())) {
             Pairing.forget();
         }
         GameList.onSyncFinished();
@@ -82,7 +89,7 @@ class SyncJob {
             return;
         }
         _done = true;
-        Sync.finished(status);
+        Sync.finished(status, _token);
     }
 
     function start() as Void {
@@ -102,7 +109,7 @@ class SyncJob {
     }
 
     hidden function handleGames(responseCode as Number, data as Dictionary or String or Null) as Void {
-        var status = Sync.statusFor(responseCode);
+        var status = Sync.statusFor(responseCode, data);
         var games = status == SYNC_OK ? GameCache.parse(data) : null;
         if (status == SYNC_OK && games == null) {
             status = SYNC_FAILED;
@@ -131,7 +138,7 @@ class SyncJob {
             } else if (responseCode == 400) {
                 _rejected = true;
             } else {
-                finish(Sync.statusFor(responseCode));
+                finish(Sync.statusFor(responseCode, data));
                 return;
             }
             uploadNext();

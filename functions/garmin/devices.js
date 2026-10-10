@@ -37,7 +37,8 @@ async function authenticateDevice(db, token, nowMs) {
       throw err;
     }
   }
-  return doc.get("uid");
+  const uid = doc.get("uid");
+  return typeof uid === "string" && uid.length > 0 ? uid : null;
 }
 
 module.exports = {LAST_SEEN_INTERVAL_MS, authenticateDevice};

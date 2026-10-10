@@ -104,7 +104,8 @@ async function listGamesForWatch(db, uid, nowMs) {
       .orderBy("gameDateTimeEpochMillis")
       .get();
   return snapshot.docs
-      .filter((doc) => doc.get("currentPhase") !== "GAME_ENDED")
+      .filter((doc) => isId(doc.id) &&
+        doc.get("currentPhase") !== "GAME_ENDED")
       .slice(0, MAX_GAMES)
       .map(toWatchGame);
 }
