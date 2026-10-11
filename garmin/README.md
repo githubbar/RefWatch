@@ -63,6 +63,26 @@ the error; a debug build includes line numbers.
 Sideloaded apps cannot be configured from Garmin Connect; test settings in the simulator
 (File → Edit Persistent Storage → Edit Application.Properties).
 
+## Release to the Connect IQ store
+1. Bump `resources/strings/version.xml`.
+2. `.\garmin\build.ps1 -Test`, then `.\garmin\build.ps1 -Export` → `garmin\bin\RefWatch.iq`
+   (release build, every product in `manifest.xml`).
+3. Upload it at https://apps.garmin.com/developer (Upload an app, or Upload new version on the
+   existing app). Sign every version with the same developer key; a new key means a new app.
+4. Listing text, icon and screenshots are in `garmin/store/`.
+
+The `.iq` is a 7-Zip archive (not a zip). It holds `manifest.xml`, `manifest.sig2`, `dev_key.pub`
+and one folder per hardware part number (`006-B4313-00`, `006-B4257-00`, `006-B2604-00`,
+`006-B2798-00`, `006-B3906-00`, `006-B3909-00`, `006-B3908-00`, `006-B3905-00`), each with
+`RefWatch.prg`, `debug.xml` and a settings JSON. The five products expand to eight part numbers
+(some products cover several hardware variants). List it with `7z l garmin\bin\RefWatch.iq`.
+
+Release build memory (2026-10-11, version 1.0.0, simulator status bar, Team actions open during
+a quick match):
+- fenix5x: 47.2 / 1275.5 kB
+- fenix7s: 41.9 / 763.6 kB
+- epix2pro47mm: 42.0 / 763.6 kB
+
 ## The match menu in the simulator
 BACK opens the match menu, so `-Click BACK` reaches it. Hold UP opens the same menu on a watch,
 but the simulator does not turn a held mouse button posted by `sim.ps1` into a long press.
