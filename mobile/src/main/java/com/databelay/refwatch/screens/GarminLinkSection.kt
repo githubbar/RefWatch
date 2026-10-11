@@ -1,8 +1,13 @@
 package com.databelay.refwatch.screens
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -22,17 +28,38 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.databelay.refwatch.common.theme.RefWatchMobileTheme
 import com.databelay.refwatch.data.garmin.GarminLinkUiState
 import com.databelay.refwatch.data.garmin.GarminLinkViewModel
+import com.databelay.refwatch.data.garmin.GarminStore
 import com.databelay.refwatch.data.garmin.LinkedGarminDevice
 import com.databelay.refwatch.data.garmin.PairingCode
 
 @Composable
 fun GarminLinkSection(viewModel: GarminLinkViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    GarminLinkContent(state = state, onLink = viewModel::requestCode, onUnlink = viewModel::unlink)
+    if (!GarminStore.showSection(GarminStore.STORE_URL, state.devices.size)) return
+    val context = LocalContext.current
+    GarminLinkContent(
+        state = state,
+        storeUrl = GarminStore.STORE_URL,
+        onOpenStore = { url ->
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (e: ActivityNotFoundException) {
+                Log.e("GarminLinkSection", "No app can open $url", e)
+            }
+        },
+        onLink = viewModel::requestCode,
+        onUnlink = viewModel::unlink
+    )
 }
 
 @Composable
-fun GarminLinkContent(state: GarminLinkUiState, onLink: () -> Unit, onUnlink: (String) -> Unit) {
+fun GarminLinkContent(
+    state: GarminLinkUiState,
+    storeUrl: String?,
+    onOpenStore: (String) -> Unit,
+    onLink: () -> Unit,
+    onUnlink: (String) -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Garmin watch", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
         val code = state.code
@@ -59,6 +86,11 @@ fun GarminLinkContent(state: GarminLinkUiState, onLink: () -> Unit, onUnlink: (S
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (!storeUrl.isNullOrBlank()) {
+                TextButton(onClick = { onOpenStore(storeUrl) }, contentPadding = PaddingValues(0.dp)) {
+                    Text("Get RefWatch for Garmin in the Connect IQ store")
+                }
+            }
             Button(onClick = onLink, enabled = !state.busy, modifier = Modifier.padding(vertical = 8.dp)) {
                 Text("Link a Garmin watch")
             }
@@ -96,6 +128,8 @@ private fun GarminLinkContentCodePreview() {
                 secondsLeft = 545,
                 devices = listOf(LinkedGarminDevice("h1", "006-B2604-00", System.currentTimeMillis()))
             ),
+            storeUrl = null,
+            onOpenStore = {},
             onLink = {},
             onUnlink = {}
         )
@@ -106,6 +140,12 @@ private fun GarminLinkContentCodePreview() {
 @Composable
 private fun GarminLinkContentIdlePreview() {
     RefWatchMobileTheme {
-        GarminLinkContent(state = GarminLinkUiState(), onLink = {}, onUnlink = {})
+        GarminLinkContent(
+            state = GarminLinkUiState(),
+            storeUrl = "https://apps.garmin.com/apps/preview",
+            onOpenStore = {},
+            onLink = {},
+            onUnlink = {}
+        )
     }
 }
