@@ -5,7 +5,9 @@ const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const {getFirestore} = require("firebase-admin/firestore");
 const pairing = require("./garmin/pairing");
-const {handlePairRequest} = require("./garmin/http");
+const {
+  handlePairRequest, handleGamesRequest, handleUploadRequest,
+} = require("./garmin/http");
 
 // Set global options for all v2 functions in this file
 setGlobalOptions({maxInstances: 10});
@@ -57,6 +59,14 @@ exports.createGarminPairingCode = onCall(async (request) => {
 // Watch (through Garmin Connect): exchanges the code for a device token.
 exports.garminPair = onRequest((req, res) =>
   handlePairRequest(getFirestore(), req, res, Date.now()));
+
+// Watch: the account's upcoming games (bearer token from garminPair).
+exports.garminGames = onRequest((req, res) =>
+  handleGamesRequest(getFirestore(), req, res, Date.now()));
+
+// Watch: one finished match, saved into the account's games.
+exports.garminUploadGame = onRequest((req, res) =>
+  handleUploadRequest(getFirestore(), req, res, Date.now()));
 
 // Phone: the user's linked Garmin watches.
 exports.listGarminDevices = onCall(async (request) => {

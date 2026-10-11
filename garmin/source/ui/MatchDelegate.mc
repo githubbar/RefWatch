@@ -31,6 +31,9 @@ class MatchDelegate extends WatchUi.BehaviorDelegate {
         if (_match.phase.equals(PHASE_GAME_ENDED)) {
             Recorder.save();
             MatchStore.archive(_match);
+            GameCache.remove(_match.gameId);
+            // Before the menu is built, so its Sync line already says "Syncing…".
+            Sync.run();
             GameList.show();
             return true;
         }

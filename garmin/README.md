@@ -143,10 +143,8 @@ Java on PATH). Phone: 14 Garmin tests pass. Watch: 75 unit tests pass; five prod
   `006-B2604-00` (the watch's `partNumber`).
 
 **Known limits until phase 4.**
-- The watch's token has no expiry; Unlink on the phone is the only revocation. Nothing on the watch
-  uses the token yet, and the watch does not notice an unlink until phase 4 handles `401` (a
-  Garmin Connect code is ignored while the watch still thinks it is linked; relink from the start
-  menu).
+- The watch's token has no expiry; Unlink on the phone is the only revocation. Phase 4 uses
+  the token, and a `401` (for example after an unlink) now shows "Link again" on the start menu.
 - Relinking an already-linked watch leaves its old record in the phone's list until it is unlinked.
 - Running the watch unit tests in the simulator clears the simulator's stored token
   (`Pairing.forget()`).
@@ -158,3 +156,47 @@ to the Record activity and Log goal scorer switches (they write the same propert
 edits) and the app version (`resources/strings/version.xml`, bump it at each release; it is also
 sent as `appVersion` when pairing). Hold UP cannot open Settings: Connect IQ's `Menu2InputDelegate`
 has no `onMenu`, so the start menu's Settings item is the way in.
+
+## Phase 4 results (game sync), 2026-10-10
+
+**Deployed** to `refwatchapp` (us-central1): `garminGames` (GET) and `garminUploadGame` (POST),
+HTTP, bearer token from `garminPair`:
+`https://us-central1-refwatchapp.cloudfunctions.net/garminGames` and
+`https://us-central1-refwatchapp.cloudfunctions.net/garminUploadGame`.
+
+**Tests.** Functions: 61 pass against the Firestore emulator (`npm --prefix functions test`, needs
+Java on PATH; the files run with `--test-concurrency=1` because each test file wipes the shared
+emulator). Phone/common: `GarminEventsTest` pins that the phone decodes the events the watch
+uploads. Watch: 99 unit tests pass.
+
+**Live checks.**
+- Without a token or with a bad one, both endpoints answer `401 {"error":"unauthorized"}`; a GET to
+  `garminUploadGame` answers `405`.
+- Right after a deploy, Google's front end briefly refused POSTs with its own HTML 401 until access
+  settings propagated (under a minute).
+
+**End to end, simulator (fēnix 5X).**
+- Linked with a phone code. The four games of the next 14 days listed with day, time and field
+  ("Home v Away" rows are the imported schedule's own names).
+- A quick match (goal, yellow card #7) uploaded and appeared under Past on the phone with its game
+  log.
+- A test game created on the phone was synced, refereed 0-1 and uploaded; it moved to Past keeping
+  its details and left the watch's list.
+- After unlinking on the phone, saving a match showed "Link again" with the cached games kept, and
+  after relinking the queued match uploaded.
+
+**Bug found and fixed in testing.** A sync downloads before it uploads, so a game just refereed came
+back from the download (the server still had it as not started). Downloads now leave out games
+whose match is still waiting to upload (`GameCache.withoutPlayed`).
+
+**fēnix 5X.** Sideloaded 0.4.0, linked on the watch, games listed through Garmin Connect. Memory in
+the simulator about 50-56 kB of 1275.5 kB.
+
+**Known limits.**
+- Running the watch unit tests in the simulator clears its stored token, game cache and finished
+  matches (tests share app storage).
+- "Link again" lasts only until the app restarts (then "Not linked").
+- After a sync rebuilds the start menu, the focus returns to the top.
+- The upload queue keeps at most 10 finished matches and drops the oldest past that, uploaded or
+  not.
+- A match the server refuses (400) stays queued and every sync shows "Sync failed".

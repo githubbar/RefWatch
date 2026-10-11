@@ -668,10 +668,17 @@ class GameTimerService : Service() {
     private fun foregroundServiceTypes(): Int {
         val tracksPosition = healthServicesManager.collectsPosition(currentInternalGame?.isAssistantReferee ?: false) &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        return if (tracksPosition) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        } else {
+        // The health type exists from API 34. On Wear OS 4 (API 33) the service runs without it,
+        // keeping the location type when position is tracked.
+        val health = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        } else {
+            0
+        }
+        return if (tracksPosition) {
+            health or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        } else {
+            health
         }
     }
 

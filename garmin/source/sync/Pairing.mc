@@ -44,7 +44,7 @@ module Pairing {
     // Sends the code; onDone gets one of the PAIR_* statuses.
     function pair(code as String, onDone as Method(status as Number) as Void) as Void {
         var request = new PairRequest(onDone);
-        Api.postJson("garminPair", requestBody(code), request.method(:onResponse));
+        Api.postJson("garminPair", requestBody(code), null, request.method(:onResponse));
     }
 
     function requestBody(code as String) as Dictionary {
