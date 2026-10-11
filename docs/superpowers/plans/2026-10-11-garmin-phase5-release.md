@@ -270,7 +270,7 @@ Add "## Release to the Connect IQ store" to `garmin/README.md` after "Sideload t
 1. Bump `resources/strings/version.xml`.
 2. `.\garmin\build.ps1 -Test`, then `.\garmin\build.ps1 -Export` → `garmin\bin\RefWatch.iq`
    (release build, every product in `manifest.xml`).
-3. Upload it at https://apps.garmin.com/developer (Upload an app, or Upload new version on the
+3. Upload it at https://apps-developer.garmin.com (Upload an app, or Upload new version on the
    existing app). Sign every version with the same developer key; a new key means a new app.
 4. Listing text, icon and screenshots are in `garmin/store/`.
 ```
@@ -418,7 +418,7 @@ fine to push it before the store submission, because the listing links to it.
 Claude does not create accounts, accept agreements or upload for the user. Give the user these
 steps and wait.
 
-- [ ] **Step 1:** The user signs in at https://apps.garmin.com/developer with a Garmin account
+- [ ] **Step 1:** The user signs in at https://apps-developer.garmin.com with a Garmin account
   (18+), and accepts the Connect IQ developer agreement.
 - [ ] **Step 2:** They choose Upload an app and select `garmin\bin\RefWatch.iq`. After
   validation, they fill in the fields from `garmin/store/listing.md` and upload the icon and

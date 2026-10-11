@@ -67,7 +67,7 @@ Sideloaded apps cannot be configured from Garmin Connect; test settings in the s
 1. Bump `resources/strings/version.xml`.
 2. `.\garmin\build.ps1 -Test`, then `.\garmin\build.ps1 -Export` → `garmin\bin\RefWatch.iq`
    (release build, every product in `manifest.xml`).
-3. Upload it at https://apps.garmin.com/developer (Upload an app, or Upload new version on the
+3. Upload it at https://apps-developer.garmin.com (Upload an app, or Upload new version on the
    existing app). Sign every version with the same developer key; a new key means a new app.
 4. Listing text, icon and screenshots are in `garmin/store/`.
 
