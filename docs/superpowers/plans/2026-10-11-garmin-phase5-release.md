@@ -169,7 +169,7 @@ Add the imports `android.content.ActivityNotFoundException`, `android.content.In
 
 - [ ] **Step 4: Run the tests and confirm that they pass**
 
-Run: `.\gradlew :mobile:testDebugUnitTest --tests "*Garmin*" :mobile:assembleDebug`
+Run: `.\gradlew :mobile:testDebugUnitTest --tests "com.databelay.refwatch.data.garmin.*" :mobile:assembleDebug`
 Expected: `BUILD SUCCESSFUL`. GarminStoreTest (4), GarminLinkViewModelTest and
 GarminLinkParsingTest all pass.
 
@@ -467,8 +467,12 @@ Run this only after Task 5 Step 5 reports that the app was approved and gives th
 - Modify: `mobile/src/main/java/com/databelay/refwatch/data/garmin/GarminStore.kt`
 - Modify: `garmin/README.md`, `docs/superpowers/specs/2026-10-07-garmin-app-design.md`
 
+> **Timing:** Garmin's approval publishes the watch app at once, while the phone app's Garmin
+> section only appears after the phone release clears Play review. Build and submit the phone
+> release to Play the same day Garmin approves (Task 7 Steps 1-5 back to back).
+
 - [ ] **Step 1:** Set `val STORE_URL: String? = "<store URL from the user>"`.
-- [ ] **Step 2:** Run `.\gradlew :mobile:testDebugUnitTest --tests "*Garmin*"`. Expected: pass.
+- [ ] **Step 2:** Run `.\gradlew :mobile:testDebugUnitTest --tests "com.databelay.refwatch.data.garmin.*"`. Expected: pass.
   Check the model with adb (`CPH2655`), then run `.\gradlew :mobile:installDebug`.
   On the phone, open Settings → Garmin watch → the store link. Expected: the RefWatch store page
   opens.

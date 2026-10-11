@@ -29,6 +29,7 @@ $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 
 New-Item -ItemType Directory -Force "$root\bin" | Out-Null
 if ($Export) {
+    if ($Test -or $Run -or $Release -or $PSBoundParameters.ContainsKey('Device')) { Write-Warning "-Export always builds a release package for every product in manifest.xml; -Device, -Test, -Run and -Release are ignored." }
     # monkeyc -e packages every product in manifest.xml into one .iq for the Connect IQ store.
     # Always a release build: the store must never get (:debug) code or test fixtures.
     $iq = "$root\bin\RefWatch.iq"
@@ -40,7 +41,7 @@ if ($Export) {
     Write-Host "Store package: $iq"
     return
 }
-$out ="$root\bin\RefWatch-$Device.prg"
+$out = "$root\bin\RefWatch-$Device.prg"
 $compileArgs = @("-o", $out, "-f", "$root\monkey.jungle", "-y", $Key, "-d", $Device, "-w")
 if ($Test) { $compileArgs += "-t" }
 # A release build drops (:debug) code, which is where the test fixtures live.

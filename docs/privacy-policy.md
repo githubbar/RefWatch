@@ -59,11 +59,13 @@ covers. Your games travel between our servers and the watch through Garmin's Con
 which Garmin operates under its own privacy policy. You can unlink a watch at any time in
 the phone app's Settings, which deletes its record and stops its access.
 
-The RefWatch app on a Garmin watch keeps the current match, your upcoming games and up to 10
-finished matches in the watch's own storage until they are sent to your account. If you turn on
-"Record activity", the watch saves each match as an activity in your Garmin account. Its heart
-rate and GPS data go to Garmin, under Garmin's privacy policy, and are not sent to us. Apart from
-the code you enter to link it, a Garmin app that is not linked to an account sends us nothing.
+The RefWatch app on a Garmin watch keeps the current match and your upcoming games in the
+watch's own storage, and holds up to 10 finished matches there until they are sent to your
+account (upcoming games are not sent anywhere). If "Record activity" is on (it is by default),
+the watch saves each match as an activity in your Garmin account. Its heart rate and GPS data go
+to Garmin, under Garmin's privacy policy, and are not sent to us. Apart from the link request
+(the code you enter, the watch model and the app version), a Garmin app that is not linked to an
+account sends us nothing.
 
 ## How we use your data
 

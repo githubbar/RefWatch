@@ -21,8 +21,8 @@ RefWatch is a match timer for soccer referees.
 
 Quick match works on its own, with no phone and no account.
 
-With a free RefWatch account, you can also link the watch to the RefWatch Android phone app
-(Settings → Garmin watch) to:
+With a free RefWatch account, you can also link the watch to the latest version of the RefWatch
+Android phone app (Settings → Garmin watch) to:
 - see your upcoming games on the watch, with teams, colors and timings
 - send each finished match back to the phone, where it appears in your game history
 
