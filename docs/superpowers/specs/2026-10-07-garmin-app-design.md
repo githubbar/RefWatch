@@ -295,6 +295,10 @@ the fēnix 5X watch-app memory limit** (exact figure read from the SDK's device
 - Calls the callables through the existing Firebase Functions client used for
   `generateCustomToken` (`AuthRepository.kt`).
 - No new Android permissions. Ships as a phone-only update.
+- The section is hidden until the Firestore document `config/garmin` has `enabled: true` and an
+  `https://` `storeUrl` (the Connect IQ store page), except for accounts that already have a linked
+  watch. It is switched on in the Firebase console on the day Garmin approves the watch app, with
+  no phone release (2026-10-12).
 - `docs/privacy-policy.md` (the live policy; the stale root `PRIVACY POLICY.html` was removed on
   2026-10-09): add that linking a Garmin watch stores a
   record of the watch and sends game data to it through Garmin Connect.

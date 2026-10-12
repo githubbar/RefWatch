@@ -1,6 +1,7 @@
 package com.databelay.refwatch.data.garmin
 
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import com.google.firebase.functions.functions
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -16,9 +17,15 @@ interface GarminLinkRepository {
     suspend fun createPairingCode(): Result<PairingCode>
     suspend fun listDevices(): Result<List<LinkedGarminDevice>>
     suspend fun unlink(deviceId: String): Result<Unit>
+    suspend fun storeConfig(): Result<GarminStoreConfig>
 }
 
 class FirebaseGarminLinkRepository @Inject constructor() : GarminLinkRepository {
+    // Firestore falls back to its offline cache when the server can't be reached.
+    override suspend fun storeConfig(): Result<GarminStoreConfig> = runCatching {
+        parseStoreConfig(Firebase.firestore.collection("config").document("garmin").get().await().data)
+    }
+
     override suspend fun createPairingCode(): Result<PairingCode> = runCatching {
         parsePairingCode(call("createGarminPairingCode"))
     }

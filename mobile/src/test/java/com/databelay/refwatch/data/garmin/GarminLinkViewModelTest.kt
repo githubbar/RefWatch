@@ -43,6 +43,9 @@ class GarminLinkViewModelTest {
             devices.removeAll { it.id == deviceId }
             return Result.success(Unit)
         }
+
+        var storeConfigResult: Result<GarminStoreConfig> = Result.success(GarminStoreConfig(enabled = false, storeUrl = null))
+        override suspend fun storeConfig(): Result<GarminStoreConfig> = storeConfigResult
     }
 
     @Before
@@ -60,6 +63,35 @@ class GarminLinkViewModelTest {
         val vm = viewModel(repo)
         advanceUntilIdle()
         assertThat(vm.state.value.devices.map { it.id }).containsExactly("h1")
+    }
+
+    @Test
+    fun anEnabledStoreConfigGivesTheStoreUrl() = runTest(dispatcher) {
+        val repo = FakeRepository().apply {
+            storeConfigResult = Result.success(GarminStoreConfig(enabled = true, storeUrl = "https://apps.garmin.com/apps/x"))
+        }
+        val vm = viewModel(repo)
+        advanceUntilIdle()
+        assertThat(vm.state.value.storeUrl).isEqualTo("https://apps.garmin.com/apps/x")
+    }
+
+    @Test
+    fun aDisabledStoreConfigGivesNoStoreUrl() = runTest(dispatcher) {
+        val repo = FakeRepository().apply {
+            storeConfigResult = Result.success(GarminStoreConfig(enabled = false, storeUrl = "https://apps.garmin.com/apps/x"))
+        }
+        val vm = viewModel(repo)
+        advanceUntilIdle()
+        assertThat(vm.state.value.storeUrl).isNull()
+    }
+
+    @Test
+    fun aFailedStoreConfigReadGivesNoStoreUrl() = runTest(dispatcher) {
+        val repo = FakeRepository().apply { storeConfigResult = Result.failure(RuntimeException("offline")) }
+        val vm = viewModel(repo)
+        advanceUntilIdle()
+        assertThat(vm.state.value.storeUrl).isNull()
+        assertThat(vm.state.value.error).isNull()
     }
 
     @Test
