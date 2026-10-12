@@ -6,12 +6,14 @@
   .\garmin\build.ps1 -Device fenix7 -Run   # build and open in the simulator
   .\garmin\build.ps1 -Test                 # build with unit tests and run them in the simulator
   .\garmin\build.ps1 -Release              # release build (no (:debug) code), as for the store
+  .\garmin\build.ps1 -Export               # store package (.iq) for every product in manifest.xml
 #>
 param(
     [string]$Device = "fenix5x",
     [switch]$Test,
     [switch]$Run,
     [switch]$Release,
+    [switch]$Export,
     [string]$Key = "$env:USERPROFILE\keys_for_garmin\developer_key.der"
 )
 $ErrorActionPreference = "Stop"
@@ -26,6 +28,19 @@ if (-not $env:JAVA_HOME) { $env:JAVA_HOME = "$env:LOCALAPPDATA\Programs\Android 
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 
 New-Item -ItemType Directory -Force "$root\bin" | Out-Null
+if ($Export) {
+    if ($Test -or $Run -or $Release -or $PSBoundParameters.ContainsKey('Device')) { Write-Warning "-Export always builds a release package for every product in manifest.xml; -Device, -Test, -Run and -Release are ignored." }
+    # monkeyc -e packages every product in manifest.xml into one .iq for the Connect IQ store.
+    # Always a release build: the store must never get (:debug) code or test fixtures.
+    $iq = "$root\bin\RefWatch.iq"
+    $ErrorActionPreference = "Continue"
+    & "$bin\monkeyc.bat" -e -r -w -o $iq -f "$root\monkey.jungle" -y $Key 2>&1 | ForEach-Object { Write-Host "$_" }
+    $exportExit = $LASTEXITCODE
+    $ErrorActionPreference = "Stop"
+    if ($exportExit -ne 0) { throw "monkeyc export failed (exit $exportExit); see the compiler output above" }
+    Write-Host "Store package: $iq"
+    return
+}
 $out = "$root\bin\RefWatch-$Device.prg"
 $compileArgs = @("-o", $out, "-f", "$root\monkey.jungle", "-y", $Key, "-d", $Device, "-w")
 if ($Test) { $compileArgs += "-t" }

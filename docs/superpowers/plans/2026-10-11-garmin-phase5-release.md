@@ -169,7 +169,7 @@ Add the imports `android.content.ActivityNotFoundException`, `android.content.In
 
 - [ ] **Step 4: Run the tests and confirm that they pass**
 
-Run: `.\gradlew :mobile:testDebugUnitTest --tests "*Garmin*" :mobile:assembleDebug`
+Run: `.\gradlew :mobile:testDebugUnitTest --tests "com.databelay.refwatch.data.garmin.*" :mobile:assembleDebug`
 Expected: `BUILD SUCCESSFUL`. GarminStoreTest (4), GarminLinkViewModelTest and
 GarminLinkParsingTest all pass.
 
@@ -270,7 +270,7 @@ Add "## Release to the Connect IQ store" to `garmin/README.md` after "Sideload t
 1. Bump `resources/strings/version.xml`.
 2. `.\garmin\build.ps1 -Test`, then `.\garmin\build.ps1 -Export` → `garmin\bin\RefWatch.iq`
    (release build, every product in `manifest.xml`).
-3. Upload it at https://apps.garmin.com/developer (Upload an app, or Upload new version on the
+3. Upload it at https://apps-developer.garmin.com (Upload an app, or Upload new version on the
    existing app). Sign every version with the same developer key; a new key means a new app.
 4. Listing text, icon and screenshots are in `garmin/store/`.
 ```
@@ -418,7 +418,7 @@ fine to push it before the store submission, because the listing links to it.
 Claude does not create accounts, accept agreements or upload for the user. Give the user these
 steps and wait.
 
-- [ ] **Step 1:** The user signs in at https://apps.garmin.com/developer with a Garmin account
+- [ ] **Step 1:** The user signs in at https://apps-developer.garmin.com with a Garmin account
   (18+), and accepts the Connect IQ developer agreement.
 - [ ] **Step 2:** They choose Upload an app and select `garmin\bin\RefWatch.iq`. After
   validation, they fill in the fields from `garmin/store/listing.md` and upload the icon and
@@ -467,8 +467,12 @@ Run this only after Task 5 Step 5 reports that the app was approved and gives th
 - Modify: `mobile/src/main/java/com/databelay/refwatch/data/garmin/GarminStore.kt`
 - Modify: `garmin/README.md`, `docs/superpowers/specs/2026-10-07-garmin-app-design.md`
 
+> **Timing:** Garmin's approval publishes the watch app at once, while the phone app's Garmin
+> section only appears after the phone release clears Play review. Build and submit the phone
+> release to Play the same day Garmin approves (Task 7 Steps 1-5 back to back).
+
 - [ ] **Step 1:** Set `val STORE_URL: String? = "<store URL from the user>"`.
-- [ ] **Step 2:** Run `.\gradlew :mobile:testDebugUnitTest --tests "*Garmin*"`. Expected: pass.
+- [ ] **Step 2:** Run `.\gradlew :mobile:testDebugUnitTest --tests "com.databelay.refwatch.data.garmin.*"`. Expected: pass.
   Check the model with adb (`CPH2655`), then run `.\gradlew :mobile:installDebug`.
   On the phone, open Settings → Garmin watch → the store link. Expected: the RefWatch store page
   opens.
