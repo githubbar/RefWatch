@@ -65,7 +65,8 @@ app, Risks).
 
 **Interfaces:**
 - Produces: `object GarminStore { val STORE_URL: String?; fun showSection(storeUrl: String?, linkedDevices: Int): Boolean }`.
-  Task 7 sets `STORE_URL`.
+  Task 7 sets `STORE_URL`. (Superseded 2026-10-12: `STORE_URL` was replaced by the Firestore
+  document `config/garmin`; see Task 7.)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -463,26 +464,29 @@ The form needs a change only if the Garmin record should count as Android-app da
 
 Run this only after Task 5 Step 5 reports that the app was approved and gives the store URL.
 
+> **Changed 2026-10-12: remote switch.** The store link is no longer a constant in the app.
+> The phone reads the Firestore document `config/garmin` (`{enabled: boolean, storeUrl:
+> string}`), so the section turns on with no phone release. Before approval: deploy the rules
+> (`firebase deploy --only firestore:rules`, the user runs it), then ship a phone release with
+> `/release` while Garmin reviews. Steps 1–2 below replace the old "set `STORE_URL`" step, and
+> Step 5's release is needed only if that earlier release has not shipped.
+
 **Files:**
-- Modify: `mobile/src/main/java/com/databelay/refwatch/data/garmin/GarminStore.kt`
 - Modify: `garmin/README.md`, `docs/superpowers/specs/2026-10-07-garmin-app-design.md`
 
-> **Timing:** Garmin's approval publishes the watch app at once, while the phone app's Garmin
-> section only appears after the phone release clears Play review. Build and submit the phone
-> release to Play the same day Garmin approves (Task 7 Steps 1-5 back to back).
-
-- [ ] **Step 1:** Set `val STORE_URL: String? = "<store URL from the user>"`.
-- [ ] **Step 2:** Run `.\gradlew :mobile:testDebugUnitTest --tests "com.databelay.refwatch.data.garmin.*"`. Expected: pass.
-  Check the model with adb (`CPH2655`), then run `.\gradlew :mobile:installDebug`.
-  On the phone, open Settings → Garmin watch → the store link. Expected: the RefWatch store page
-  opens.
+- [ ] **Step 1 (user, Firebase console):** Firestore → create collection `config`, document
+  `garmin`, with fields `enabled` (boolean) `true` and `storeUrl` (string) set to the store URL.
+  It must start with `https://`, or the app ignores it.
+- [ ] **Step 2:** On the phone, fully close and reopen RefWatch. Then open Settings → Garmin
+  watch → the store link. Expected: the section shows for an account with no linked watch, and
+  the RefWatch store page opens.
 - [ ] **Step 3: Docs.**
   - Spec Build order step 5: add "Done (<date>); Connect IQ store: <URL>".
   - `garmin/README.md`: add "Phase 5 results (release), <date>", with the store URL, the
     approved version, the memory figures from Task 2, and the beta-test results from Task 5.
   - Update the memory file `platform-expansion.md`: Garmin app published.
-- [ ] **Step 4: Commit:** "Link the phone's Garmin section to the Connect IQ store".
-- [ ] **Step 5: Phone release.** Run `/release`. It bumps the version, builds and checks both
+- [ ] **Step 4: Commit:** "Record the Connect IQ store release".
+- [ ] **Step 5: Phone release (only if the remote-switch release has not shipped).** Run `/release`. It bumps the version, builds and checks both
   bundles (SHA1 `A2:91:2C:...`), commits and pushes `main`, then tags. Push the tag only after
   the user confirms. The user uploads `refwatch-mobile-release-vX.Y.Z.aab` (and the wear bundle,
   if the Wear OS 4 change has not shipped yet) in Play Console.

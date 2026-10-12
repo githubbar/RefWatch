@@ -37,11 +37,11 @@ import com.databelay.refwatch.data.garmin.PairingCode
 @Composable
 fun GarminLinkSection(viewModel: GarminLinkViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    if (!GarminStore.showSection(GarminStore.STORE_URL, state.devices.size)) return
+    if (!GarminStore.showSection(state.storeUrl, state.devices.size)) return
     val context = LocalContext.current
     GarminLinkContent(
         state = state,
-        storeUrl = GarminStore.STORE_URL,
+        storeUrl = state.storeUrl,
         onOpenStore = { url ->
             try {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))

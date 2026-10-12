@@ -17,7 +17,9 @@ data class GarminLinkUiState(
     val secondsLeft: Long = 0,
     val devices: List<LinkedGarminDevice> = emptyList(),
     val busy: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /** The Connect IQ store page, from `config/garmin`; null while the section is switched off. */
+    val storeUrl: String? = null
 )
 
 /**
@@ -39,6 +41,9 @@ class GarminLinkViewModel @Inject constructor(
 
     init {
         refreshDevices()
+        viewModelScope.launch {
+            repository.storeConfig().onSuccess { config -> _state.update { it.copy(storeUrl = config.activeStoreUrl) } }
+        }
     }
 
     fun refreshDevices() {
